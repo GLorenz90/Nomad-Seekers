@@ -83,261 +83,268 @@ albedo_color = Color(0.9, 0.35, 0.2, 0.75)
 emission_enabled = true
 emission = Color(0.9, 0.3, 0.15, 1)
 
-[node name="Arena" type="Node3D" unique_id=539720474]
+[node name="Arena" type="Node3D" unique_id=623528525]
 script = ExtResource("1_a43o1")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2131770787]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1128210487]
 environment = SubResource("Environment_bt1tq")
 
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=2040878828]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=638499982]
 transform = Transform3D(0.81915206, -0.46984634, 0.32898995, 0, 0.57357645, 0.81915206, -0.57357645, -0.6710101, 0.46984634, 0, 0, 0)
 shadow_enabled = true
 
-[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=2138963509]
+[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=1491966101]
 navigation_mesh = SubResource("NavigationMesh_yje0t")
 
-[node name="Level" type="Node3D" parent="Navigation" unique_id=130642026]
+[node name="Level" type="Node3D" parent="Navigation" unique_id=7625066]
 
-[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=352969052]
+[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=1577978706]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -9)
 use_collision = true
 size = Vector3(30, 1, 72)
 material = SubResource("ShaderMaterial_nqmqx")
 
-[node name="StartWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=453042735]
+[node name="StartWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=523238665]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, 18)
 use_collision = true
 size = Vector3(1, 4, 13)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="StartWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=372026837]
+[node name="StartWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=977097848]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2, 18)
 use_collision = true
 size = Vector3(1, 4, 13)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="StartBack" type="CSGBox3D" parent="Navigation/Level" unique_id=831027330]
+[node name="StartBack" type="CSGBox3D" parent="Navigation/Level" unique_id=2950494]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 24.5)
 use_collision = true
 size = Vector3(7, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=1247388801]
+[node name="RoomAWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=379383497]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.5, 2, 0)
 use_collision = true
 size = Vector3(1, 4, 23)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=159281483]
+[node name="RoomAWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=1281235169]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 2, 0)
 use_collision = true
 size = Vector3(1, 4, 23)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=1241158283]
+[node name="RoomAWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=874244545]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 2, 11)
 use_collision = true
 size = Vector3(10, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=1326197326]
+[node name="RoomAWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=1324350739]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, 11)
 use_collision = true
 size = Vector3(10, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallNL" type="CSGBox3D" parent="Navigation/Level" unique_id=1304351726]
+[node name="RoomAWallNL" type="CSGBox3D" parent="Navigation/Level" unique_id=1079699761]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 2, -11)
 use_collision = true
 size = Vector3(10, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallNR" type="CSGBox3D" parent="Navigation/Level" unique_id=1818055557]
+[node name="RoomAWallNR" type="CSGBox3D" parent="Navigation/Level" unique_id=1039664865]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, -11)
 use_collision = true
 size = Vector3(10, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=849420118]
+[node name="RoomAPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=2033485933]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, 2)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=541729906]
+[node name="RoomAPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=1874168799]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, -2)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=11701039]
+[node name="RoomBWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=2073810474]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.5, 2, -30)
 use_collision = true
 size = Vector3(1, 4, 23)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=566399512]
+[node name="RoomBWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=1827231517]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 2, -30)
 use_collision = true
 size = Vector3(1, 4, 23)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=1110229211]
+[node name="RoomBWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=1446801517]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 2, -19)
 use_collision = true
 size = Vector3(10, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=760787442]
+[node name="RoomBWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=747556743]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, -19)
 use_collision = true
 size = Vector3(10, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallN" type="CSGBox3D" parent="Navigation/Level" unique_id=1392979467]
+[node name="RoomBWallN" type="CSGBox3D" parent="Navigation/Level" unique_id=658753470]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -41)
 use_collision = true
 size = Vector3(24, 4, 1)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=253058234]
+[node name="RoomBPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=1849583244]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, -28)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=1779704678]
+[node name="RoomBPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=800483766]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, -32)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="CorridorW" type="CSGBox3D" parent="Navigation/Level" unique_id=1631085893]
+[node name="CorridorW" type="CSGBox3D" parent="Navigation/Level" unique_id=58275409]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2, -15)
 use_collision = true
 size = Vector3(1, 4, 8)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="CorridorE" type="CSGBox3D" parent="Navigation/Level" unique_id=2038431365]
+[node name="CorridorE" type="CSGBox3D" parent="Navigation/Level" unique_id=1203541624]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2, -15)
 use_collision = true
 size = Vector3(1, 4, 8)
 material = SubResource("ShaderMaterial_swrx8")
 
-[node name="Player" parent="." unique_id=2025384990 instance=ExtResource("3_6joey")]
+[node name="Player" parent="." unique_id=968035053 instance=ExtResource("3_6joey")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 20)
 
-[node name="CameraRig" parent="." unique_id=1965408822 instance=ExtResource("4_7wjmx")]
+[node name="CameraRig" parent="." unique_id=1213327214 instance=ExtResource("4_7wjmx")]
 
-[node name="HUD" parent="." unique_id=1149573083 instance=ExtResource("5_lw7ys")]
+[node name="HUD" parent="." unique_id=1679269846 instance=ExtResource("5_lw7ys")]
 
-[node name="Rooms" type="Node3D" parent="." unique_id=30048584]
+[node name="Rooms" type="Node3D" parent="." unique_id=1593725319]
 
-[node name="RoomA" type="Node3D" parent="Rooms" unique_id=2114703039]
+[node name="RoomA" type="Node3D" parent="Rooms" unique_id=1976142863]
 script = ExtResource("6_htucp")
 room_name = "Room A"
 waves = Array[ExtResource("7_4cf4i")]([SubResource("Resource_8jgwj"), SubResource("Resource_m44an"), SubResource("Resource_u80kj")])
 trigger_size = Vector3(20, 4, 19)
 
-[node name="Doors" type="Node3D" parent="Rooms/RoomA" unique_id=1298624149]
+[node name="Doors" type="Node3D" parent="Rooms/RoomA" unique_id=313206940]
 
-[node name="Door0" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=771139298]
+[node name="Door0" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=1763536204]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 11)
 use_collision = true
 size = Vector3(4.2, 4, 0.6)
 material = SubResource("StandardMaterial3D_q2sf5")
 
-[node name="Door1" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=664757215]
+[node name="Door1" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=1675265014]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -11)
 use_collision = true
 size = Vector3(4.2, 4, 0.6)
 material = SubResource("StandardMaterial3D_q2sf5")
 
-[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomA" unique_id=965493731]
+[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomA" unique_id=1513439271]
 
-[node name="Spawn0" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1968531524]
+[node name="Spawn0" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1985324242]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, -6)
 
-[node name="Spawn1" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=2063409744]
+[node name="Spawn1" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=456165149]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -6)
 
-[node name="Spawn2" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=935058201]
+[node name="Spawn2" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=780970945]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
 
-[node name="Spawn3" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=729179287]
+[node name="Spawn3" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1536248795]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 1)
 
-[node name="Spawn4" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1947857280]
+[node name="Spawn4" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=812415488]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 1)
 
-[node name="Spawn5" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=2092690634]
+[node name="Spawn5" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1224146177]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3)
 
-[node name="RoomB" type="Node3D" parent="Rooms" unique_id=1795441316]
+[node name="RoomB" type="Node3D" parent="Rooms" unique_id=1851390118]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -30)
 script = ExtResource("6_htucp")
 room_name = "Room B"
 waves = Array[ExtResource("7_4cf4i")]([SubResource("Resource_wdrsa"), SubResource("Resource_7jf4w")])
 trigger_size = Vector3(20, 4, 19)
 
-[node name="Doors" type="Node3D" parent="Rooms/RoomB" unique_id=1765655054]
+[node name="Doors" type="Node3D" parent="Rooms/RoomB" unique_id=1480988893]
 
-[node name="Door0" type="CSGBox3D" parent="Rooms/RoomB/Doors" unique_id=818170326]
+[node name="Door0" type="CSGBox3D" parent="Rooms/RoomB/Doors" unique_id=81069082]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 11)
 use_collision = true
 size = Vector3(4.2, 4, 0.6)
 material = SubResource("StandardMaterial3D_yln86")
 
-[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomB" unique_id=1587436439]
+[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomB" unique_id=1375468481]
 
-[node name="Spawn0" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=2073971208]
+[node name="Spawn0" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1396803607]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, -6)
 
-[node name="Spawn1" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=917686292]
+[node name="Spawn1" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1658842673]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -6)
 
-[node name="Spawn2" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1572833440]
+[node name="Spawn2" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=812730592]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
 
-[node name="Spawn3" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1088066071]
+[node name="Spawn3" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=219815990]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 1)
 
-[node name="Spawn4" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=904230553]
+[node name="Spawn4" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1638929362]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 1)
 
-[node name="Spawn5" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=2122037675]
+[node name="Spawn5" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=990799521]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3)
 
-[node name="Gathering" type="Node3D" parent="." unique_id=1009291026]
+[node name="Gathering" type="Node3D" parent="." unique_id=827394052]
 
-[node name="NodeStart" type="StaticBody3D" parent="Gathering" unique_id=1501079038]
+[node name="NodeStart" type="StaticBody3D" parent="Gathering" unique_id=477735184]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0, 13)
 script = ExtResource("15_wra51")
 
-[node name="NodeA1" type="StaticBody3D" parent="Gathering" unique_id=1253557743]
+[node name="NodeA1" type="StaticBody3D" parent="Gathering" unique_id=273773821]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 8.5)
 script = ExtResource("15_wra51")
 color = &"ice"
 
-[node name="NodeA2" type="StaticBody3D" parent="Gathering" unique_id=1129447623]
+[node name="NodeA2" type="StaticBody3D" parent="Gathering" unique_id=2141173850]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0, -8.5)
 script = ExtResource("15_wra51")
 color = &"lightning"
 
-[node name="NodeB1" type="StaticBody3D" parent="Gathering" unique_id=1773946229]
+[node name="NodeB1" type="StaticBody3D" parent="Gathering" unique_id=927429271]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, -38.5)
 script = ExtResource("15_wra51")
 color = &"dark"
 
-[node name="NodeB2" type="StaticBody3D" parent="Gathering" unique_id=1299423357]
+[node name="NodeB2" type="StaticBody3D" parent="Gathering" unique_id=721027618]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0, -21.5)
 script = ExtResource("15_wra51")
 color = &"raw"
 
-[node name="TeleporterStart" type="Area3D" parent="Gathering" unique_id=1934963859]
+[node name="TeleporterStart" type="Area3D" parent="Gathering" unique_id=1120871251]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 16.5)
 script = ExtResource("16_ua730")
 
-[node name="TeleporterB" type="Area3D" parent="Gathering" unique_id=583761577]
+[node name="TeleporterB" type="Area3D" parent="Gathering" unique_id=86475323]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -24)
 script = ExtResource("16_ua730")
+
+[node name="TeleporterExit" type="Area3D" parent="Gathering" unique_id=1553758291]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -37)
+script = ExtResource("16_ua730")
+destination = "res://scenes/main.tscn"
+destination_name = "Back to the gym"
+requires_rooms_cleared = true

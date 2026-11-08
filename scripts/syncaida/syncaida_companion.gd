@@ -55,6 +55,16 @@ func pair(new_data: SyncAIDaData) -> void:
 	_refresh_look()
 
 
+## Debug: resets the paired SyncAIDa to its base and re-applies its bonus.
+func reset_to_base() -> void:
+	if data == null:
+		return
+	data.reset_to_base()
+	apply_stats()
+	_shown_stage = -1
+	_refresh_look()
+
+
 ## Moves the stat bonus to the current data's values.
 func apply_stats() -> void:
 	var target := data.bonuses() if data else {&"def": 0.0, &"str": 0.0, &"dex": 0.0, &"sol": 0.0}

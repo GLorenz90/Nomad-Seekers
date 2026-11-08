@@ -78,6 +78,8 @@ const FEEDS := {
 @export var gauge := 0.0
 ## Form at the last check from level 50 on (re-checked every 5 levels).
 @export var last_form_level := 0
+## Which starter it began as (STARTERS index), -1 if none. Debug resets use it.
+@export var starter_index := -1
 
 
 static func create(name: String) -> SyncAIDaData:
@@ -92,7 +94,28 @@ static func starter(index: int) -> SyncAIDaData:
 	var spec: Array = STARTERS[clampi(index, 0, STARTERS.size() - 1)]
 	var s := create(spec[0])
 	s.stat_xp[spec[1]] = STARTER_LEVEL * XP_PER_LEVEL
+	s.starter_index = clampi(index, 0, STARTERS.size() - 1)
 	return s
+
+
+## Debug (testing only): back to how it started, keeping its name. A starter
+## returns to level 5 in its stat; anything else to level 0.
+func reset_to_base() -> void:
+	var index := starter_index
+	if index < 0:
+		for i in STARTERS.size():
+			if STARTERS[i][0] == display_name:
+				index = i
+	stat_xp = {&"def": 0.0, &"str": 0.0, &"dex": 0.0, &"sol": 0.0}
+	if index >= 0:
+		stat_xp[STARTERS[index][1]] = STARTER_LEVEL * XP_PER_LEVEL
+		starter_index = index
+	form = "Mote"
+	stage = 0
+	bursts = []
+	active_burst = 0
+	gauge = 0.0
+	last_form_level = 0
 
 
 static func starter_text(index: int) -> String:

@@ -64,6 +64,7 @@ var _sync_stat_rows := {}
 var _sync_feeds: GridContainer
 var _sync_burst: OptionButton
 var _sync_message: Label
+var _character_message: Label
 ## Debug: feeding doesn't use up items (for trying evolutions quickly).
 var free_feeding := false
 var _free_feeding_toggle: CheckButton
@@ -138,6 +139,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		var step := 1 if event.is_action_pressed("loadout_next") else -1
 		_close_picker()
 		_tabs.current_tab = posmod(_tabs.current_tab + step, _tabs.get_tab_count())
+		get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Loadouts" and not _picker.visible and _clear_input(event) != 0:
+		_clear_focused_slot(_clear_input(event) == 2)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
 		if _picker.visible:
@@ -324,7 +328,7 @@ func _build() -> void:
 	left.custom_minimum_size.x = 780.0
 	columns.add_child(left)
 	left.add_child(_label("Loadouts", 26))
-	left.add_child(_label("Pick a hand, then a weapon.  A/Enter: select   B/Esc: back   LB/RB: tabs   Start/Tab: close and save", 14))
+	left.add_child(_label("Pick a hand, then a weapon.  A/Enter: select   B/Esc: back   LB/RB: tabs   Start/Tab: close and save\nX/Delete: unequip that hand   Y/Shift+Delete: clear the whole loadout", 14))
 
 	var grid := GridContainer.new()
 	grid.columns = 4
@@ -349,6 +353,11 @@ func _build() -> void:
 		grid.add_child(status)
 		_slot_status.append(status)
 
+	var clear_all := Button.new()
+	clear_all.text = "Clear all loadouts (testing)"
+	clear_all.pressed.connect(_clear_all_loadouts)
+	clear_all.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	left.add_child(clear_all)
 	_augment = CheckButton.new()
 	_augment.text = "Double-Heavy augment (two Heavy one-handed items)"
 	_augment.toggled.connect(func(on: bool):
@@ -507,6 +516,14 @@ func _build_character_tab() -> void:
 	_job.focus_mode = Control.FOCUS_NONE
 	_character_info = _label("", 18)
 	box.add_child(_character_info)
+	var reset := Button.new()
+	reset.text = "Reset character to level 1 (testing)"
+	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	reset.pressed.connect(_reset_character)
+	box.add_child(reset)
+	_character_message = _label("", 15)
+	_character_message.modulate = Color(1.0, 0.85, 0.5)
+	box.add_child(_character_message)
 	box.add_child(_label("The emblem comes from name, race, gender and job (like PSO section IDs). It picks the weapon\nfamilies and rares your drops favor. The job is set at character creation and can't change\n(Levels tab has a debug switch). Jobs lock weapons: S = Striker, R = Ranger, I = Invoker.", 14))
 
 
@@ -661,6 +678,10 @@ func _build_syncaida_tab() -> void:
 		_sync_feeds.add_child(b)
 		var effect := _label(_feed_text(item), 13)
 		_sync_feeds.add_child(effect)
+	var reset := Button.new()
+	reset.text = "Reset to base stats (testing)"
+	reset.pressed.connect(_reset_syncaida)
+	right.add_child(reset)
 	_free_feeding_toggle = CheckButton.new()
 	_free_feeding_toggle.text = "Free feeding (debug)"
 	_free_feeding_toggle.toggled.connect(_set_free_feeding)
@@ -906,7 +927,7 @@ func _build_levels_tab() -> void:
 			hud.set_debug_visible(on))
 	right.add_child(_debug_toggle)
 	_hitbox_toggle = CheckButton.new()
-	_hitbox_toggle.text = "Show melee hitboxes"
+	_hitbox_toggle.text = "Show hitboxes (yours and enemies')"
 	_hitbox_toggle.toggled.connect(func(on: bool):
 		if combat:
 			combat.show_hitboxes = on)
@@ -989,3 +1010,76 @@ func _build_controls_tab() -> void:
 	var help := _label(DebugHud.HELP, 18)
 	help.name = "Controls"
 	_tabs.add_child(help)
+
+
+# --- Testing helpers (Loadouts, SyncAIDa and Character tabs) ------------------
+
+func _tab_name() -> String:
+	var page := _tabs.get_current_tab_control()
+	return String(page.name) if page else ""
+
+
+## 1 = clear the focused hand (gamepad X / Delete), 2 = clear the whole
+## loadout (gamepad Y / Shift+Delete), 0 = neither.
+func _clear_input(event: InputEvent) -> int:
+	var pad := event as InputEventJoypadButton
+	if pad and pad.pressed:
+		if pad.button_index == JOY_BUTTON_X:
+			return 1
+		if pad.button_index == JOY_BUTTON_Y:
+			return 2
+	var key := event as InputEventKey
+	if key and key.pressed and not key.echo and key.keycode == KEY_DELETE:
+		return 2 if key.shift_pressed else 1
+	return 0
+
+
+func _clear_focused_slot(whole: bool) -> void:
+	var focus := get_viewport().gui_get_focus_owner()
+	for i in _slot_buttons.size():
+		for hand in 2:
+			if _slot_buttons[i][hand] != focus:
+				continue
+			var l := _set.loadouts[i]
+			if whole:
+				l.left = null
+				l.right = null
+				_message.text = "Loadout %d cleared." % (i + 1)
+			else:
+				var two := l.two_handed_weapon()
+				if two:
+					l.left = null
+					l.right = null  # a two-handed weapon fills both hands
+				else:
+					l.set_hand(hand, null)
+				_message.text = "Loadout %d, %s hand unequipped." % [i + 1, "left" if hand == 0 else "right"]
+			_refresh()
+			return
+
+
+func _clear_all_loadouts() -> void:
+	for l in _set.loadouts:
+		l.left = null
+		l.right = null
+	_refresh()
+	_message.text = "All loadouts cleared (equip something before closing to fight)."
+
+
+func _reset_syncaida() -> void:
+	var seeker := _player()
+	if seeker == null or seeker.syncaida.data == null:
+		return
+	seeker.syncaida.reset_to_base()
+	_sync_message.text = "%s reset to its base stats." % seeker.syncaida.data.display_name
+	_refresh_syncaida()
+
+
+func _reset_character() -> void:
+	var seeker := _player()
+	if seeker == null or seeker.save == null:
+		return
+	seeker.save.character.experience = 0
+	seeker.health.restore_full()
+	combat.lp = combat.stats.max_lp
+	_refresh_character()
+	_character_message.text = "Back to level 1 (EXP 0). Character levels aren't in yet, so EXP is all this resets for now."

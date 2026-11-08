@@ -103,19 +103,22 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
   - Firing a burst gives a moment of invulnerability.
 - **Free feeding (debug)** in the SyncAIDa tab feeds without using items, so you can try evolutions quickly.
 
+## Travel
+The gym (`scenes/main.tscn`) has a teleporter to the arena. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to the gym. Every trip loads the arena fresh. Teleporters save first and bank carried Lumidium.
+
 ## Menu (Start / Tab)
 Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goes back (closes the weapon picker, then the menu), **LB / RB** switch tabs, Start closes.
 
 | Tab | What's there |
 |---|---|
-| Loadouts | 8 loadouts, weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy augment |
+| Loadouts | 8 loadouts (X / Delete unequips the highlighted hand, Y / Shift+Delete clears that loadout, plus a Clear all button for testing), weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy augment |
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
-| Character | Name (New name button for gamepads), race, gender, emblem and drop pool. The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
-| SyncAIDa | Starter choice, pairing, feeding, active Sync Burst |
+| Character | Name (New name button for gamepads), race, gender, emblem and drop pool, Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
+| SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
 | Levels | Prototype only: level select, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |
 
-The debug readout is off by default. Select / F3 or the Levels tab turns it on.
+Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Levels tab turns it on.
 
 ## Controls
 | Action | Gamepad | Keyboard / mouse |

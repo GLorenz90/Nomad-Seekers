@@ -101,6 +101,15 @@ func _initialize() -> void:
 		pad.set_script(load("res://scripts/world/teleporter.gd"))
 		pad.position = spec[1]
 		_add(gather, pad)
+	# The end of the arena: back to the gym once every room is cleared.
+	var exit := Area3D.new()
+	exit.name = "TeleporterExit"
+	exit.set_script(load("res://scripts/world/teleporter.gd"))
+	exit.set("destination", "res://scenes/main.tscn")
+	exit.set("destination_name", "Back to the gym")
+	exit.set("requires_rooms_cleared", true)
+	exit.position = Vector3(0, 0, -37)
+	_add(gather, exit)
 
 	var packed := PackedScene.new()
 	var err := packed.pack(_root)

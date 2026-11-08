@@ -101,6 +101,22 @@ func _run() -> void:
 	_check("d-pad + A equips a weapon (%s)" % picked, right != null and picked.begins_with(right.display_name)
 		and not _menu._picker.visible)
 
+	# Testing helpers: X unequips the focused hand, Y the whole loadout.
+	_menu._set.loadouts[0].left = load("res://data/weapons/sword.tres")
+	_menu._refresh()
+	_menu._slot_buttons[0][1].grab_focus()
+	await _pad(JOY_BUTTON_X)
+	_check("X unequips the focused hand only", _menu._set.loadouts[0].right == null and _menu._set.loadouts[0].left != null)
+	await _pad(JOY_BUTTON_Y)
+	_check("Y clears the whole loadout", _menu._set.loadouts[0].is_empty())
+	_menu._clear_all_loadouts()
+	var all_empty := true
+	for l in _menu._set.loadouts:
+		all_empty = all_empty and l.is_empty()
+	_check("Clear all loadouts empties every slot", all_empty)
+	_menu._set = CombatController.make_default_loadouts()
+	_menu._refresh()
+
 	# Every other tab gets focus.
 	for name in ["Inventory", "Character", "SyncAIDa", "Levels"]:
 		while _tab() != name:
@@ -127,6 +143,23 @@ func _run() -> void:
 	await _frames(3)
 	_check("d-pad + A picks from it (race %s)" % CharacterData.Race.keys()[_player.save.character.race],
 		_player.save.character.race != CharacterData.Race.HUMAN and not popup.visible)
+
+	# Character reset (testing).
+	_player.save.character.experience = 750
+	_menu._reset_character()
+	_check("Reset character to level 1 sets EXP back to 0", _player.save.character.experience == 0)
+
+	# SyncAIDa reset (testing): Kindle back to STR Lv 5 and nothing else.
+	var kindle := _player.syncaida.data
+	for i in 40:
+		_player.syncaida.feed(&"ice", true)
+	var str_before := _player.combat.stats.strength
+	var dex_before := _player.combat.stats.dexterity
+	_menu._reset_syncaida()
+	_check("Reset to base stats: STR Lv 5 only, form Mote, no bursts (Lv %d %s)" % [kindle.level(), kindle.form],
+		kindle.level() == 5 and kindle.stat_level(&"str") == 5 and kindle.form == "Mote" and kindle.bursts.is_empty())
+	_check("and the Seeker loses the bonus it had gained (DEX %+.0f, STR %+.0f)" % [_player.combat.stats.dexterity - dex_before, _player.combat.stats.strength - str_before],
+		_player.combat.stats.dexterity < dex_before)
 
 	# Levels tab tools.
 	while _tab() != "Levels":
@@ -160,6 +193,35 @@ func _run() -> void:
 	await _frames(20)
 	_check("level select loads the test room (%s)" % current_scene.scene_file_path,
 		current_scene != null and current_scene.scene_file_path == "res://scenes/main.tscn" and not paused)
+
+	# The gym's teleporter goes to the arena, which loads fresh.
+	var gym := current_scene
+	var gym_player: Player = gym.get_node("Player")
+	gym_player.autosave = false
+	var pad := gym.get_node("ArenaTeleporter") as Teleporter
+	_check("the gym has a teleporter to the arena", pad != null and pad.destination == "res://scenes/arena.tscn")
+	gym_player.global_position = pad.global_position + Vector3.UP * 0.1
+	await _frames(30)
+	_check("standing on it loads the arena (%s)" % current_scene.scene_file_path,
+		current_scene.scene_file_path == "res://scenes/arena.tscn")
+	var arena := current_scene
+	var arena_player: Player = arena.get_node("Player")
+	arena_player.autosave = false
+	var exit := arena.get_node("Gathering/TeleporterExit") as Teleporter
+	_check("the arena loads fresh (rooms waiting)",
+		(arena.get_node("Rooms/RoomA") as WaveRoom).state == WaveRoom.RoomState.WAITING)
+	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
+	await _frames(20)
+	_check("the arena's exit stays shut until every room is cleared", current_scene == arena and not exit.is_active())
+	arena_player.global_position = Vector3(0, 0.1, 20)
+	await _frames(10)
+	for room in ["Rooms/RoomA", "Rooms/RoomB"]:
+		(arena.get_node(room) as WaveRoom).state = WaveRoom.RoomState.CLEARED
+	await _frames(5)
+	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
+	await _frames(30)
+	_check("once cleared it returns to the gym (%s)" % current_scene.scene_file_path,
+		current_scene.scene_file_path == "res://scenes/main.tscn")
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)

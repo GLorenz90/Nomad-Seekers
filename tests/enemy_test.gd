@@ -104,10 +104,18 @@ func _run() -> void:
 	hound.data.evasion = 0.0
 	var d0 := hound.global_position.distance_to(_player.global_position)
 	hp = _player.health.hp
+	var area_during_windup := false
+	var area_on_strike := false
 	for i in 240:
 		await physics_frame
+		if hound.state == Enemy.State.WINDUP and hound.hit_area.visible:
+			area_during_windup = true
 		if _player.health.hp < hp:
+			await process_frame
+			area_on_strike = hound.hit_area.visible
 			break
+	_check("its hit area shows during the windup and flashes on the strike",
+		hound.hit_area != null and area_during_windup and area_on_strike)
 	_check("Grub Hound closes in (%.1f m -> %.1f m) and hits for its damage (took %.0f)" % [
 		d0, hound.global_position.distance_to(_player.global_position), hp - _player.health.hp],
 		hound.global_position.distance_to(_player.global_position) < d0 and is_equal_approx(hp - _player.health.hp, 18.0))
