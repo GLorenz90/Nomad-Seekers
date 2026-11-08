@@ -10,8 +10,8 @@ const SAVE_PATH := "user://loadouts.tres"
 ## Placeholder for the armor augment (North Star §5.1). Armor arrives later;
 ## for now the loadout menu toggles it.
 @export var double_heavy_augment := false
-## Options: when true, hand buttons do twin attacks by default and holding LT
-## attacks with one hand.
+## No longer used: powerstanced pairs always twin-attack now. Kept so loadouts
+## saved by the first Part 3 build still load.
 @export var powerstance_default := false
 
 

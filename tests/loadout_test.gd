@@ -82,12 +82,26 @@ func _run() -> void:
 	# --- LT mode per loadout ---
 	var expected := {
 		SWORD_PISTOL: Loadout.LTMode.ARMS_UP, SHIELD_SWORD: Loadout.LTMode.SHIELD,
-		TWIN_SWORDS: Loadout.LTMode.POWERSTANCE, TWIN_PISTOLS: Loadout.LTMode.POWERSTANCE,
+		TWIN_SWORDS: Loadout.LTMode.ARMS_UP, TWIN_PISTOLS: Loadout.LTMode.ARMS_UP,
 		GREAT_SWORD: Loadout.LTMode.TWO_HAND}
 	var modes_ok := true
 	for index in expected:
 		modes_ok = modes_ok and _combat.loadout_set.loadouts[index].get_lt_mode() == expected[index]
-	_check("LT modes: arms-up, shield, powerstance (different swords), twin pistols, 2h", modes_ok)
+	_check("LT blocks with every loadout: arms-up, shield, pairs (arms-up), 2h", modes_ok)
+	var sets := _combat.loadout_set.loadouts
+	_check("same-type pairs are powerstanced, mixed pairs aren't",
+		sets[TWIN_SWORDS].is_powerstance() and sets[TWIN_PISTOLS].is_powerstance()
+		and not sets[SWORD_PISTOL].is_powerstance() and not sets[SHIELD_SWORD].is_powerstance())
+
+	# --- Two-handed weapons are one item ---
+	_combat.select_loadout(GREAT_SWORD)
+	var meshes := 0
+	for m in _combat._meshes:
+		if m.mesh != null:
+			meshes += 1
+	_check("Great Sword shows as one weapon, not two (%d meshes)" % meshes, meshes == 1)
+	_check("both buttons use the one Great Sword",
+		_combat.current_weapon(0) == _combat.current_weapon(1) and _combat.current_weapon(0).display_name == "Great Sword")
 
 	# --- Blocking (hits from the Swinger, 20 damage) ---
 	_check("no block takes full damage (%.0f)" % await _hit_after(SWORD_PISTOL, false, 0), is_equal_approx(_last_taken, 20.0))
@@ -148,54 +162,69 @@ func _run() -> void:
 	shooter.attack_mode = TargetDummy.AttackMode.NONE
 	_check("shield blocks a real Shooter bolt (took %.0f)" % (hp - _player.health.hp), is_equal_approx(hp - _player.health.hp, 8.0))
 
-	# --- Powerstance ---
+	# --- Powerstance: a same-type pair always attacks with both hands ---
 	var sword_hit := 20.0 * 1.3
 	_combat.select_loadout(TWIN_SWORDS)
 	await _reset(Vector3(0, 0.1, -5.5))
 	await _tap("hand_x")
 	await _idle()
-	_check("without LT, one sword swings (%s)" % [_hits], _hits.size() == 1)
-	await _reset(Vector3(0, 0.1, -5.5))
-	Input.action_press("block")
-	await _tap("hand_x")
-	await _idle()
-	Input.action_release("block")
-	_check("LT + X: both swords hit, 75%% each (%s)" % [_hits], _hits.size() == 2
+	_check("X with twin swords: both hit, 75%% each (%s)" % [_hits], _hits.size() == 2
 		and is_equal_approx(_hits[0], sword_hit * 0.75) and is_equal_approx(_hits[1], sword_hit * 0.75))
 	await _reset(Vector3(0, 0.1, -5.5))
-	Input.action_press("block")
+	await _tap("hand_y")
+	await _idle()
+	_check("Y with twin swords also hits with both (%d hits)" % _hits.size(), _hits.size() == 2)
+	await _reset(Vector3(0, 0.1, -5.5))
 	await _tap("hand_x")
 	for i in 2:
 		await _until_window()
-		await _tap("hand_y")
+		await _tap("hand_y" if i == 0 else "hand_x")
 	await _idle()
-	Input.action_release("block")
-	_check("twin attacks chain their own 3 steps (%s)" % [_started], _started == ["Slash", "Return Slash", "Cleave"] and "Twin finisher!" in _feedback)
+	_check("twin attacks chain their own 3 steps on either button (%s)" % [_started],
+		_started == ["Slash", "Return Slash", "Cleave"] and "Twin finisher!" in _feedback)
+
+	# LT still blocks with a powerstanced pair.
+	await _hit_after(TWIN_SWORDS, true, 30)
+	_check("LT blocks with twin swords instead of twin-attacking (took %.0f)" % _last_taken, is_equal_approx(_last_taken, 15.0))
+
+	# RT + a hand: that hand's special, the other hand swings normally.
+	var sword: WeaponData = _combat.current_weapon(CombatController.Hand.LEFT)
+	var special := AttackData.new()
+	special.display_name = "Test Special"
+	special.damage_mult = 2.0
+	special.lp_cost = 5.0
+	special.duration = 0.8
+	special.active_start = 0.3
+	special.active_end = 0.4
+	sword.special_attack = special
+	await _reset(Vector3(0, 0.1, -5.5))
+	var lp_start := _combat.lp
+	Input.action_press("shift")
+	await _tap("hand_x")
+	Input.action_release("shift")
+	var spent := lp_start - _combat.lp  # before LP starts regenerating
+	await _idle()
+	_check("RT + X uses the X-hand weapon's special with both swinging (%s, %s, %.0f LP)" % [_started, _hits, spent],
+		_started == ["Test Special"] and _hits.size() == 2
+		and is_equal_approx(_hits.max(), sword_hit * 2.0 * 0.75) and is_equal_approx(_hits.min(), sword_hit * 0.75)
+		and spent >= 5.0)
+	await _reset(Vector3(0, 0.1, -5.5))
+	Input.action_press("shift")
+	await _tap("hand_y")
+	Input.action_release("shift")
+	await _idle()
+	_check("RT + Y uses the Y-hand weapon's special; Frost Sword has none, so a normal twin (%s)" % [_started],
+		_started == ["Slash"] and _hits.size() == 2)
+	sword.special_attack = null
 
 	_combat.select_loadout(TWIN_PISTOLS)
 	await _reset(Vector3(0, 0.1, -5.5))
 	var lp_before := _combat.lp
-	Input.action_press("block")
 	await _tap("hand_y")
 	await _frames(10)
 	var lp_spent := lp_before - _combat.lp
 	await _idle()
-	Input.action_release("block")
 	_check("twin pistols fire both guns (%d hits, %.0f LP)" % [_hits.size(), lp_spent], _hits.size() == 2 and is_equal_approx(lp_spent, 2.0))
-
-	_combat.loadout_set.powerstance_default = true
-	_combat.select_loadout(TWIN_SWORDS)
-	await _reset(Vector3(0, 0.1, -5.5))
-	await _tap("hand_x")
-	await _idle()
-	var default_twin := _hits.size()
-	await _reset(Vector3(0, 0.1, -5.5))
-	Input.action_press("block")
-	await _tap("hand_x")
-	await _idle()
-	Input.action_release("block")
-	_check("'Powerstance by default' swaps LT (%d hits default, %d with LT)" % [default_twin, _hits.size()], default_twin == 2 and _hits.size() == 1)
-	_combat.loadout_set.powerstance_default = false
 
 	# --- Menu ---
 	var press := InputEventAction.new()

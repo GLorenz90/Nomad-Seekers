@@ -8,9 +8,11 @@ extends Resource
 ##   Heavy one-handed items (any pair, including a Heavy Shield with an Axe).
 ##
 ## What LT does depends on what's equipped (North Star §4.1); see get_lt_mode().
+## A matching pair (same weapon_type, not shields) is powerstanced: every attack
+## uses both hands. LT still blocks (arms-up) with a pair.
 
 enum Hand { LEFT, RIGHT }
-enum LTMode { NONE, SHIELD, TWO_HAND, POWERSTANCE, ARMS_UP }
+enum LTMode { NONE, SHIELD, TWO_HAND, ARMS_UP }
 
 ## Arms-up block: "slightly weaker than a 2h block".
 const ARMS_UP_BLOCK := 0.25
@@ -70,9 +72,13 @@ func get_lt_mode() -> LTMode:
 		return LTMode.SHIELD
 	if two_handed_weapon():
 		return LTMode.TWO_HAND
-	if left and right and left.weapon_type != &"" and left.weapon_type == right.weapon_type:
-		return LTMode.POWERSTANCE
 	return LTMode.ARMS_UP
+
+
+## Two one-handed weapons of the same type (Sword + Frost Sword): always twin.
+func is_powerstance() -> bool:
+	return left != null and right != null and not left.is_shield \
+		and left.weapon_type != &"" and left.weapon_type == right.weapon_type
 
 
 func block_strength() -> float:
@@ -93,5 +99,6 @@ func block_strength() -> float:
 func describe() -> String:
 	var two_hand := two_handed_weapon()
 	if two_hand:
-		return two_hand.display_name + " (2h)"
-	return "%s / %s" % [left.display_name if left else "-", right.display_name if right else "-"]
+		return two_hand.display_name + " (both hands)"
+	var text := "%s / %s" % [left.display_name if left else "-", right.display_name if right else "-"]
+	return text + (" (powerstance)" if is_powerstance() else "")

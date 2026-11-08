@@ -10,7 +10,8 @@ Lock on: R3 / Q / middle mouse    Switch target: flick right stick
 Attack: X / left click, Y / right click (tap = Normal, hold = Hard)
 Chain: press again inside the timing window (too early breaks the combo)
 Second spell: hold RT / E while casting    Loadouts: LB/RB / Z,C
-Block / powerstance: LT / F    Loadout menu: Start / Tab
+Same-type pair (e.g. Sword + Frost Sword): every attack uses both hands
+Block: LT / F    Special: hold RT / E + hand    Loadout menu: Start / Tab
 Click to capture the mouse, Esc to release. F3 hides this panel."""
 
 var player: Player
@@ -59,9 +60,13 @@ func _process(_delta: float) -> void:
 	_pips.text = "Chain  " + pips
 	var x_hand := CombatController.Hand.LEFT if combat.x_is_left else CombatController.Hand.RIGHT
 	var y_hand := CombatController.Hand.RIGHT if combat.x_is_left else CombatController.Hand.LEFT
-	_hands.text = "%d  X: %s    Y: %s" % [combat.loadout_index + 1, _weapon_label(x_hand), _weapon_label(y_hand)]
+	var two_hand := combat.get_loadout().two_handed_weapon()
+	if two_hand:
+		_hands.text = "%d  X / Y: %s (both hands)" % [combat.loadout_index + 1, two_hand.display_name]
+	else:
+		_hands.text = "%d  X: %s    Y: %s" % [combat.loadout_index + 1, _weapon_label(x_hand), _weapon_label(y_hand)]
 	_lt.text = combat.get_lt_text()
-	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() or combat.is_powerstance_active() else Color.WHITE
+	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE
 	if _panel.visible:
 		_debug.text = "%s\n%s\n%s\nFPS: %d" % [
 			player.get_debug_text(), camera_rig.get_debug_text(),

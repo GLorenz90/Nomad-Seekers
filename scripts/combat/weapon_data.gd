@@ -37,13 +37,19 @@ enum Weight { LIGHT, HEAVY }
 @export var spells: Array[SpellData] = []
 ## Sustained weapons only. Its duration is the wind-down after release.
 @export var sustained_attack: AttackData
+## RT (Shift) + this hand's button uses this instead of the normal step
+## (North Star §5.2 special tags, filled in by Part 5). Null = no special, so
+## RT + the button is just a normal attack. There is no Hard special.
+@export var special_attack: AttackData
 
 @export_group("Placeholder visual")
 @export var mesh_size := Vector3(0.08, 0.08, 1.0)
 @export var mesh_color := Color(0.8, 0.8, 0.85)
 
 
-func get_attack(step: int, hard: bool, spell_slot: int = 0) -> AttackData:
+func get_attack(step: int, hard: bool, spell_slot: int = 0, special: bool = false) -> AttackData:
+	if special and special_attack and not casting:
+		return special_attack
 	if casting:
 		if spells.is_empty():
 			return null

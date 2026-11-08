@@ -23,7 +23,6 @@ var _picker: VBoxContainer
 var _picker_title: Label
 var _message: Label
 var _augment: CheckButton
-var _powerstance: CheckButton
 var _editing := Vector2i(-1, -1)  # (loadout index, hand)
 var _root: Control
 
@@ -134,7 +133,7 @@ func _refresh() -> void:
 			var b: Button = _slot_buttons[i][hand]
 			var w := l.get_hand(hand)
 			if w == null and two_hand:
-				b.text = "(%s)" % two_hand.display_name
+				b.text = "(both hands)"
 			else:
 				b.text = _weapon_label(w)
 		var error := l.validate(_set.double_heavy_augment)
@@ -149,17 +148,16 @@ func _refresh() -> void:
 			status.text = _lt_short(l)
 			status.modulate = Color(0.6, 1.0, 0.6)
 	_augment.set_pressed_no_signal(_set.double_heavy_augment)
-	_powerstance.set_pressed_no_signal(_set.powerstance_default)
 
 
 func _lt_short(l: Loadout) -> String:
+	if l.is_powerstance():
+		return "powerstance, LT %d%%" % roundi(l.block_strength() * 100.0)
 	match l.get_lt_mode():
 		Loadout.LTMode.SHIELD:
 			return "LT shield %d%%" % roundi(l.block_strength() * 100.0)
 		Loadout.LTMode.TWO_HAND:
 			return "LT 2h block %d%%" % roundi(l.block_strength() * 100.0)
-		Loadout.LTMode.POWERSTANCE:
-			return "LT powerstance"
 		Loadout.LTMode.ARMS_UP:
 			return "LT arms-up %d%%" % roundi(l.block_strength() * 100.0)
 	return ""
@@ -251,7 +249,7 @@ func _build() -> void:
 			pair.append(b)
 		_slot_buttons.append(pair)
 		var status := _label("", 14)
-		status.custom_minimum_size.x = 150.0
+		status.custom_minimum_size.x = 170.0
 		grid.add_child(status)
 		_slot_status.append(status)
 
@@ -261,12 +259,7 @@ func _build() -> void:
 		_set.double_heavy_augment = on
 		_refresh())
 	left.add_child(_augment)
-	_powerstance = CheckButton.new()
-	_powerstance.text = "Powerstance by default (hold LT for single-hand attacks)"
-	_powerstance.toggled.connect(func(on: bool):
-		_set.powerstance_default = on
-		_refresh())
-	left.add_child(_powerstance)
+	left.add_child(_label("A pair of the same weapon type is powerstanced: every attack uses both. RT + a hand uses that hand's special.", 13))
 	_message = _label("", 16)
 	_message.modulate = Color(1.0, 0.85, 0.5)
 	left.add_child(_message)

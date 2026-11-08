@@ -4,8 +4,9 @@ extends Node3D
 ## LP and attack execution (North Star §4, §5).
 ##
 ## Input: each face button is one hand (x_is_left picks which). Tap = Normal
-## attack (fires on release), hold past hold_threshold = Hard attack. On a casting
-## item, holding Shift (RT) casts the item's second spell.
+## attack (fires on release), hold past hold_threshold = Hard attack. Holding
+## Shift (RT) uses that hand's special (WeaponData.special_attack; none exist
+## until Part 5, so it's a normal attack) or, on a casting item, its second spell.
 ##
 ## Combo rules:
 ## - A chain has 3 steps. Any attack from either hand can fill the next step.
@@ -29,10 +30,14 @@ extends Node3D
 ##   when the block starts. The shield's hand button deflects (light, opens a
 ##   parry) or shoves (heavy, knocks back).
 ## - Two-handed weapon: weak block (the weapon's block_strength).
-## - Matching pair (same weapon_type): hold LT for twin attacks with both hands.
-##   Casting items cast both spells at once. powerstance_default swaps this.
-## - Two different weapons: arms-up block (Loadout.ARMS_UP_BLOCK).
+## - Anything else: arms-up block (Loadout.ARMS_UP_BLOCK).
 ## Blocks only stop hits from the front (block_arc_deg).
+##
+## Powerstance: a matching pair (same weapon_type, e.g. Sword + Frost Sword)
+## always attacks with both hands, each at TWIN_DAMAGE_SCALE. RT + a hand's
+## button uses the special of the weapon in THAT hand while the other hand swings
+## normally. Twin casting items cast both spells at once (RT switches the
+## pressed hand's spell).
 ##
 ## Must be a direct child of the Player.
 
@@ -243,10 +248,9 @@ func get_lt_mode() -> Loadout.LTMode:
 	return l.get_lt_mode() if l else Loadout.LTMode.NONE
 
 
-func is_powerstance_active() -> bool:
-	if get_lt_mode() != Loadout.LTMode.POWERSTANCE:
-		return false
-	return Input.is_action_pressed("block") != loadout_set.powerstance_default
+func is_powerstance() -> bool:
+	var l := get_loadout()
+	return l != null and l.is_powerstance()
 
 
 # --- Public state ------------------------------------------------------------
@@ -339,23 +343,26 @@ func get_lt_text() -> String:
 		Loadout.LTMode.TWO_HAND:
 			return "LT: Two-handed block %d%%" % roundi(l.block_strength() * 100.0)
 		Loadout.LTMode.ARMS_UP:
-			return "LT: Arms-up block %d%%" % roundi(l.block_strength() * 100.0)
-		Loadout.LTMode.POWERSTANCE:
-			if loadout_set.powerstance_default:
-				return "Powerstance (hold LT for single hands)"
-			return "LT: Powerstance twin attacks"
+			var text := "LT: Arms-up block %d%%" % roundi(l.block_strength() * 100.0)
+			if l.is_powerstance():
+				text += "   Powerstance: both hands attack"
+			return text
 	return "LT: -"
 
 
 func get_debug_text() -> String:
 	var lines := PackedStringArray()
 	lines.append("Loadout %d (LB/RB): %s" % [loadout_index + 1, get_loadout().describe()])
-	for hand in [Hand.LEFT, Hand.RIGHT]:
-		var w := current_weapon(hand)
-		var label := w.display_name if w else "-"
-		if w and w.casting:
-			label += " [%s / Shift: %s]" % [w.get_spell_name(0), w.get_spell_name(1)]
-		lines.append("%s (%s hand): %s" % [button_for(hand), "left" if hand == Hand.LEFT else "right", label])
+	var two_hand := get_loadout().two_handed_weapon()
+	if two_hand:
+		lines.append("X / Y (both hands): %s" % two_hand.display_name)
+	else:
+		for hand in [Hand.LEFT, Hand.RIGHT]:
+			var w := current_weapon(hand)
+			var label := w.display_name if w else "-"
+			if w and w.casting:
+				label += " [%s / Shift: %s]" % [w.get_spell_name(0), w.get_spell_name(1)]
+			lines.append("%s (%s hand): %s" % [button_for(hand), "left" if hand == Hand.LEFT else "right", label])
 	lines.append(get_lt_text() + ("  [BLOCKING]" if _blocking else ""))
 	if _current:
 		lines.append("Attack: %s%s%s  %.2fs  window %.2f-%.2f" % [
@@ -426,9 +433,10 @@ func _request_attack(hand: int, hard: bool) -> void:
 	var weapon := current_weapon(hand)
 	if weapon == null:
 		return
-	var twin := is_powerstance_active() and not weapon.is_shield
+	var twin := is_powerstance()
 	var standalone := weapon.no_combo or weapon.casting or (hard and weapon.sustained)
-	var slot := 1 if Input.is_action_pressed("shift") else 0
+	var special := Input.is_action_pressed("shift")
+	var slot := 1 if special else 0
 
 	if _current:
 		var cur := _current
@@ -441,15 +449,16 @@ func _request_attack(hand: int, hard: bool) -> void:
 		if cur.elapsed > cur.attack.window_close or chain_step >= MAX_CHAIN:
 			return
 		_resolve_pending_hit(cur)
-		_begin(hand, weapon, hard, slot, not standalone, twin)
+		_begin(hand, weapon, hard, slot, not standalone, twin, special)
 		return
 
 	var continuing := not standalone and not _chain_locked and chain_step > 0 \
 		and chain_step < MAX_CHAIN and _time <= _chain_expire
-	_begin(hand, weapon, hard, slot, continuing, twin)
+	_begin(hand, weapon, hard, slot, continuing, twin, special)
 
 
-func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bool, twin: bool) -> void:
+func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bool,
+		twin: bool, special: bool = false) -> void:
 	var streak_id := TWIN if twin else hand
 	var next_step := chain_step + 1 if continuing else 1
 	var next_streak := 1
@@ -462,7 +471,8 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 		next_step = 0
 		next_streak = 1
 
-	var attack := weapon.get_attack(next_streak, hard, slot)
+	# The pressed hand may use its special; the other twin hand swings normally.
+	var attack := weapon.get_attack(next_streak, hard, slot, special)
 	if attack == null:
 		return
 	var other_weapon: WeaponData = null
@@ -470,7 +480,7 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 	var cost := attack.lp_cost
 	if twin:
 		other_weapon = current_weapon(1 - hand)
-		other_attack = other_weapon.get_attack(next_streak, hard, slot)
+		other_attack = other_weapon.get_attack(next_streak, hard, 0, false)
 		if other_attack:
 			cost += other_attack.lp_cost
 	if lp < cost:
@@ -502,7 +512,7 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 	_chain_expire = 0.0
 	if attack.opens_parry > 0.0:
 		_parry_until = _time + attack.opens_parry
-	_animate(hand, attack, sustained)
+	_animate(_holding_hand(hand), attack, sustained)
 	if a.twin:
 		_animate(1 - hand, other_attack, false)
 	if chain_step == MAX_CHAIN and _weapon_streak == MAX_CHAIN:
@@ -556,7 +566,7 @@ func _update_sustained(cur: ActiveAttack, delta: float) -> void:
 	if not cur.releasing:
 		cur.releasing = true
 		cur.release_timer = a.duration
-		_return_to_rest(cur.hand)
+		_return_to_rest(_holding_hand(cur.hand))
 	cur.release_timer -= delta
 	if cur.release_timer <= 0.0:
 		chain_step = 0
@@ -684,7 +694,7 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
 		var attack: AttackData = strike[1]
 		if not attack.is_projectile:
 			continue
-		var muzzle := _pivots[strike[3]].global_position + cur.direction * 0.6
+		var muzzle := _pivots[_holding_hand(strike[3])].global_position + cur.direction * 0.6
 		var aim := cur.direction
 		if is_instance_valid(cur.target):
 			aim = (CameraRig.get_lock_point(cur.target) - muzzle).normalized()
@@ -714,10 +724,20 @@ func _build_hand(shoulder: Vector3) -> void:
 	_meshes.append(mesh)
 
 
+## The hand that actually holds the weapon used by this button. A two-handed
+## weapon is one item: it lives in one hand's slot and both buttons use it.
+func _holding_hand(hand: int) -> int:
+	var l := get_loadout()
+	if l and l.get_hand(hand) == null and l.get_hand(1 - hand) and l.get_hand(1 - hand).two_handed:
+		return 1 - hand
+	return hand
+
+
 func _equip_visuals() -> void:
 	rotation.y = 0.0
 	for hand in [Hand.LEFT, Hand.RIGHT]:
-		var w := current_weapon(hand)
+		var l := get_loadout()
+		var w: WeaponData = l.get_hand(hand) if l else null
 		var mesh_instance := _meshes[hand]
 		if w == null:
 			mesh_instance.mesh = null
@@ -755,10 +775,13 @@ func _block_pose() -> void:
 	for hand in [Hand.LEFT, Hand.RIGHT]:
 		if _tweens[hand]:
 			_tweens[hand].kill()
-		var w := current_weapon(hand)
+		var l := get_loadout()
+		var w: WeaponData = l.get_hand(hand) if l else null
 		if w == null:
 			continue
-		if w.is_shield:
+		if w.two_handed:
+			_pivots[hand].rotation = Vector3(0.9, 0.0, 0.3)  # held across the body
+		elif w.is_shield:
 			_pivots[hand].rotation = Vector3.ZERO
 			_pivots[hand].position.z = -0.25
 		else:

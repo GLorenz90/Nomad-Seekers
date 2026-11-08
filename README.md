@@ -30,9 +30,11 @@ Built in playable parts (see the Prototype Roadmap in the Claude project). Curre
 - **LT depends on the loadout**:
   - Shield in either hand: full block at the shield's strength (Shield 60%, Heavy Shield 85%). A hit in the first 0.2 s of the block is **parried** (no damage, the attacker is staggered).
   - Two-handed weapon: weak block (Great Sword 35%, Dervish Blades 30%).
-  - Matching pair (same weapon type, even different items like Sword + Frost Sword): **powerstance**. Hold LT and press either hand for twin attacks with both weapons, each at 75% (1.5x total). Twin attacks chain their own 3 steps. Twin casting items cast both spells at full power and full LP. The menu's "Powerstance by default" option swaps this, so LT gives single-hand attacks.
-  - Two different weapons: arms-up block, 25%.
+  - Anything else, including a powerstanced pair: arms-up block, 25%.
   - Blocks and parries only cover the front (140°). Blocking slows you to 40% speed.
+- **Powerstance**: a pair of the same weapon type (even different items, like Sword + Frost Sword) always attacks with both weapons, each at 75% (1.5x total), on either button. Twin attacks chain their own 3 steps. Twin casting items cast both spells at full power and full LP.
+- **RT + a hand's button** uses the special of the weapon in that hand (`WeaponData.special_attack`); with a powerstanced pair, the other hand swings normally at the same time. No weapon has a special until Part 5, so for now RT + a button is a normal attack (or the second spell on a casting item).
+- **Two-handed weapons are one item**: one weapon in one hand's slot, shown once, and used by both buttons.
 - **Shield hand button**: Shield **Deflect** opens a parry window; Heavy Shield **Shove** knocks enemies back.
 - **Dodge**: hits during the dash's i-frames are dodged.
 - **New weapons**: Shield, Heavy Shield, Great Sword (PSO sword frames), Axe (PSO partisan frames), Frost Sword (an Ice sword that powerstances with the Sword).
