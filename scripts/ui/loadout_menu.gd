@@ -69,6 +69,8 @@ var _sync_feeds: GridContainer
 var _sync_burst: OptionButton
 var _sync_message: Label
 var _character_message: Label
+var _material_buttons := {}  # id -> Button
+var _material_info: Label
 ## Debug: feeding doesn't use up items (for trying evolutions quickly).
 var free_feeding := false
 var _free_feeding_toggle: CheckButton
@@ -484,6 +486,11 @@ func _refresh_inventory() -> void:
 	for id in Inventory.CONSUMABLES:
 		items.append("%s x%d" % [Inventory.CONSUMABLES[id], inv.count(id)])
 	lines.append("[b]Consumables[/b]  " + "   ".join(items))
+	var mats := PackedStringArray()
+	for id in Materials.ALL:
+		if inv.count(id) > 0:
+			mats.append("%s x%d" % [Materials.display_name(id), inv.count(id)])
+	lines.append("[b]Materials[/b]  " + ("   ".join(mats) if not mats.is_empty() else "none (use them in the Character tab)"))
 	lines.append("")
 	lines.append("[b]Found weapons[/b] (%d)" % inv.weapons.size())
 	if inv.weapons.is_empty():
@@ -534,6 +541,22 @@ func _build_character_tab() -> void:
 	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	reset.pressed.connect(_reset_character)
 	box.add_child(reset)
+	# PSO materials: each use raises a stat by 2, up to the race's limits.
+	box.add_child(_label("Materials", 20))
+	_material_info = _label("", 15)
+	box.add_child(_material_info)
+	var mats := GridContainer.new()
+	mats.columns = 3
+	mats.add_theme_constant_override("h_separation", 10)
+	mats.add_theme_constant_override("v_separation", 6)
+	box.add_child(mats)
+	for id in Materials.ALL:
+		var b := Button.new()
+		b.custom_minimum_size.x = 330.0
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.pressed.connect(_use_material.bind(id))
+		mats.add_child(b)
+		_material_buttons[id] = b
 	_character_message = _label("", 15)
 	_character_message.modulate = Color(1.0, 0.85, 0.5)
 	box.add_child(_character_message)
@@ -597,6 +620,25 @@ func _refresh_character() -> void:
 		c.emblem_name(), c.experience, String(favored[0]).capitalize(), String(favored[1]).capitalize(),
 		", ".join(rares) if not rares.is_empty() else "none"]
 	_character_info.modulate = c.emblem_text_color()
+	if _material_info:
+		_material_info.text = "Used: stat materials %s   HP %s   LP %s   (A uses one: +%d to its stat, permanent)" % [
+			Materials.limit_text(c, &"stat"), Materials.limit_text(c, &"hp"), Materials.limit_text(c, &"lp"),
+			int(Materials.PER_USE)]
+		for id in _material_buttons:
+			var b: Button = _material_buttons[id]
+			var have := seeker.save.inventory.count(id)
+			b.text = "%s x%d  (%s +2, used %d)" % [Materials.display_name(id), have, Materials.stat_label(id),
+				int(c.materials.get(id, 0))]
+			# Greyed but still pressable, so A explains why it can't be used.
+			b.modulate = Color(1, 1, 1, 0.45) if have <= 0 or Materials.use_error(c, id) != "" else Color.WHITE
+
+
+func _use_material(id: StringName) -> void:
+	var seeker := _player()
+	if seeker == null:
+		return
+	_character_message.text = seeker.use_material(id)
+	_refresh_character()
 
 
 # --- SyncAIDa tab (Part 6) -------------------------------------------------------
@@ -928,6 +970,7 @@ func _build_levels_tab() -> void:
 	right.add_child(_label("Testing tools", 22))
 	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
 			["+1000 Oro", _tool_oro], ["+5 of each consumable", _tool_items],
+			["+10 of each material", _tool_materials],
 			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn],
 			["Change job (debug; fixed at creation)", _tool_cycle_job],
 			["Learn every spell or trap your race can use, at your max level", _tool_learn_all],
@@ -1032,6 +1075,12 @@ func _tool_items() -> void:
 	_level_message.text = "+5 of each consumable."
 
 
+func _tool_materials() -> void:
+	for id in Materials.ALL:
+		_player().save.inventory.add_consumable(id, 10)
+	_level_message.text = "+10 of each material (use them in the Character tab)."
+
+
 func _tool_lumidium() -> void:
 	var inv := _player().save.inventory
 	for color in Inventory.LUMIDIUM:
@@ -1119,10 +1168,11 @@ func _reset_character() -> void:
 	if seeker == null or seeker.save == null:
 		return
 	seeker.save.character.experience = 0
+	seeker.reset_materials()
 	seeker.health.restore_full()
 	combat.lp = combat.stats.max_lp
 	_refresh_character()
-	_character_message.text = "Back to level 1 (EXP 0). Character levels aren't in yet, so EXP is all this resets for now."
+	_character_message.text = "Back to level 1 (EXP 0). Materials used are forgotten too. Character levels aren't in yet."
 
 
 # --- Spell testing tools (Levels tab) ------------------------------------------

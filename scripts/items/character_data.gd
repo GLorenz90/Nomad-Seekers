@@ -27,6 +27,8 @@ const JOB_CODES := ["S", "R", "I"]
 ## Learned spells and traps: id -> level (Part 6). Learned levels are kept even
 ## if SOL later drops (like PSO).
 @export var spells: Dictionary = {}
+## Materials used: id -> count (PSO materials, see Materials).
+@export var materials: Dictionary = {}
 
 
 ## PSO-style: the name's character codes plus race, gender and job, mod 12.

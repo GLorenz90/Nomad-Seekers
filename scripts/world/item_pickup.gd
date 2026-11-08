@@ -84,6 +84,8 @@ func describe() -> String:
 		return "%d Oro" % int(contents.oro)
 	if contents.has("consumable"):
 		return String(Inventory.CONSUMABLES.get(contents.consumable, contents.consumable))
+	if contents.has("material"):
+		return Materials.display_name(StringName(contents.material))
 	if contents.has("weapon"):
 		return (contents.weapon as WeaponData).display_name
 	if contents.has("lumidium"):
@@ -99,6 +101,8 @@ func color() -> Color:
 		return Color(1.0, 0.8, 0.2)
 	if contents.has("consumable"):
 		return Color(0.4, 1.0, 0.6)
+	if contents.has("material"):
+		return Color(1.0, 0.6, 0.3)
 	if contents.has("weapon"):
 		var w := contents.weapon as WeaponData
 		return Color(1.0, 0.35, 0.9) if w.rare else Color(0.6, 0.8, 1.0)
@@ -125,6 +129,9 @@ func collect(seeker: Player) -> void:
 		text = "+" + text
 	elif contents.has("consumable"):
 		inv.add_consumable(contents.consumable)
+		text = "+1 " + text
+	elif contents.has("material"):
+		inv.add_consumable(StringName(contents.material))
 		text = "+1 " + text
 	elif contents.has("weapon"):
 		var w := contents.weapon as WeaponData

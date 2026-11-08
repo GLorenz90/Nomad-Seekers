@@ -41,6 +41,13 @@ func use_consumable(id: StringName) -> bool:
 	return true
 
 
+## Display name for anything kept in `consumables` (consumables and materials).
+static func item_name(id: StringName) -> String:
+	if CONSUMABLES.has(id):
+		return CONSUMABLES[id]
+	return Materials.display_name(id)
+
+
 func count(id: StringName) -> int:
 	return int(consumables.get(id, 0))
 

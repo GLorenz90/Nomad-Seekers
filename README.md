@@ -126,6 +126,13 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Goluman** can't cast. They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
 - **Level hazards.** Six hidden traps sit in the arena. Only Goluman can see them; anyone else finds out by stepping on one (each springs once).
 - **Paralyze** is a new status: 2.5 s, no moving or acting.
+- **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them in the **Character** tab.
+  - PSO's limits: the seven stat materials share one limit, **275 for Humans and 175 for everyone else** (PSO's 250 / 150, +25 for the two new materials). HP and LP have their own 125 each.
+  - Goluman, like PSO's androids, can't use Mind or LP Materials.
+  - They drop from enemies (about 2.4% of kills). Levels tab: +10 of each. Reset character forgets the ones used.
+  - Accuracy has no other source yet; character levels and gear will add to it.
+
+![Materials in the Character tab](docs/screenshots/materials_character_tab.png)
 
 ![The Spells tab](docs/screenshots/magic_spells_tab.png)
 ![Hazards seen by a Goluman](docs/screenshots/magic_hazards.png)
@@ -141,7 +148,7 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 | Loadouts | 8 loadouts (X / Delete unequips the highlighted hand, Y / Shift+Delete clears that loadout, plus a Clear all button for testing), weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy augment |
 | Spells | Casting items in your loadouts → their slots → your learned spells (A picks, X clears a slot, B goes back). Also lists stored discs to read |
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
-| Character | Name (New name button for gamepads), race, gender, emblem and drop pool, Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
+| Character | Name (New name button for gamepads), race, gender, emblem and drop pool, materials (A uses one), Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
 | Levels | Prototype only: level select, learn every spell or one spell at a level, forget all, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |
@@ -205,6 +212,7 @@ godot --headless --path . --script res://tests/loot_test.gd
 godot --headless --path . --script res://tests/syncaida_test.gd
 godot --headless --path . --script res://tests/menu_test.gd
 godot --headless --path . --script res://tests/magic_test.gd
+godot --headless --path . --script res://tests/materials_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
@@ -227,3 +235,5 @@ The tests always use a fresh save and never write yours.
 `tools/build_starter_weapons.gd`, `tools/build_enemies.gd` and `tools/build_arena.gd` regenerate the weapons, enemies and arena with their default values (this overwrites any edits).
 
 - `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job, Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
+
+- `materials_test.gd` (in the arena): the nine materials, the 275 / 175 shared limit and the separate HP / LP 125, Goluman restrictions, STR / DEX / ATA / max HP gains (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.

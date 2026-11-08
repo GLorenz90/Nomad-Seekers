@@ -109,6 +109,52 @@ func use_save(data: SaveData) -> void:
 	combat.apply_loadout_set(save.loadouts)
 	if syncaida:
 		syncaida.pair(save.paired_syncaida())
+	apply_materials()
+
+
+# --- Materials (PSO) --------------------------------------------------------------------
+
+var _material_applied := {}
+
+
+## Moves the material stat bonus to the current save's counts (like the
+## SyncAIDa bonus, only the difference is applied).
+func apply_materials() -> void:
+	var target := Materials.bonuses(save.character) if save else {}
+	var s := combat.stats
+	for stat in Materials.ALL.values().map(func(m: Array) -> StringName: return m[1]):
+		var delta := float(target.get(stat, 0.0)) - float(_material_applied.get(stat, 0.0))
+		if delta != 0.0:
+			s.set(stat, float(s.get(stat)) + delta)
+	_material_applied = target
+	if health.max_hp != s.max_hp:
+		var gained := s.max_hp - health.max_hp
+		health.max_hp = s.max_hp
+		health.hp = clampf(health.hp + maxf(gained, 0.0), 0.0, health.max_hp)
+	combat.lp = minf(combat.lp, s.max_lp)
+
+
+## Uses one material from the inventory. Returns the message to show.
+func use_material(id: StringName) -> String:
+	if save == null:
+		return ""
+	if save.inventory.count(id) <= 0:
+		return "No %s left" % Materials.display_name(id)
+	var error := Materials.use_error(save.character, id)
+	if error != "":
+		return error
+	save.inventory.use_consumable(id)
+	save.character.materials[id] = int(save.character.materials.get(id, 0)) + 1
+	apply_materials()
+	var stat := Materials.stat_of(id)
+	return "%s +%d (now %d)" % [Materials.stat_label(id), int(Materials.PER_USE), roundi(float(combat.stats.get(stat)))]
+
+
+## Debug: forgets every material used.
+func reset_materials() -> void:
+	if save:
+		save.character.materials.clear()
+		apply_materials()
 
 
 ## Takes one of the four starter SyncAIDa (SyncAIDaData.STARTERS) and pairs it.

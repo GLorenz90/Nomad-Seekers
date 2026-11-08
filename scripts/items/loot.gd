@@ -31,6 +31,8 @@ const WEAPON_SHARE := 0.35
 const ORO_SHARE := 0.4
 ## Spell discs (Part 6); the rest of the drops are consumables.
 const DISC_SHARE := 0.1
+## PSO materials (any of the nine, evenly), taken from the consumable share.
+const MATERIAL_SHARE := 0.04
 const TAG_CHANCE := 0.35
 const BONUS_CHANCE := 0.4
 const RARE_CHANCE := 0.04
@@ -72,7 +74,7 @@ static func rares_for(emblem: int) -> Array[WeaponData]:
 
 
 ## What an enemy leaves behind: {} (nothing), {"oro": n}, {"consumable": id},
-## or {"weapon": WeaponData}.
+## {"material": id}, {"disc": {...}} or {"weapon": WeaponData}.
 static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator,
 		traps := false) -> Dictionary:
 	if rng.randf() > DROP_CHANCE:
@@ -84,6 +86,9 @@ static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator,
 		return {"oro": int(round(rng.randf_range(10.0, 30.0) * enemy.max_hp / 100.0))}
 	if r < WEAPON_SHARE + ORO_SHARE + DISC_SHARE:
 		return {"disc": roll_disc(rng, traps)}
+	if r < WEAPON_SHARE + ORO_SHARE + DISC_SHARE + MATERIAL_SHARE:
+		var mats := Materials.ALL.keys()
+		return {"material": mats[rng.randi() % mats.size()]}
 	var ids := Inventory.CONSUMABLES.keys()
 	return {"consumable": ids[rng.randi() % ids.size()]}
 
