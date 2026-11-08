@@ -327,7 +327,7 @@ func get_lunge_velocity() -> Vector3:
 
 ## Called by Player for every incoming hit. Returns the damage multiplier after
 ## blocking (0 when parried). Blocks and parries only work from the front.
-func resolve_incoming(attacker: Node3D) -> float:
+func resolve_incoming(attacker: Node3D, projectile: Node = null) -> float:
   var frontal := true
   if attacker:
     var to := attacker.global_position - _player.global_position
@@ -339,15 +339,32 @@ func resolve_incoming(attacker: Node3D) -> float:
   if not frontal:
     return 1.0
   var shield_parry := _blocking and get_lt_mode() == Loadout.LTMode.SHIELD and _block_time <= parry_window
-  if shield_parry or _time < _parry_until:
+  var magic_shield := _has_reflecting_shield()
+  # Magic shields (Ward, Barrier) can't parry melee; they only block it.
+  var can_parry := projectile != null or not magic_shield
+  if can_parry and (shield_parry or _time < _parry_until):
+    if projectile and magic_shield and projectile.has_method("reflect"):
+      projectile.reflect(_player, self)
+      combo_feedback.emit("Reflected!")
+      return 0.0
     combo_feedback.emit("Parry!")
-    if attacker and attacker.has_method("on_parried"):
+    if projectile == null and attacker and attacker.has_method("on_parried"):
       attacker.on_parried()
     return 0.0
   if _blocking:
     combo_feedback.emit("Blocked")
     return 1.0 - get_loadout().block_strength()
   return 1.0
+
+
+func _has_reflecting_shield() -> bool:
+  var l := get_loadout()
+  if l == null:
+    return false
+  for w in [l.left, l.right]:
+    if w and w.is_shield and w.reflects:
+      return true
+  return false
 
 
 func button_for(hand: int) -> String:
@@ -476,6 +493,8 @@ func _request_attack(hand: int, hard: bool) -> void:
   var weapon := current_weapon(hand)
   if weapon == null:
     return
+  if not _player.status.can_act():
+    return  # frozen or shocked
   var twin := is_powerstance()
   var standalone := weapon.no_combo or weapon.casting or (hard and weapon.sustained)
   var special := Input.is_action_pressed("shift")
@@ -779,6 +798,8 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   if _blocking:
     info.amount *= shield_attack_damage_scale
   info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
+  info.kind = DamageInfo.kind_for(weapon.weapon_class)
+  info.status_power = attack.status_power
   info.is_hard = hard
   if randf() < stats.crit_chance():
     info.is_crit = true
@@ -823,7 +844,7 @@ func _melee_hits(cur: ActiveAttack) -> void:
     for strike in _strikes(cur):
       var info := _make_damage(strike[0], strike[1], cur.hard, strike[2])
       info.hit_position = (body as Node3D).global_position + Vector3.UP * 1.2
-      report_hit(body, info, health.take_damage(info))
+      report_hit(body, info, HitResolver.apply(body, info, _player))
     if cur.attack.knockback > 0.0 and body.has_method("apply_knockback"):
       body.apply_knockback(cur.direction * cur.attack.knockback)
 

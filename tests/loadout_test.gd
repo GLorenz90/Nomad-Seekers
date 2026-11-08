@@ -34,6 +34,10 @@ func _run() -> void:
 	_player = _main.get_node("Player")
 	_combat = _player.combat
 	_combat.stats.luck = 0.0
+	# Keep these checks about blocking and combos free of defense and EVA misses.
+	_combat.stats.defense = 0.0
+	_combat.stats.resolve = 0.0
+	_combat.stats.evasion = 0.0
 	_combat.x_is_left = true  # these checks were written with X = left hand
 	_combat.apply_loadout_set(CombatController.make_default_loadouts())
 	_dummy = _main.get_node("Dummies/DummyA")

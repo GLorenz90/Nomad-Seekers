@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1_ej0lo"]
+
+[resource]
+script = ExtResource("1_ej0lo")
+display_name = "Mutated Crawler"
+enemy_type = 1
+notes = "Underground native twisted by the corrupted Caves boss. Fast, quick bite, Poison."
+max_hp = 90.0
+defense = 8.0
+evasion = 25.0
+weak_to = 1
+resists = 4
+move_speed = 6.0
+attack_damage = 12.0
+attack_element = 4
+status_power = 2.5
+attack_range = 1.8
+windup = 0.35
+recovery = 0.5
+attack_interval = 1.4
+shape = 1
+color = Color(0.45, 0.7, 0.3, 1)
+size = Vector3(0.8, 0.9, 1.2)

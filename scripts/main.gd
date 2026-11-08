@@ -1,6 +1,7 @@
 extends Node3D
-## Test room. Wires the Seeker, camera and HUD together, bakes the navmesh, and
-## respawns the Seeker if it ever falls out of the level.
+## Shared level script (test room and arena). Wires the Seeker, camera, HUD,
+## loadout menu, target markers and any wave rooms together, bakes the navmesh,
+## and respawns the Seeker if they fall out of the level or die.
 ##
 ## The navmesh is baked at startup from the Level's collision (a child of the
 ## Navigation region), so blockout edits never leave it stale. The same navmesh
@@ -33,6 +34,10 @@ func _ready() -> void:
 	add_child(target_markers)
 	target_markers.setup(player.combat, camera_rig)
 	camera_rig.show_lock_marker = false
+	for room in get_tree().get_nodes_in_group("wave_rooms"):
+		room.wave_started.connect(func(r: WaveRoom, index: int, total: int):
+			hud.show_banner("%s — Wave %d / %d" % [r.room_name, index + 1, total]))
+		room.room_cleared.connect(func(r: WaveRoom): hud.show_banner("%s clear" % r.room_name))
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_bake_navmesh()
 
@@ -56,3 +61,4 @@ func _respawn_player() -> void:
 	player.velocity = Vector3.ZERO
 	player.reset_physics_interpolation()
 	player.health.restore_full()
+	player.status.clear_all()

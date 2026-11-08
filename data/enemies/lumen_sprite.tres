@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1_sguk8"]
+
+[resource]
+script = ExtResource("1_sguk8")
+display_name = "Lumen Sprite"
+enemy_type = 5
+notes = "Fey-alien spawn of Malbona Lumo, hostile to Lumin. Darts about, casts Light bolts that Blind (magic, reflectable)."
+max_hp = 80.0
+resolve = 25.0
+evasion = 40.0
+weak_to = 6
+resists = 5
+move_speed = 5.0
+hover_height = 1.3
+attack_style = 2
+attack_damage = 13.0
+attack_element = 5
+status_power = 2.5
+attack_range = 11.0
+min_range = 7.0
+windup = 0.5
+recovery = 0.4
+projectile_speed = 13.0
+shape = 2
+color = Color(1, 0.92, 0.55, 1)
+size = Vector3(0.6, 0.6, 0.6)

@@ -50,6 +50,7 @@ var _knockback := Vector3.ZERO
 @onready var _label: Label3D = $Label3D
 @onready var _agent: NavigationAgent3D = $NavigationAgent3D
 @onready var health: Health = $Health
+@onready var status: StatusEffects = $StatusEffects
 @onready var _mesh: MeshInstance3D = $Mesh
 
 
@@ -89,7 +90,7 @@ func _physics_process(delta: float) -> void:
 			var to := next - global_position
 			to.y = 0.0
 			if to.length_squared() > 0.0001:
-				flat = to.normalized() * move_speed
+				flat = to.normalized() * move_speed * status.move_scale()
 				rotation.y = lerp_angle(rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-8.0 * delta))
 	_knockback = _knockback.move_toward(Vector3.ZERO, 30.0 * delta)
 	velocity.x = flat.x + _knockback.x
@@ -143,7 +144,7 @@ func _update_attack(delta: float) -> void:
 			_swing_hit(seeker)
 		return
 	_attack_cooldown -= delta
-	if _attack_cooldown > 0.0 or _stagger > 0.0:
+	if _attack_cooldown > 0.0 or _stagger > 0.0 or not status.can_act():
 		return
 	var to := seeker.global_position - global_position
 	to.y = 0.0
@@ -159,8 +160,9 @@ func _update_attack(delta: float) -> void:
 		_glow(Color(1.0, 0.55, 0.1), windup)
 
 
-func _make_hit() -> DamageInfo:
+func _make_hit(kind: DamageInfo.Kind = DamageInfo.Kind.MELEE) -> DamageInfo:
 	var info := DamageInfo.new()
+	info.kind = kind
 	info.amount = attack_damage
 	info.damage_type = attack_element
 	info.source = self
@@ -174,7 +176,7 @@ func _shoot(seeker: Player) -> void:
 	bolt.projectile_range = attack_range + 4.0
 	var from := get_lock_point() + Vector3.UP * 0.2
 	var aim := (seeker.global_position + Vector3.UP * 1.1 - from).normalized()
-	Projectile.spawn(get_parent(), from, aim, bolt, _make_hit(), Color(1.0, 0.3, 0.6), self, null,
+	Projectile.spawn(get_parent(), from, aim, bolt, _make_hit(DamageInfo.Kind.RANGED), Color(1.0, 0.3, 0.6), self, null,
 		Projectile.PLAYER_MASK)
 
 
@@ -183,7 +185,7 @@ func _swing_hit(seeker: Player) -> void:
 	to.y = 0.0
 	var facing := -global_basis.z
 	if to.length() <= swing_reach and facing.angle_to(to.normalized()) <= deg_to_rad(60.0):
-		seeker.receive_hit(_make_hit(), self)
+		HitResolver.apply(seeker, _make_hit(), self)
 
 
 func _glow(color: Color, seconds: float) -> void:
@@ -226,6 +228,7 @@ func _on_died() -> void:
 	velocity = Vector3.ZERO
 	reset_physics_interpolation()
 	health.restore_full()
+	status.clear_all()
 	collision_layer = 4
 	visible = true
 	set_physics_process(true)

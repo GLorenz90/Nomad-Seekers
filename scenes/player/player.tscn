@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/combat/combat_controller.gd" id="2_combat"]
 [ext_resource type="Script" path="res://scripts/combat/health.gd" id="3_health"]
+[ext_resource type="Script" path="res://scripts/combat/status_effects.gd" id="4_status"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -52,3 +53,6 @@ script = ExtResource("2_combat")
 
 [node name="Health" type="Node" parent="."]
 script = ExtResource("3_health")
+
+[node name="StatusEffects" type="Node" parent="."]
+script = ExtResource("4_status")
