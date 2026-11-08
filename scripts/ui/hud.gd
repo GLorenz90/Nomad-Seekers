@@ -14,6 +14,7 @@ Same-type pair (e.g. Sword + Frost Sword): every attack uses both hands
 Block: LT / F    Special: hold RT / E + hand    Loadout menu: Start / Tab
 Items: D-pad left/up/right / 1,2,3 (HP Gel, LP Cell, Cure Salt)
 Lumidium: hit a crystal 3 times; stand on a teleporter to deposit it
+Sync Burst (gauge full): L3 / R    Feed and pair SyncAIDa: menu, SyncAIDa tab
 Click to capture the mouse, Esc to release. F3 hides this panel."""
 
 var player: Player
@@ -21,6 +22,8 @@ var camera_rig: CameraRig
 
 var _hp_bar: ProgressBar
 var _lp_bar: ProgressBar
+var _sync_bar: ProgressBar
+var _sync_label: Label
 var _pips: Label
 var _hands: Label
 var _lt: Label
@@ -61,6 +64,18 @@ func _process(_delta: float) -> void:
 	_hp_bar.value = player.health.hp
 	_lp_bar.max_value = combat.stats.max_lp
 	_lp_bar.value = combat.lp
+	var companion := player.syncaida
+	if companion and companion.data:
+		var d := companion.data
+		_sync_bar.value = d.gauge
+		var fill := _sync_bar.get_theme_stylebox("fill") as StyleBoxFlat
+		fill.bg_color = Color(1.0, 0.9, 0.4) if companion.is_ready() else d.color()
+		_sync_label.text = "%s  %s  Lv %d   Burst: %s%s%s" % [d.display_name, d.form, d.level(), d.burst_name(),
+			"  READY (L3)" if companion.is_ready() else "",
+			"   Aegis %.0fs" % combat.aegis_time_left() if combat.aegis_active() else ""]
+	elif companion:
+		_sync_bar.value = 0.0
+		_sync_label.text = "No SyncAIDa yet: choose your starter (Start / Tab > SyncAIDa)"
 	var pips := ""
 	for i in CombatController.MAX_CHAIN:
 		pips += ("● " if i < combat.chain_step else "○ ")
@@ -139,13 +154,18 @@ func _build_status() -> void:
 	box.anchor_top = 1.0
 	box.anchor_bottom = 1.0
 	box.offset_left = 24.0
-	box.offset_top = -200.0
+	box.offset_top = -250.0
 	box.offset_right = 420.0
 	box.offset_bottom = -20.0
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
 	_hp_bar = _bar(box, "HP", Color(0.35, 0.85, 0.4))
 	_lp_bar = _bar(box, "LP", Color(0.3, 0.6, 1.0))
+	_sync_bar = _bar(box, "SY", Color(0.8, 0.9, 1.0))
+	_sync_bar.max_value = SyncAIDaCompanion.GAUGE_MAX
+	_sync_bar.custom_minimum_size.y = 10.0
+	_sync_label = _label(box, 15)
+	_sync_label.modulate = Color(0.85, 0.95, 1.0)
 	_pips = _label(box, 20)
 	_hands = _label(box, 18)
 	_lt = _label(box, 16)

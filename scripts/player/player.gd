@@ -63,6 +63,8 @@ var save: SaveData
 var carried_lumidium: Dictionary = {}
 ## Writes user://save.tres on deposits and menu closes. Tests turn this off.
 var autosave := true
+## The paired SyncAIDa following the Seeker (Part 6).
+var syncaida: SyncAIDaCompanion
 
 var _jump_velocity := 0.0
 var _gravity_up := 0.0
@@ -87,6 +89,10 @@ func _ready() -> void:
 	add_to_group("player")
 	health.max_hp = combat.stats.max_hp
 	health.hp = health.max_hp
+	syncaida = SyncAIDaCompanion.new()
+	syncaida.name = "SyncAIDa"
+	add_child(syncaida)
+	syncaida.setup(self)
 	var defaults := CombatController.make_default_loadouts()
 	if combat.use_saved_loadouts:
 		use_save(SaveData.load_or_new(defaults))
@@ -101,6 +107,29 @@ func use_save(data: SaveData) -> void:
 	combat.inventory = save.inventory
 	combat.job_code = save.character.job_code()
 	combat.apply_loadout_set(save.loadouts)
+	if syncaida:
+		syncaida.pair(save.paired_syncaida())
+
+
+## Takes one of the four starter SyncAIDa (SyncAIDaData.STARTERS) and pairs it.
+func choose_starter(index: int) -> void:
+	if save == null:
+		return
+	save.choose_starter(index)
+	syncaida.pair(save.paired_syncaida())
+	save_game()
+
+
+## Pairs a different owned SyncAIDa.
+func pair_syncaida(index: int) -> void:
+	if save == null or index < 0 or index >= save.syncaida.size():
+		return
+	save.paired = index
+	syncaida.pair(save.paired_syncaida())
+
+
+func grant_invulnerability(seconds: float) -> void:
+	_invuln_timer = maxf(_invuln_timer, seconds)
 
 
 func save_game() -> void:
@@ -217,6 +246,8 @@ func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) ->
 	if block_scale <= 0.0:
 		return 0.0
 	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense, s.resolve, s.evasion)
+	if combat.aegis_active():
+		info.amount *= CombatController.AEGIS_GUARD
 	var amount := health.take_damage(info)
 	status.add_buildup(info, attacker)
 	DamageNumber.spawn(get_parent(), global_position + Vector3.UP * 1.9, amount, info.damage_type, false)

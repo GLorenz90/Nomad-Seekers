@@ -2,7 +2,7 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 5, weapons and loot**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 6, SyncAIDa**.
 
 Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` has two wave rooms full of real enemies (open it and press F6).
 
@@ -82,6 +82,23 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Menu tabs** (LB/RB in the menu): Loadouts (the picker now lists found weapons first, greyed out if your job can't use them), Inventory, Character.
 - **Save file:** `user://save.tres` holds the character, loadouts and inventory. It's written when the menu closes and at teleporters. Part 3's `loadouts.tres` is imported once.
 
+## Part 6: SyncAIDa
+- **Your SyncAIDa** floats over your right shoulder. Its color follows its strongest stat and its shape changes with each evolution.
+- **Starter choice:** a new Seeker picks one of four starters in the menu's **SyncAIDa** tab (the menu opens there until you've chosen). Each starts at **level 5 in one stat**, so it boosts what your character needs right away: Aegi (DEF), Kindle (STR), Swift (DEX), Lumi (SOL). You can own several and pair one; with Free feeding on, the tab also lets you adopt more starters for testing.
+- **Feeding** (SyncAIDa tab): consumables come from your inventory and Lumidium from your bank. Each item raises some of **DEF / STR / DEX / SOL** and may lower another, as in PSO. Every 100 XP in a stat is one stat level. The SyncAIDa's level is the sum of its stat levels, up to **200**. Each stat level adds +2 to your matching stat (DEF → DEF, STR → STR, DEX → DEX, SOL → SOL).
+- **Evolution** (PSO-style formulas):
+  - **Level 10:** takes a form from its strongest stat (Shell, Ember, Flit or Glimmer).
+  - **Level 35:** takes a form from its strongest stat (Bastion, Talon, Kestrel or Wisp).
+  - **Level 50 and up:** takes a form from its two strongest stats (Bulwark, Sentinel, Oracle, Falcon, Pyre or Zephyr), re-checked every 5 levels.
+  - **Level 100:** adds "Prime".
+  - Forms depend only on the SyncAIDa's stats, never your job, so one character can raise a SyncAIDa for another (PSO's mag meta-progression).
+- **Sync Burst** (L3 / R when the gauge is full). The gauge fills from damage you deal and take. Each milestone (10 / 35 / 50) unlocks a burst, up to 3. Choose the active one in the SyncAIDa tab.
+  - **Lumen Nova:** Light damage to every enemy within 8 m. Scales with level and SOL.
+  - **Aegis Pulse:** for 15 s, nearby Seekers deal +30% damage and take -30%.
+  - **Mending Bloom:** heals nearby Seekers 50% HP, restores 30 LP and clears statuses.
+  - Firing a burst gives a moment of invulnerability.
+- **Free feeding (debug)** in the SyncAIDa tab feeds without using items, so you can try evolutions quickly.
+
 ## Controls
 | Action | Gamepad | Keyboard / mouse |
 |---|---|---|
@@ -94,6 +111,7 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 | Hand attacks (tap / hold) | X / Y | Left / right click |
 | Second spell (hold while casting) / special | RT | E |
 | Use HP Gel / LP Cell / Cure Salt | D-pad left / up / right | 1 / 2 / 3 |
+| Sync Burst | L3 | R |
 | Cycle loadouts | LB / RB | Z / C |
 | Block / powerstance | LT | F |
 | Loadout menu | Start | Tab |
@@ -118,6 +136,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - Only the arena has Lumidium nodes and teleporters. Teleporters only bank Lumidium; travel arrives with the hub.
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
 - EXP is counted but there are no levels yet.
+- Party bursts (several Seekers firing together) wait for co-op. SyncAIDa have no feeding cooldown and no personalities yet.
 - The game pauses while the loadout menu is open. Co-op will need a non-pausing version.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
 - No step-up for small ledges yet. Input is bound to all devices until couch co-op.
@@ -132,6 +151,7 @@ godot --headless --path . --script res://tests/loadout_test.gd
 godot --headless --path . --script res://tests/targeting_test.gd
 godot --headless --path . --script res://tests/enemy_test.gd
 godot --headless --path . --script res://tests/loot_test.gd
+godot --headless --path . --script res://tests/syncaida_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
@@ -144,6 +164,8 @@ godot --headless --path . --script res://tests/loot_test.gd
 - `enemy_test.gd` (in the arena): all six monster types, DEF / RES / EVA math and miss rate, every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard-hit stagger, a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open).
 
 - `loot_test.gd` (in the arena): the full weapon list and every emblem's favored families, job locks, the 7 rares covering all 10 emblems, drop rates and emblem weighting, tag tiers, tag names and RT specials, the +30% vs Beast bonus, Gush / Mind / King's / Hell effects (and Hell never killing a boss), the Charge special paying Oro, Shotgun pellets, a Grenade arc and its blast (and its prediction), the Boomerang lock chain, the Gigarang hitting out and back, the Thrown Daggers finisher, Machine Pistol automatic fire, the Staff's four spells, Heal and Cure, EXP and drops, pickups and an HP Gel, a Lumidium node breaking, losing carried Lumidium on death, a teleporter deposit, and a save round-trip.
+
+- `syncaida_test.gd` (in the arena): no SyncAIDa until a starter is chosen, the four starters at level 5 in their stat and the instant bonus, level-10 forms following stats rather than job, feeding from inventory and bank, the stat math, the Seeker stat bonus following the paired SyncAIDa, every evolution (job, strongest stat, top two, Prime), burst unlocks, the 200 cap, the gauge from damage dealt and taken, L3 firing Lumen Nova (in range only), Aegis Pulse in both directions, Mending Bloom, feeding from the menu, and a save round-trip.
 
 The tests always use a fresh save and never write yours.
 

@@ -14,6 +14,9 @@ const OLD_LOADOUTS_PATH := "user://loadouts.tres"
 @export var character: CharacterData
 @export var loadouts: LoadoutSet
 @export var inventory: Inventory
+## Every SyncAIDa the Seeker owns; `paired` is the one in the field.
+@export var syncaida: Array[SyncAIDaData] = []
+@export var paired := 0
 
 
 static func fresh(default_loadouts: LoadoutSet) -> SaveData:
@@ -25,6 +28,21 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 	s.inventory.add_consumable(&"lp_cell", 2)
 	s.inventory.add_consumable(&"cure_salt", 1)
 	return s
+
+
+## Gives the Seeker their starting SyncAIDa (SyncAIDaData.STARTERS index).
+## Until one is chosen, they have none; the menu's SyncAIDa tab offers the four.
+func choose_starter(index: int) -> SyncAIDaData:
+	var s := SyncAIDaData.starter(index)
+	syncaida.append(s)
+	paired = syncaida.size() - 1
+	return s
+
+
+func paired_syncaida() -> SyncAIDaData:
+	if syncaida.is_empty():
+		return null
+	return syncaida[clampi(paired, 0, syncaida.size() - 1)]
 
 
 static func load_or_new(default_loadouts: LoadoutSet) -> SaveData:

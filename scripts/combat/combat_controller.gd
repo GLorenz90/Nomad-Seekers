@@ -75,6 +75,9 @@ const TWIN := 2
 const TWIN_DAMAGE_SCALE := 0.75
 ## Homing throws hop to the next enemy within this distance of the last one.
 const LOCK_CHAIN_HOP := 9.0
+## Aegis Pulse (Sync Burst): damage dealt x AEGIS_POWER, taken x AEGIS_GUARD.
+const AEGIS_POWER := 1.3
+const AEGIS_GUARD := 0.7
 ## Heal and Cure reach every Seeker this close to the caster.
 const SUPPORT_RANGE := 10.0
 const WEAPON_DIR := "res://data/weapons/"
@@ -161,6 +164,7 @@ var _blocking := false
 var _block_time := 0.0
 var _parry_until := -1.0
 var _lt_was_down := false
+var _aegis_until := -1.0
 
 var _player: Player
 var _pivots: Array[Node3D] = []
@@ -408,6 +412,18 @@ func _has_reflecting_shield() -> bool:
 
 func button_for(hand: int) -> String:
   return "X" if (hand == Hand.LEFT) == x_is_left else "Y"
+
+
+func apply_aegis(seconds: float) -> void:
+  _aegis_until = maxf(_aegis_until, _time + seconds)
+
+
+func aegis_active() -> bool:
+  return _time < _aegis_until
+
+
+func aegis_time_left() -> float:
+  return maxf(_aegis_until - _time, 0.0)
 
 
 func report_hit(target: Node, info: DamageInfo, amount: float) -> void:
@@ -930,6 +946,8 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   info.amount = weapon.base_damage * attack.damage_mult * (1.0 + stat / 100.0) * scale
   if _blocking:
     info.amount *= shield_attack_damage_scale
+  if aegis_active():
+    info.amount *= AEGIS_POWER
   info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
   info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(weapon.weapon_class)
   info.status_power = attack.status_power
