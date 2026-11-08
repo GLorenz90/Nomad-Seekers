@@ -28,16 +28,17 @@ func _initialize() -> void:
 	quit()
 
 
-## Job locks (North Star §5.3 Jobs column): S = Striker, R = Ranger, I = Invoker.
+## Job locks: S = Striker, R = Ranger, I = Invoker. Set by Grayson (weapon jobs form,
+## 2026-11-08); Frost Sword uses the Sword's entry.
 const JOBS := {
-	&"sword": "SRI", &"great_sword": "S", &"bladestaff": "SI", &"dagger": "SRI", &"spear": "S",
-	&"halberd": "S", &"mace": "SI", &"maul": "S", &"flail": "S", &"axe": "S", &"great_axe": "S",
-	&"glove": "S", &"dervish_blades": "S", &"shield": "SRI", &"heavy_shield": "S",
-	&"pistol": "SRI", &"machine_pistol": "R", &"hand_shotgun": "R", &"rifle": "R",
-	&"assault_rifle": "R", &"shotgun": "R", &"bazooka": "R", &"grenade": "RS",
-	&"grenade_launcher": "R", &"thrown_daggers": "RS", &"boomerang": "SR", &"gigarang": "S",
-	&"bow": "RI", &"crossbow": "RI", &"arbalest": "R", &"gunblade": "SR", &"burstbow": "R", &"wand": "SRI", &"cane": "I",
-	&"staff": "I", &"cards": "IR", &"talisman": "I", &"totem": "I", &"ward": "IS", &"barrier": "I",
+	&"sword": "SRI", &"great_sword": "S", &"bladestaff": "SI", &"dagger": "SRI", &"spear": "SRI",
+	&"halberd": "SI", &"mace": "SRI", &"maul": "S", &"flail": "S", &"axe": "S",
+	&"great_axe": "S", &"glove": "SRI", &"dervish_blades": "SI", &"gunblade": "SR", &"shield": "SRI",
+	&"heavy_shield": "S", &"pistol": "SRI", &"machine_pistol": "SRI", &"hand_shotgun": "R", &"rifle": "R",
+	&"assault_rifle": "R", &"shotgun": "R", &"bazooka": "R", &"grenade": "SR", &"grenade_launcher": "R",
+	&"thrown_daggers": "SR", &"boomerang": "SRI", &"gigarang": "SR", &"bow": "RI", &"crossbow": "RI",
+	&"arbalest": "R", &"burstbow": "R", &"wand": "SRI", &"cane": "I", &"staff": "I",
+	&"cards": "RI", &"talisman": "SRI", &"totem": "I", &"ward": "SRI", &"barrier": "I",
 }
 
 
