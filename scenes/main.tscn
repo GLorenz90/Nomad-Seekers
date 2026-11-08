@@ -1,18 +1,11 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://ddi5ejr2c5ejk"]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://ty8ph0j817rs" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/camera/camera_rig.tscn" id="3_rig"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/target_dummy.tscn" id="4_dummy"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
-[ext_resource type="Shader" path="res://assets/shaders/blockout_grid.gdshader" id="6_grid"]
-
-[sub_resource type="NavigationMesh" id="NavMesh_main"]
-geometry_parsed_geometry_type = 1
-geometry_collision_mask = 1
-agent_height = 2.0
-agent_radius = 0.5
-agent_max_climb = 0.25
+[ext_resource type="Shader" uid="uid://2uvuox5ybq6h" path="res://assets/shaders/blockout_grid.gdshader" id="6_grid"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.32, 0.45, 0.68, 1)
@@ -29,292 +22,295 @@ ambient_light_source = 3
 tonemap_mode = 2
 ssao_enabled = true
 
+[sub_resource type="NavigationMesh" id="NavMesh_main"]
+geometry_parsed_geometry_type = 1
+geometry_collision_mask = 1
+agent_height = 2.0
+
 [sub_resource type="ShaderMaterial" id="Mat_floor"]
+render_priority = 0
 shader = ExtResource("6_grid")
 shader_parameter/base_color = Color(0.42, 0.44, 0.47, 1)
 shader_parameter/line_color = Color(0.3, 0.32, 0.35, 1)
+shader_parameter/cell_size = 1.0
 
 [sub_resource type="ShaderMaterial" id="Mat_wall"]
+render_priority = 0
 shader = ExtResource("6_grid")
 shader_parameter/base_color = Color(0.36, 0.42, 0.52, 1)
 shader_parameter/line_color = Color(0.26, 0.3, 0.38, 1)
+shader_parameter/cell_size = 1.0
 
 [sub_resource type="ShaderMaterial" id="Mat_platform"]
+render_priority = 0
 shader = ExtResource("6_grid")
 shader_parameter/base_color = Color(0.78, 0.6, 0.36, 1)
 shader_parameter/line_color = Color(0.55, 0.4, 0.22, 1)
+shader_parameter/cell_size = 1.0
 
-[node name="Main" type="Node3D"]
+[node name="Main" type="Node3D" unique_id=1987873994]
 script = ExtResource("1_main")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=735117171]
 environment = SubResource("Env_main")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=772533120]
 transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.75, -0.43301, 0, 10, 0)
 shadow_enabled = true
 
-[node name="Navigation" type="NavigationRegion3D" parent="."]
+[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=404671647]
 navigation_mesh = SubResource("NavMesh_main")
 
-[node name="Level" type="Node3D" parent="Navigation"]
+[node name="Level" type="Node3D" parent="Navigation" unique_id=13051367]
 
-[node name="Floor" type="CSGBox3D" parent="Navigation/Level"]
+[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=1328177445]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 use_collision = true
 size = Vector3(60, 1, 60)
 material = SubResource("Mat_floor")
 
-[node name="WallNorth" type="CSGBox3D" parent="Navigation/Level"]
+[node name="WallNorth" type="CSGBox3D" parent="Navigation/Level" unique_id=261864990]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -30.5)
 use_collision = true
 size = Vector3(62, 4, 1)
 material = SubResource("Mat_wall")
 
-[node name="WallSouth" type="CSGBox3D" parent="Navigation/Level"]
+[node name="WallSouth" type="CSGBox3D" parent="Navigation/Level" unique_id=215838784]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 30.5)
 use_collision = true
 size = Vector3(62, 4, 1)
 material = SubResource("Mat_wall")
 
-[node name="WallEast" type="CSGBox3D" parent="Navigation/Level"]
+[node name="WallEast" type="CSGBox3D" parent="Navigation/Level" unique_id=196346761]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.5, 2, 0)
 use_collision = true
 size = Vector3(1, 4, 60)
 material = SubResource("Mat_wall")
 
-[node name="WallWest" type="CSGBox3D" parent="Navigation/Level"]
+[node name="WallWest" type="CSGBox3D" parent="Navigation/Level" unique_id=1427804277]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30.5, 2, 0)
 use_collision = true
 size = Vector3(1, 4, 60)
 material = SubResource("Mat_wall")
 
-[node name="Step1" type="CSGBox3D" parent="Navigation/Level"]
+[node name="Step1" type="CSGBox3D" parent="Navigation/Level" unique_id=178096222]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.25, -6)
 use_collision = true
 size = Vector3(3, 0.5, 2)
 material = SubResource("Mat_platform")
 
-[node name="Step2" type="CSGBox3D" parent="Navigation/Level"]
+[node name="Step2" type="CSGBox3D" parent="Navigation/Level" unique_id=27961021]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.5, -8)
 use_collision = true
-size = Vector3(3, 1.0, 2)
+size = Vector3(3, 1, 2)
 material = SubResource("Mat_platform")
 
-[node name="Step3" type="CSGBox3D" parent="Navigation/Level"]
+[node name="Step3" type="CSGBox3D" parent="Navigation/Level" unique_id=237918218]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.75, -10)
 use_collision = true
 size = Vector3(3, 1.5, 2)
 material = SubResource("Mat_platform")
 
-[node name="Step4" type="CSGBox3D" parent="Navigation/Level"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 1.0, -12)
+[node name="Step4" type="CSGBox3D" parent="Navigation/Level" unique_id=1153480600]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 1, -12)
 use_collision = true
-size = Vector3(3, 2.0, 2)
+size = Vector3(3, 2, 2)
 material = SubResource("Mat_platform")
 
-[node name="Step5" type="CSGBox3D" parent="Navigation/Level"]
+[node name="Step5" type="CSGBox3D" parent="Navigation/Level" unique_id=1554340328]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 1.25, -14)
 use_collision = true
 size = Vector3(3, 2.5, 2)
 material = SubResource("Mat_platform")
 
-[node name="Step6" type="CSGBox3D" parent="Navigation/Level"]
+[node name="Step6" type="CSGBox3D" parent="Navigation/Level" unique_id=1668137409]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 1.5, -16)
 use_collision = true
-size = Vector3(3, 3.0, 2)
+size = Vector3(3, 3, 2)
 material = SubResource("Mat_platform")
 
-[node name="Ramp" type="CSGBox3D" parent="Navigation/Level"]
+[node name="Ramp" type="CSGBox3D" parent="Navigation/Level" unique_id=368935647]
 transform = Transform3D(1, 0, 0, 0, 0.93969, 0.34202, 0, -0.34202, 0.93969, -12, 1.1, 0)
 use_collision = true
 size = Vector3(4, 0.5, 8)
 material = SubResource("Mat_platform")
 
-[node name="RampLanding" type="CSGBox3D" parent="Navigation/Level"]
+[node name="RampLanding" type="CSGBox3D" parent="Navigation/Level" unique_id=1431059788]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 2.45, -5.67)
 use_collision = true
 size = Vector3(4, 0.5, 4)
 material = SubResource("Mat_platform")
 
-[node name="GapStep" type="CSGBox3D" parent="Navigation/Level"]
+[node name="GapStep" type="CSGBox3D" parent="Navigation/Level" unique_id=893707652]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0.5, 18)
 use_collision = true
 size = Vector3(3, 1, 3)
 material = SubResource("Mat_platform")
 
-[node name="GapPad1" type="CSGBox3D" parent="Navigation/Level"]
+[node name="GapPad1" type="CSGBox3D" parent="Navigation/Level" unique_id=1903150041]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 1, 18)
 use_collision = true
 size = Vector3(3, 2, 3)
 material = SubResource("Mat_platform")
 
-[node name="GapPad2" type="CSGBox3D" parent="Navigation/Level"]
+[node name="GapPad2" type="CSGBox3D" parent="Navigation/Level" unique_id=1736122200]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1, 18)
 use_collision = true
 size = Vector3(3, 2, 3)
 material = SubResource("Mat_platform")
 
-[node name="GapPad3" type="CSGBox3D" parent="Navigation/Level"]
+[node name="GapPad3" type="CSGBox3D" parent="Navigation/Level" unique_id=1978844259]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 1, 18)
 use_collision = true
 size = Vector3(3, 2, 3)
 material = SubResource("Mat_platform")
 
-[node name="GapPad4" type="CSGBox3D" parent="Navigation/Level"]
+[node name="GapPad4" type="CSGBox3D" parent="Navigation/Level" unique_id=488174124]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 18)
 use_collision = true
 size = Vector3(3, 2, 3)
 material = SubResource("Mat_platform")
 
-[node name="GapPad5" type="CSGBox3D" parent="Navigation/Level"]
+[node name="GapPad5" type="CSGBox3D" parent="Navigation/Level" unique_id=1482255676]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1, 18)
 use_collision = true
 size = Vector3(3, 2, 3)
 material = SubResource("Mat_platform")
 
-[node name="GapPad6" type="CSGBox3D" parent="Navigation/Level"]
+[node name="GapPad6" type="CSGBox3D" parent="Navigation/Level" unique_id=1064715439]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 1, 18)
 use_collision = true
 size = Vector3(3, 2, 3)
 material = SubResource("Mat_platform")
 
-[node name="PillarA" type="CSGBox3D" parent="Navigation/Level"]
+[node name="PillarA" type="CSGBox3D" parent="Navigation/Level" unique_id=1660247647]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -15)
 use_collision = true
 size = Vector3(1.5, 6, 1.5)
 material = SubResource("Mat_wall")
 
-[node name="PillarB" type="CSGBox3D" parent="Navigation/Level"]
+[node name="PillarB" type="CSGBox3D" parent="Navigation/Level" unique_id=1748472487]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, -20)
 use_collision = true
 size = Vector3(1.5, 6, 1.5)
 material = SubResource("Mat_wall")
 
-[node name="PillarC" type="CSGBox3D" parent="Navigation/Level"]
+[node name="PillarC" type="CSGBox3D" parent="Navigation/Level" unique_id=1213678729]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 3, -20)
 use_collision = true
 size = Vector3(1.5, 6, 1.5)
 material = SubResource("Mat_wall")
 
-[node name="TunnelRoof" type="CSGBox3D" parent="Navigation/Level"]
+[node name="TunnelRoof" type="CSGBox3D" parent="Navigation/Level" unique_id=1257703262]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 2.75, -20)
 use_collision = true
 size = Vector3(6, 0.5, 8)
 material = SubResource("Mat_wall")
 
-[node name="TunnelWallL" type="CSGBox3D" parent="Navigation/Level"]
+[node name="TunnelWallL" type="CSGBox3D" parent="Navigation/Level" unique_id=1765372133]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.25, 1.25, -20)
 use_collision = true
 size = Vector3(0.5, 2.5, 8)
 material = SubResource("Mat_wall")
 
-[node name="TunnelWallR" type="CSGBox3D" parent="Navigation/Level"]
+[node name="TunnelWallR" type="CSGBox3D" parent="Navigation/Level" unique_id=452038561]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.75, 1.25, -20)
 use_collision = true
 size = Vector3(0.5, 2.5, 8)
 material = SubResource("Mat_wall")
 
-[node name="LowWall" type="CSGBox3D" parent="Navigation/Level"]
+[node name="LowWall" type="CSGBox3D" parent="Navigation/Level" unique_id=2089133542]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.6, 4)
 use_collision = true
 size = Vector3(6, 1.2, 0.5)
 material = SubResource("Mat_platform")
 
-[node name="Labels" type="Node3D" parent="."]
+[node name="Labels" type="Node3D" parent="." unique_id=1617335031]
 
-[node name="Gap3m" type="Label3D" parent="Labels"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.0, 3.0, 18)
+[node name="Gap3m" type="Label3D" parent="Labels" unique_id=1859724762]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 3, 18)
 billboard = 1
-font_size = 64
-outline_size = 12
 text = "3 m"
-
-[node name="Gap4m" type="Label3D" parent="Labels"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.5, 3.0, 18)
-billboard = 1
 font_size = 64
-outline_size = 12
+
+[node name="Gap4m" type="Label3D" parent="Labels" unique_id=2084706630]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.5, 3, 18)
+billboard = 1
 text = "4 m"
-
-[node name="Gap5m" type="Label3D" parent="Labels"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 3.0, 18)
-billboard = 1
 font_size = 64
-outline_size = 12
+
+[node name="Gap5m" type="Label3D" parent="Labels" unique_id=446752794]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 3, 18)
+billboard = 1
 text = "5 m"
-
-[node name="Gap6m" type="Label3D" parent="Labels"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 3.0, 18)
-billboard = 1
 font_size = 64
-outline_size = 12
+
+[node name="Gap6m" type="Label3D" parent="Labels" unique_id=1842159032]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 3, 18)
+billboard = 1
 text = "6 m"
-
-[node name="Gap7m" type="Label3D" parent="Labels"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.0, 3.0, 18)
-billboard = 1
 font_size = 64
-outline_size = 12
-text = "7 m"
 
-[node name="StairsLabel" type="Label3D" parent="Labels"]
+[node name="Gap7m" type="Label3D" parent="Labels" unique_id=1224014313]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 3, 18)
+billboard = 1
+text = "7 m"
+font_size = 64
+
+[node name="StairsLabel" type="Label3D" parent="Labels" unique_id=670249317]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 4.5, -11)
 billboard = 1
-font_size = 64
-outline_size = 12
 text = "0.5 m steps"
+font_size = 64
 
-[node name="TunnelLabel" type="Label3D" parent="Labels"]
+[node name="TunnelLabel" type="Label3D" parent="Labels" unique_id=750107073]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 3.6, -16)
 billboard = 1
-font_size = 64
-outline_size = 12
 text = "Low tunnel"
-
-[node name="BlockLabel" type="Label3D" parent="Labels"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 4.0, 3)
-billboard = 1
 font_size = 64
-outline_size = 12
-text = "Block practice"
 
-[node name="Player" parent="." instance=ExtResource("2_player")]
+[node name="BlockLabel" type="Label3D" parent="Labels" unique_id=1014508073]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 4, 3)
+billboard = 1
+text = "Block practice"
+font_size = 64
+
+[node name="Player" parent="." unique_id=948499617 instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 8)
 
-[node name="CameraRig" parent="." instance=ExtResource("3_rig")]
+[node name="CameraRig" parent="." unique_id=1624656662 instance=ExtResource("3_rig")]
 
-[node name="Dummies" type="Node3D" parent="."]
+[node name="Dummies" type="Node3D" parent="." unique_id=247332810]
 
-[node name="DummyA" parent="Dummies" instance=ExtResource("4_dummy")]
+[node name="DummyA" parent="Dummies" unique_id=445877434 instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
 
-[node name="DummyB" parent="Dummies" instance=ExtResource("4_dummy")]
+[node name="DummyB" parent="Dummies" unique_id=155578776 instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -11)
 behavior = 1
 patrol_offset = Vector3(10, 0, 0)
 
-[node name="DummyC" parent="Dummies" instance=ExtResource("4_dummy")]
+[node name="DummyC" parent="Dummies" unique_id=13129086 instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 3, -16)
 weak_to = 1
 resists = 2
 
-[node name="DummyD" parent="Dummies" instance=ExtResource("4_dummy")]
+[node name="DummyD" parent="Dummies" unique_id=2138399375 instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -18.5)
 weak_to = 2
 
-[node name="DummyE" parent="Dummies" instance=ExtResource("4_dummy")]
+[node name="DummyE" parent="Dummies" unique_id=1819742689 instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 10)
 behavior = 2
 
-[node name="Swinger" parent="Dummies" instance=ExtResource("4_dummy")]
+[node name="Swinger" parent="Dummies" unique_id=1253570166 instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 8)
+max_hp = 400.0
 attack_mode = 2
-max_hp = 400.0
 
-[node name="Shooter" parent="Dummies" instance=ExtResource("4_dummy")]
+[node name="Shooter" parent="Dummies" unique_id=1962639022 instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -2)
-attack_mode = 1
 max_hp = 400.0
+attack_mode = 1
 
-[node name="HUD" parent="." instance=ExtResource("5_hud")]
+[node name="HUD" parent="." unique_id=809857340 instance=ExtResource("5_hud")]
