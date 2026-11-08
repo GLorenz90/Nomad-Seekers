@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_3l3ae"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_ynhqo"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_rnkbu"]
+
+[sub_resource type="Resource" id="Resource_j8byu"]
+script = ExtResource("1_3l3ae")
+display_name = "Whirl Cut"
+swing = 6
+move_speed_scale = 0.5
+duration = 0.6666666666666666
+active_start = 0.2
+active_end = 0.4
+window_open = 0.3333333333333333
+window_close = 0.6666666666666666
+lunge_distance = 0.0
+reach = 0.2
+hitbox_size = Vector3(3.2, 1.6, 3.2)
+
+[sub_resource type="Resource" id="Resource_5c1ot"]
+script = ExtResource("1_3l3ae")
+display_name = "Whirl Cut"
+swing = 6
+move_speed_scale = 0.5
+duration = 0.6666666666666666
+active_start = 0.2
+active_end = 0.4
+window_open = 0.3333333333333333
+window_close = 0.6666666666666666
+lunge_distance = 0.0
+reach = 0.2
+hitbox_size = Vector3(3.2, 1.6, 3.2)
+
+[sub_resource type="Resource" id="Resource_c03yc"]
+script = ExtResource("1_3l3ae")
+display_name = "Cyclone"
+damage_mult = 1.4
+swing = 6
+move_speed_scale = 0.5
+duration = 0.8
+active_start = 0.26666666666666666
+active_end = 0.4666666666666667
+window_open = 0.8
+window_close = 0.8
+lunge_distance = 0.0
+reach = 0.2
+hitbox_size = Vector3(3.2, 1.6, 3.2)
+
+[sub_resource type="Resource" id="Resource_lw3yr"]
+script = ExtResource("1_3l3ae")
+display_name = "Whirlwind"
+damage_mult = 0.55
+swing = 6
+move_speed_scale = 0.6
+face_movement = true
+duration = 0.3
+lunge_distance = 0.0
+reach = 0.0
+hitbox_size = Vector3(3.6, 1.6, 3.6)
+
+[resource]
+script = ExtResource("2_ynhqo")
+display_name = "Dervish Blades"
+two_handed = true
+sustained = true
+base_damage = 11.0
+normal_attacks = Array[ExtResource("1_3l3ae")]([SubResource("Resource_j8byu"), SubResource("Resource_5c1ot"), SubResource("Resource_c03yc")])
+sustained_attack = SubResource("Resource_lw3yr")
+mesh_size = Vector3(0.06, 0.06, 0.6)
+mesh_color = Color(0.4, 0.9, 0.85, 1)

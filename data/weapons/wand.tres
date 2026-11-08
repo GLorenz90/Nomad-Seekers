@@ -1,0 +1,106 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_xyas7"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_yuxax"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_vuk1u"]
+
+[sub_resource type="Resource" id="Resource_5x021"]
+script = ExtResource("1_xyas7")
+display_name = "Fire Bolt (Hard)"
+damage_mult = 2.2
+override_damage_type = true
+damage_type = 1
+lp_cost = 14.0
+swing = 5
+duration = 1.5
+active_start = 0.8
+active_end = 0.9
+window_open = 1.5
+window_close = 1.5
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 15.0
+projectile_radius = 0.32
+projectile_range = 28.0
+
+[sub_resource type="Resource" id="Resource_4f0kg"]
+script = ExtResource("1_xyas7")
+display_name = "Fire Bolt"
+override_damage_type = true
+damage_type = 1
+lp_cost = 6.0
+swing = 5
+move_speed_scale = 0.5
+duration = 1.1666666666666667
+active_start = 0.5
+active_end = 0.6
+window_open = 1.1666666666666667
+window_close = 1.1666666666666667
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 16.0
+projectile_radius = 0.18
+projectile_range = 28.0
+
+[sub_resource type="Resource" id="Resource_03m4y"]
+script = ExtResource("3_vuk1u")
+display_name = "Fire Bolt"
+normal = SubResource("Resource_4f0kg")
+hard = SubResource("Resource_5x021")
+
+[sub_resource type="Resource" id="Resource_gwuma"]
+script = ExtResource("1_xyas7")
+display_name = "Frost Lance (Hard)"
+damage_mult = 1.9
+override_damage_type = true
+damage_type = 2
+lp_cost = 18.0
+swing = 5
+duration = 1.5
+active_start = 0.8
+active_end = 0.9
+window_open = 1.5
+window_close = 1.5
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 24.0
+projectile_radius = 0.2
+projectile_range = 28.0
+projectile_pierce = true
+
+[sub_resource type="Resource" id="Resource_yyk6c"]
+script = ExtResource("1_xyas7")
+display_name = "Frost Lance"
+damage_mult = 0.85
+override_damage_type = true
+damage_type = 2
+lp_cost = 8.0
+swing = 5
+move_speed_scale = 0.5
+duration = 1.1666666666666667
+active_start = 0.5
+active_end = 0.6
+window_open = 1.1666666666666667
+window_close = 1.1666666666666667
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 24.0
+projectile_range = 28.0
+projectile_pierce = true
+
+[sub_resource type="Resource" id="Resource_beutb"]
+script = ExtResource("3_vuk1u")
+display_name = "Frost Lance"
+normal = SubResource("Resource_yyk6c")
+hard = SubResource("Resource_gwuma")
+
+[resource]
+script = ExtResource("2_yuxax")
+display_name = "Wand"
+weapon_class = 2
+no_combo = true
+casting = true
+base_damage = 18.0
+spells = Array[ExtResource("3_vuk1u")]([SubResource("Resource_03m4y"), SubResource("Resource_beutb")])
+mesh_size = Vector3(0.05, 0.05, 0.45)
+mesh_color = Color(0.95, 0.78, 0.3, 1)
