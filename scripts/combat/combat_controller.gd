@@ -1,6 +1,7 @@
 class_name CombatController
 extends Node3D
-## The Seeker's hands: input, timing combos, LP and attack execution (North Star §4).
+## The Seeker's hands: input, loadouts, timing combos, blocking, powerstance,
+## LP and attack execution (North Star §4, §5).
 ##
 ## Input: each face button is one hand (x_is_left picks which). Tap = Normal
 ## attack (fires on release), hold past hold_threshold = Hard attack. On a casting
@@ -17,12 +18,21 @@ extends Node3D
 ## - No-combo weapons and casting items are standalone and end any chain.
 ##
 ## Movement (PSU-style): each attack's move_speed_scale decides whether the
-## Seeker is rooted (0) or keeps moving at a reduced speed. Melee is rooted
-## except Dervish Blades; Normal shots and Normal spells are mobile; Hard shots
-## and Hard spells are rooted.
+## Seeker is rooted (0) or keeps moving at a reduced speed.
 ##
 ## Sustained weapons (Dervish Blades): holding the button runs the weapon's
 ## sustained_attack, hitting every sustained_tick until released.
+##
+## Loadouts (LB/RB): see Loadout for the one-Heavy and two-handed rules. LT
+## depends on the loadout:
+## - Shield equipped: full block at the shield's strength, with a parry window
+##   when the block starts. The shield's hand button deflects (light, opens a
+##   parry) or shoves (heavy, knocks back).
+## - Two-handed weapon: weak block (the weapon's block_strength).
+## - Matching pair (same weapon_type): hold LT for twin attacks with both hands.
+##   Casting items cast both spells at once. powerstance_default swaps this.
+## - Two different weapons: arms-up block (Loadout.ARMS_UP_BLOCK).
+## Blocks only stop hits from the front (block_arc_deg).
 ##
 ## Must be a direct child of the Player.
 
@@ -35,11 +45,17 @@ enum Hand { LEFT, RIGHT }
 
 const ENEMY_MASK := 4
 const MAX_CHAIN := 3
+## Streak id for twin (powerstance) attacks, so twins chain into their own steps.
+const TWIN := 2
+## Each weapon's share of a twin melee/gun attack (two hits = 1.5x total).
+## Casting twins cast both spells at full power and full LP.
+const TWIN_DAMAGE_SCALE := 0.75
 const WEAPON_DIR := "res://data/weapons/"
-## Prototype loadouts as [left hand, right hand]. LB/RB cycles. Proper loadout
-## editing arrives in Part 3.
-## An empty slot next to a two-handed weapon means both buttons use it.
-const STARTER_LOADOUTS := [["sword", "pistol"], ["wand", "sword"], ["pistol", "pistol"], ["dervish_blades", ""]]
+## Default loadouts as [left hand, right hand]; "" is empty. An empty hand next
+## to a two-handed weapon means both buttons use it.
+const DEFAULT_LOADOUTS := [
+	["sword", "pistol"], ["shield", "sword"], ["sword", "frost_sword"], ["pistol", "pistol"],
+	["wand", "sword"], ["great_sword", ""], ["dervish_blades", ""], ["", ""]]
 
 @export var stats: Stats
 ## North Star: the player chooses which face button is which hand.
@@ -50,9 +66,18 @@ const STARTER_LOADOUTS := [["sword", "pistol"], ["wand", "sword"], ["pistol", "p
 ## Melee attacks snap to face an enemy this close (PSO-style auto-turn).
 @export var melee_turn_range := 4.0
 @export var show_hitboxes := true
+## Load the player's saved loadouts from user:// on start.
+@export var use_saved_loadouts := true
+
+@export_group("Blocking")
+## Seconds at the start of a shield block that count as a parry.
+@export var parry_window := 0.2
+## Blocks only stop hits from inside this arc in front of the Seeker.
+@export var block_arc_deg := 140.0
+@export_range(0.0, 1.0) var block_move_scale := 0.4
 
 var lp := 0.0
-var loadouts: Array = []
+var loadout_set: LoadoutSet
 var loadout_index := 0
 ## Steps used in the current chain (0 = no chain).
 var chain_step := 0
@@ -72,6 +97,10 @@ class ActiveAttack:
 	var tick := 0.0
 	var releasing := false
 	var release_timer := 0.0
+	## Powerstance: the other hand attacks at the same time.
+	var twin := false
+	var other_weapon: WeaponData
+	var other_attack: AttackData
 
 
 var _current: ActiveAttack
@@ -84,6 +113,10 @@ var _time := 0.0
 var _lp_regen_delay := 0.0
 var _held: Array[float] = [-1.0, -1.0]
 var _hard_fired: Array[bool] = [false, false]
+var _blocking := false
+var _block_time := 0.0
+var _parry_until := -1.0
+var _lt_was_down := false
 
 var _player: Player
 var _pivots: Array[Node3D] = []
@@ -99,18 +132,13 @@ func _ready() -> void:
 	if stats == null:
 		stats = Stats.new()
 	lp = stats.max_lp
-	for pair in STARTER_LOADOUTS:
-		loadouts.append([_load_weapon(pair[0]), _load_weapon(pair[1])])
 	_build_hand(Vector3(-0.5, 1.05, -0.1))
 	_build_hand(Vector3(0.5, 1.05, -0.1))
 	_build_hitbox_debug()
-	_equip_visuals()
-
-
-func _load_weapon(file: String) -> WeaponData:
-	if file.is_empty():
-		return null
-	return load(WEAPON_DIR + file + ".tres")
+	if use_saved_loadouts:
+		apply_loadout_set(LoadoutSet.load_or_default(make_default_loadouts()))
+	else:
+		apply_loadout_set(make_default_loadouts())
 
 
 func _process(delta: float) -> void:
@@ -132,37 +160,118 @@ func _physics_process(delta: float) -> void:
 	elif chain_step > 0 and _time > _chain_expire:
 		chain_step = 0
 		_chain_locked = false
+	_update_block(delta)
 	_update_hitbox_debug()
 
 
-# --- Public -----------------------------------------------------------------
+# --- Loadouts ---------------------------------------------------------------
+
+static func load_weapon(file: String) -> WeaponData:
+	if file.is_empty():
+		return null
+	return load(WEAPON_DIR + file + ".tres")
+
+
+static func make_default_loadouts() -> LoadoutSet:
+	var defaults := LoadoutSet.new()
+	for pair in DEFAULT_LOADOUTS:
+		defaults.loadouts.append(Loadout.make(load_weapon(pair[0]), load_weapon(pair[1])))
+	defaults.ensure_slots()
+	return defaults
+
+
+func apply_loadout_set(new_set: LoadoutSet) -> void:
+	loadout_set = new_set
+	loadout_set.ensure_slots()
+	if not is_usable(loadout_index):
+		loadout_index = 0
+		for i in loadout_set.loadouts.size():
+			if is_usable(i):
+				loadout_index = i
+				break
+	cancel()
+	_equip_visuals()
+	loadout_changed.emit(loadout_index)
+
+
+func get_loadout() -> Loadout:
+	if loadout_set == null or loadout_set.loadouts.is_empty():
+		return null
+	return loadout_set.loadouts[loadout_index]
+
+
+func is_usable(index: int) -> bool:
+	var l := loadout_set.loadouts[index]
+	return not l.is_empty() and l.validate(loadout_set.double_heavy_augment) == ""
+
+
+func select_loadout(index: int) -> bool:
+	if not is_usable(index):
+		return false
+	loadout_index = index
+	cancel()
+	_equip_visuals()
+	loadout_changed.emit(loadout_index)
+	return true
+
+
+## LB/RB: next usable loadout, skipping empty ones and ones that break the rules.
+func cycle_loadout(step: int) -> void:
+	var count := loadout_set.loadouts.size()
+	for i in range(1, count + 1):
+		var index := posmod(loadout_index + step * i, count)
+		if is_usable(index):
+			select_loadout(index)
+			return
+
 
 func current_weapon(hand: int) -> WeaponData:
-	if loadouts.is_empty():
+	var l := get_loadout()
+	if l == null:
 		return null
-	var w: WeaponData = loadouts[loadout_index][hand]
+	var w := l.get_hand(hand)
 	if w == null:
 		# A two-handed weapon in the other hand covers this button too.
-		var other: WeaponData = loadouts[loadout_index][1 - hand]
+		var other := l.get_hand(1 - hand)
 		if other and other.two_handed:
 			return other
 	return w
 
 
+func get_lt_mode() -> Loadout.LTMode:
+	var l := get_loadout()
+	return l.get_lt_mode() if l else Loadout.LTMode.NONE
+
+
+func is_powerstance_active() -> bool:
+	if get_lt_mode() != Loadout.LTMode.POWERSTANCE:
+		return false
+	return Input.is_action_pressed("block") != loadout_set.powerstance_default
+
+
+# --- Public state ------------------------------------------------------------
+
 func is_attacking() -> bool:
 	return _current != null
 
 
+func is_blocking() -> bool:
+	return _blocking
+
+
 ## 0 while rooted; otherwise the fraction of normal speed the Seeker may move at.
 func get_move_scale() -> float:
-	if _current == null:
-		return 1.0
-	return _current.attack.move_speed_scale
+	if _current:
+		return _current.attack.move_speed_scale
+	if _blocking:
+		return block_move_scale
+	return 1.0
 
 
-## True when the attack decides which way the Seeker faces.
+## True when combat decides which way the Seeker faces.
 func controls_facing() -> bool:
-	return _current != null and not _current.attack.face_movement
+	return _blocking or (_current != null and not _current.attack.face_movement)
+
 
 ## Dashing can cancel an attack once its hit is out.
 func can_dash_cancel() -> bool:
@@ -173,8 +282,10 @@ func cancel() -> void:
 	_current = null
 	chain_step = 0
 	_chain_locked = false
+	_blocking = false
 	for hand in [Hand.LEFT, Hand.RIGHT]:
-		_return_to_rest(hand)
+		if hand < _pivots.size():
+			_return_to_rest(hand)
 
 
 ## Lunge velocity for the Seeker while a melee attack winds up.
@@ -187,6 +298,31 @@ func get_lunge_velocity() -> Vector3:
 	return _current.direction * (a.lunge_distance / maxf(a.active_end, 0.05))
 
 
+## Called by Player for every incoming hit. Returns the damage multiplier after
+## blocking (0 when parried). Blocks and parries only work from the front.
+func resolve_incoming(attacker: Node3D) -> float:
+	var frontal := true
+	if attacker:
+		var to := attacker.global_position - _player.global_position
+		to.y = 0.0
+		var facing := -_player.global_basis.z
+		facing.y = 0.0
+		if to.length_squared() > 0.0001:
+			frontal = facing.angle_to(to.normalized()) <= deg_to_rad(block_arc_deg * 0.5)
+	if not frontal:
+		return 1.0
+	var shield_parry := _blocking and get_lt_mode() == Loadout.LTMode.SHIELD and _block_time <= parry_window
+	if shield_parry or _time < _parry_until:
+		combo_feedback.emit("Parry!")
+		if attacker and attacker.has_method("on_parried"):
+			attacker.on_parried()
+		return 0.0
+	if _blocking:
+		combo_feedback.emit("Blocked")
+		return 1.0 - get_loadout().block_strength()
+	return 1.0
+
+
 func button_for(hand: int) -> String:
 	return "X" if (hand == Hand.LEFT) == x_is_left else "Y"
 
@@ -195,19 +331,37 @@ func report_hit(target: Node, info: DamageInfo, amount: float) -> void:
 	hit_landed.emit(target, info, amount)
 
 
+func get_lt_text() -> String:
+	var l := get_loadout()
+	match get_lt_mode():
+		Loadout.LTMode.SHIELD:
+			return "LT: Shield block %d%% (parry on press)" % roundi(l.block_strength() * 100.0)
+		Loadout.LTMode.TWO_HAND:
+			return "LT: Two-handed block %d%%" % roundi(l.block_strength() * 100.0)
+		Loadout.LTMode.ARMS_UP:
+			return "LT: Arms-up block %d%%" % roundi(l.block_strength() * 100.0)
+		Loadout.LTMode.POWERSTANCE:
+			if loadout_set.powerstance_default:
+				return "Powerstance (hold LT for single hands)"
+			return "LT: Powerstance twin attacks"
+	return "LT: -"
+
+
 func get_debug_text() -> String:
 	var lines := PackedStringArray()
-	lines.append("Loadout %d/%d (LB/RB)" % [loadout_index + 1, loadouts.size()])
+	lines.append("Loadout %d (LB/RB): %s" % [loadout_index + 1, get_loadout().describe()])
 	for hand in [Hand.LEFT, Hand.RIGHT]:
 		var w := current_weapon(hand)
 		var label := w.display_name if w else "-"
 		if w and w.casting:
 			label += " [%s / Shift: %s]" % [w.get_spell_name(0), w.get_spell_name(1)]
 		lines.append("%s (%s hand): %s" % [button_for(hand), "left" if hand == Hand.LEFT else "right", label])
+	lines.append(get_lt_text() + ("  [BLOCKING]" if _blocking else ""))
 	if _current:
-		lines.append("Attack: %s%s  %.2fs  window %.2f-%.2f" % [
-			_current.attack.display_name, " (Hard)" if _current.hard else "",
-			_current.elapsed, _current.attack.window_open, _current.attack.window_close])
+		lines.append("Attack: %s%s%s  %.2fs  window %.2f-%.2f" % [
+			_current.attack.display_name, " (Twin)" if _current.twin else "",
+			" (Hard)" if _current.hard else "", _current.elapsed,
+			_current.attack.window_open, _current.attack.window_close])
 	return "\n".join(lines)
 
 
@@ -237,16 +391,33 @@ func _read_hand(hand: int, delta: float) -> void:
 func _handle_loadout_input() -> void:
 	if _current:
 		return
-	var step := 0
 	if Input.is_action_just_pressed("loadout_next"):
-		step = 1
+		cycle_loadout(1)
 	elif Input.is_action_just_pressed("loadout_prev"):
-		step = -1
-	if step != 0:
-		loadout_index = posmod(loadout_index + step, loadouts.size())
-		chain_step = 0
-		_equip_visuals()
-		loadout_changed.emit(loadout_index)
+		cycle_loadout(-1)
+
+
+# --- Blocking ---------------------------------------------------------------
+
+func _update_block(delta: float) -> void:
+	var mode := get_lt_mode()
+	var can_block := mode == Loadout.LTMode.SHIELD or mode == Loadout.LTMode.TWO_HAND \
+		or mode == Loadout.LTMode.ARMS_UP
+	var lt_down := Input.is_action_pressed("block")
+	var fresh_press := lt_down and not _lt_was_down
+	_lt_was_down = lt_down
+	var wants := can_block and _current == null and lt_down
+	if wants and not _blocking:
+		_blocking = true
+		# Only a fresh LT press gets the parry window; resuming after an attack doesn't.
+		_block_time = 0.0 if fresh_press else parry_window + 0.01
+		_block_pose()
+	elif wants:
+		_block_time += delta
+	elif _blocking:
+		_blocking = false
+		for hand in [Hand.LEFT, Hand.RIGHT]:
+			_return_to_rest(hand)
 
 
 # --- Combo logic ------------------------------------------------------------
@@ -255,6 +426,7 @@ func _request_attack(hand: int, hard: bool) -> void:
 	var weapon := current_weapon(hand)
 	if weapon == null:
 		return
+	var twin := is_powerstance_active() and not weapon.is_shield
 	var standalone := weapon.no_combo or weapon.casting or (hard and weapon.sustained)
 	var slot := 1 if Input.is_action_pressed("shift") else 0
 
@@ -269,22 +441,23 @@ func _request_attack(hand: int, hard: bool) -> void:
 		if cur.elapsed > cur.attack.window_close or chain_step >= MAX_CHAIN:
 			return
 		_resolve_pending_hit(cur)
-		_begin(hand, weapon, hard, slot, not standalone)
+		_begin(hand, weapon, hard, slot, not standalone, twin)
 		return
 
 	var continuing := not standalone and not _chain_locked and chain_step > 0 \
 		and chain_step < MAX_CHAIN and _time <= _chain_expire
-	_begin(hand, weapon, hard, slot, continuing)
+	_begin(hand, weapon, hard, slot, continuing, twin)
 
 
-func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bool) -> void:
+func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bool, twin: bool) -> void:
+	var streak_id := TWIN if twin else hand
 	var next_step := chain_step + 1 if continuing else 1
 	var next_streak := 1
-	# Same weapon = same hand, or the same two-handed weapon on either button.
-	var same_weapon := hand == _last_hand or (weapon.two_handed and weapon == _last_weapon)
+	# Same weapon = same hand (or twin again), or one two-handed weapon on either button.
+	var same_weapon := streak_id == _last_hand or (weapon.two_handed and weapon == _last_weapon)
 	if continuing and same_weapon:
 		next_streak = _weapon_streak + 1
-	var sustained := hard and weapon.sustained
+	var sustained := hard and weapon.sustained and not twin
 	if weapon.no_combo or weapon.casting or sustained:
 		next_step = 0
 		next_streak = 1
@@ -292,18 +465,27 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 	var attack := weapon.get_attack(next_streak, hard, slot)
 	if attack == null:
 		return
-	if lp < attack.lp_cost:
+	var other_weapon: WeaponData = null
+	var other_attack: AttackData = null
+	var cost := attack.lp_cost
+	if twin:
+		other_weapon = current_weapon(1 - hand)
+		other_attack = other_weapon.get_attack(next_streak, hard, slot)
+		if other_attack:
+			cost += other_attack.lp_cost
+	if lp < cost:
 		combo_feedback.emit("Not enough LP")
 		return
 
 	if not continuing:
 		_chain_locked = false
+	_blocking = false
 	chain_step = next_step
 	_weapon_streak = next_streak
-	_last_hand = hand
+	_last_hand = streak_id
 	_last_weapon = weapon
-	lp -= attack.lp_cost
-	if attack.lp_cost > 0.0:
+	lp -= cost
+	if cost > 0.0:
 		_lp_regen_delay = 0.75
 
 	var a := ActiveAttack.new()
@@ -312,12 +494,19 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 	a.attack = attack
 	a.hard = hard
 	a.sustained = sustained
+	a.twin = twin and other_attack != null
+	a.other_weapon = other_weapon
+	a.other_attack = other_attack
 	_aim(a)
 	_current = a
 	_chain_expire = 0.0
+	if attack.opens_parry > 0.0:
+		_parry_until = _time + attack.opens_parry
 	_animate(hand, attack, sustained)
+	if a.twin:
+		_animate(1 - hand, other_attack, false)
 	if chain_step == MAX_CHAIN and _weapon_streak == MAX_CHAIN:
-		combo_feedback.emit("Finisher!")
+		combo_feedback.emit("Twin finisher!" if a.twin else "Finisher!")
 	attack_started.emit(hand, weapon, attack, chain_step, hard)
 
 
@@ -331,7 +520,7 @@ func _update_attack(delta: float) -> void:
 	if a.is_projectile:
 		if not cur.fired and cur.elapsed >= a.active_start:
 			cur.fired = true
-			_fire_projectile(cur)
+			_fire_projectiles(cur)
 	elif cur.elapsed >= a.active_start and cur.elapsed <= a.active_end:
 		_melee_hits(cur)
 
@@ -384,7 +573,7 @@ func _resolve_pending_hit(cur: ActiveAttack) -> void:
 	if cur.attack.is_projectile:
 		if not cur.fired:
 			cur.fired = true
-			_fire_projectile(cur)
+			_fire_projectiles(cur)
 	else:
 		_melee_hits(cur)
 
@@ -440,17 +629,26 @@ func _find_soft_target(max_range: float, max_angle_deg: float) -> Node3D:
 	return best
 
 
-func _make_damage(cur: ActiveAttack) -> DamageInfo:
+func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: float) -> DamageInfo:
 	var info := DamageInfo.new()
-	var stat := stats.attack_stat(cur.weapon.weapon_class)
-	info.amount = cur.weapon.base_damage * cur.attack.damage_mult * (1.0 + stat / 100.0)
-	info.damage_type = cur.attack.damage_type if cur.attack.override_damage_type else cur.weapon.damage_type
-	info.is_hard = cur.hard
+	var stat := stats.attack_stat(weapon.weapon_class)
+	info.amount = weapon.base_damage * attack.damage_mult * (1.0 + stat / 100.0) * scale
+	info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
+	info.is_hard = hard
 	if randf() < stats.crit_chance():
 		info.is_crit = true
 		info.amount *= 1.5
 	info.source = _player
 	return info
+
+
+## [weapon, attack, damage scale] for each hand taking part in this attack.
+func _strikes(cur: ActiveAttack) -> Array:
+	if not cur.twin:
+		return [[cur.weapon, cur.attack, 1.0, cur.hand]]
+	var scale := 1.0 if cur.weapon.casting else TWIN_DAMAGE_SCALE
+	return [[cur.weapon, cur.attack, scale, cur.hand],
+		[cur.other_weapon, cur.other_attack, scale, 1 - cur.hand]]
 
 
 func _hitbox_transform(cur: ActiveAttack) -> Transform3D:
@@ -473,21 +671,28 @@ func _melee_hits(cur: ActiveAttack) -> void:
 		var health := Health.find(body)
 		if health == null or health.is_dead():
 			continue
-		var info := _make_damage(cur)
-		info.hit_position = (body as Node3D).global_position + Vector3.UP * 1.2
-		report_hit(body, info, health.take_damage(info))
+		for strike in _strikes(cur):
+			var info := _make_damage(strike[0], strike[1], cur.hard, strike[2])
+			info.hit_position = (body as Node3D).global_position + Vector3.UP * 1.2
+			report_hit(body, info, health.take_damage(info))
+		if cur.attack.knockback > 0.0 and body.has_method("apply_knockback"):
+			body.apply_knockback(cur.direction * cur.attack.knockback)
 
 
-func _fire_projectile(cur: ActiveAttack) -> void:
-	var muzzle := _pivots[cur.hand].global_position + cur.direction * 0.6
-	var aim := cur.direction
-	if is_instance_valid(cur.target):
-		aim = (CameraRig.get_lock_point(cur.target) - muzzle).normalized()
-	var info := _make_damage(cur)
-	var color := Element.color_of(info.damage_type)
-	if info.damage_type == Element.Type.GENERIC:
-		color = Color(1.0, 0.85, 0.5)
-	Projectile.spawn(_player.get_parent(), muzzle, aim, cur.attack, info, color, _player, self)
+func _fire_projectiles(cur: ActiveAttack) -> void:
+	for strike in _strikes(cur):
+		var attack: AttackData = strike[1]
+		if not attack.is_projectile:
+			continue
+		var muzzle := _pivots[strike[3]].global_position + cur.direction * 0.6
+		var aim := cur.direction
+		if is_instance_valid(cur.target):
+			aim = (CameraRig.get_lock_point(cur.target) - muzzle).normalized()
+		var info := _make_damage(strike[0], attack, cur.hard, strike[2])
+		var color := Element.color_of(info.damage_type)
+		if info.damage_type == Element.Type.GENERIC:
+			color = Color(1.0, 0.85, 0.5)
+		Projectile.spawn(_player.get_parent(), muzzle, aim, attack, info, color, _player, self)
 
 
 func _regen_lp(delta: float) -> void:
@@ -510,10 +715,10 @@ func _build_hand(shoulder: Vector3) -> void:
 
 
 func _equip_visuals() -> void:
+	rotation.y = 0.0
 	for hand in [Hand.LEFT, Hand.RIGHT]:
 		var w := current_weapon(hand)
 		var mesh_instance := _meshes[hand]
-		rotation.y = 0.0
 		if w == null:
 			mesh_instance.mesh = null
 			continue
@@ -531,6 +736,8 @@ func _equip_visuals() -> void:
 
 func _rest_pose(hand: int) -> Vector3:
 	var w := current_weapon(hand)
+	if w and w.is_shield:
+		return Vector3(-0.3, 0.6 if hand == Hand.LEFT else -0.6, 0.0)
 	if w and w.weapon_class == WeaponData.WeaponClass.MELEE:
 		return Vector3(-0.6, 0.0, 0.0)
 	return Vector3(-0.2, 0.0, 0.0)
@@ -541,6 +748,21 @@ func _return_to_rest(hand: int) -> void:
 		_tweens[hand].kill()
 	_pivots[hand].rotation = _rest_pose(hand)
 	_pivots[hand].position.z = -0.1
+
+
+## Shields come up square in front; other weapons are raised crosswise.
+func _block_pose() -> void:
+	for hand in [Hand.LEFT, Hand.RIGHT]:
+		if _tweens[hand]:
+			_tweens[hand].kill()
+		var w := current_weapon(hand)
+		if w == null:
+			continue
+		if w.is_shield:
+			_pivots[hand].rotation = Vector3.ZERO
+			_pivots[hand].position.z = -0.25
+		else:
+			_pivots[hand].rotation = Vector3(0.9, 0.5 if hand == Hand.LEFT else -0.5, 0.0)
 
 
 func _animate(hand: int, a: AttackData, sustained: bool = false) -> void:

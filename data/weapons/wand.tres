@@ -97,6 +97,7 @@ hard = SubResource("Resource_gwuma")
 [resource]
 script = ExtResource("2_yuxax")
 display_name = "Wand"
+weapon_type = &"wand"
 weapon_class = 2
 no_combo = true
 casting = true

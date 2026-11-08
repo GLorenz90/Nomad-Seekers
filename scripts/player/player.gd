@@ -92,7 +92,7 @@ func _physics_process(delta: float) -> void:
 
 	if state == State.DASH:
 		_process_dash(delta)
-	elif combat.is_attacking():
+	elif combat.is_attacking() or combat.is_blocking():
 		_process_attacking(delta, move_dir)
 	else:
 		_process_movement(delta, move_dir)
@@ -112,6 +112,21 @@ func get_lock_target() -> Node3D:
 
 func is_invulnerable() -> bool:
 	return _invuln_timer > 0.0
+
+
+## Every incoming enemy hit goes through here: dash i-frames, then blocking and
+## parrying (CombatController.resolve_incoming), then Health.
+func receive_hit(info: DamageInfo, attacker: Node3D) -> float:
+	if is_invulnerable():
+		combat.combo_feedback.emit("Dodged")
+		return 0.0
+	var scale := combat.resolve_incoming(attacker)
+	if scale <= 0.0:
+		return 0.0
+	info.amount *= scale
+	var amount := health.take_damage(info)
+	DamageNumber.spawn(get_parent(), global_position + Vector3.UP * 1.9, amount, info.damage_type, false)
+	return amount
 
 
 ## Camera-relative stick direction (zero when the stick is centered).
@@ -160,7 +175,8 @@ func _process_movement(delta: float, move_dir: Vector3, speed_scale: float = 1.0
 	velocity.z = horizontal.z
 
 
-## Mobile attacks keep walking at a reduced speed; rooted ones only lunge.
+## Mobile attacks and blocking keep walking at a reduced speed; rooted attacks
+## only lunge.
 func _process_attacking(delta: float, move_dir: Vector3) -> void:
 	var scale := combat.get_move_scale()
 	if scale > 0.0:

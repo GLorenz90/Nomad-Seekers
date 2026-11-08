@@ -11,6 +11,11 @@ func _initialize() -> void:
 	_save(_pistol(), "pistol")
 	_save(_wand(), "wand")
 	_save(_dervish_blades(), "dervish_blades")
+	_save(_frost_sword(), "frost_sword")
+	_save(_great_sword(), "great_sword")
+	_save(_axe(), "axe")
+	_save(_shield(), "shield")
+	_save(_heavy_shield(), "heavy_shield")
 	quit()
 
 
@@ -54,6 +59,7 @@ func _attack(name: String, swing: AttackData.Swing, mult: float, hit: float,
 func _sword() -> WeaponData:
 	var w := WeaponData.new()
 	w.display_name = "Sword"
+	w.weapon_type = &"sword"
 	w.weapon_class = WeaponData.WeaponClass.MELEE
 	w.base_damage = 20.0
 	w.mesh_size = Vector3(0.08, 0.08, 1.0)
@@ -97,6 +103,7 @@ func _shot(name: String, mult: float, hard: bool, fire: float, combo: float, ful
 func _pistol() -> WeaponData:
 	var w := WeaponData.new()
 	w.display_name = "Pistol"
+	w.weapon_type = &"pistol"
 	w.weapon_class = WeaponData.WeaponClass.RANGED
 	w.base_damage = 12.0
 	w.mesh_size = Vector3(0.08, 0.16, 0.38)
@@ -137,6 +144,7 @@ func _spell_attack(name: String, element: Element.Type, mult: float, lp: float,
 func _wand() -> WeaponData:
 	var w := WeaponData.new()
 	w.display_name = "Wand"
+	w.weapon_type = &"wand"
 	w.weapon_class = WeaponData.WeaponClass.MAGIC
 	w.casting = true
 	w.no_combo = true
@@ -160,10 +168,11 @@ func _wand() -> WeaponData:
 
 ## Dervish Blades: the machinegun of melee. Original timings (PSO has no
 ## equivalent): quick spinning slashes you can walk through, and holding the
-## button spins continuously, hitting everything around you every 0.15 s.
+## button spins continuously, hitting everything around you every 0.2 s.
 func _dervish_blades() -> WeaponData:
 	var w := WeaponData.new()
 	w.display_name = "Dervish Blades"
+	w.weapon_type = &"dervish_blades"
 	w.weapon_class = WeaponData.WeaponClass.MELEE
 	w.two_handed = true
 	w.sustained = true
@@ -186,7 +195,7 @@ func _dervish_blades() -> WeaponData:
 	spin.display_name = "Whirlwind"
 	spin.swing = AttackData.Swing.SPIN
 	spin.damage_mult = 0.55
-	spin.sustained_tick = 0.15
+	spin.sustained_tick = 0.2  # 5 hits/s -> 3.75 hits/s (-25% damage rate)
 	spin.duration = _f(9)  # wind-down after release
 	spin.move_speed_scale = 0.6
 	spin.face_movement = true
@@ -194,4 +203,118 @@ func _dervish_blades() -> WeaponData:
 	spin.reach = 0.0
 	spin.hitbox_size = Vector3(3.6, 1.6, 3.6)
 	w.sustained_attack = spin
+	return w
+
+
+## Same type as the Sword (so the two powerstance), but deals Ice damage.
+func _frost_sword() -> WeaponData:
+	var w := _sword()
+	w.display_name = "Frost Sword"
+	w.damage_type = Element.Type.ICE
+	w.mesh_color = Color(0.6, 0.85, 1.0)
+	return w
+
+
+## Great Sword = PSO "Sword" (two-handed). Comes-out frames aren't listed, so
+## hits land two frames before the window opens, like the saber.
+##   Normal combo/full 17/39, 15/31, -/43    Heavy 24/46, 19/35, -/43
+func _great_sword() -> WeaponData:
+	var w := WeaponData.new()
+	w.display_name = "Great Sword"
+	w.weapon_type = &"great_sword"
+	w.weapon_class = WeaponData.WeaponClass.MELEE
+	w.weight = WeaponData.Weight.HEAVY
+	w.two_handed = true
+	w.block_strength = 0.35
+	w.base_damage = 34.0
+	w.mesh_size = Vector3(0.14, 0.1, 1.6)
+	w.mesh_color = Color(0.7, 0.72, 0.78)
+	var specs := [
+		["Sweep", AttackData.Swing.SLASH_RIGHT, 1.0, 15, 17, 39],
+		["Return Sweep", AttackData.Swing.SLASH_LEFT, 1.1, 13, 15, 31],
+		["Crushing Blow", AttackData.Swing.OVERHEAD, 1.4, 18, 43, 43],
+		["Heavy Sweep", AttackData.Swing.SLASH_RIGHT, 1.8, 22, 24, 46],
+		["Heavy Return", AttackData.Swing.SLASH_LEFT, 1.95, 17, 19, 35],
+		["Earthsplitter", AttackData.Swing.OVERHEAD, 2.4, 20, 43, 43]]
+	var attacks: Array[AttackData] = []
+	for spec in specs:
+		var a := _attack(spec[0], spec[1], spec[2], spec[3], spec[4], spec[5])
+		a.reach = 1.4
+		a.hitbox_size = Vector3(3.0, 1.6, 2.2)
+		a.lunge_distance = 0.6
+		attacks.append(a)
+	w.normal_attacks = attacks.slice(0, 3)
+	w.hard_attacks = attacks.slice(3, 6)
+	return w
+
+
+## Axe (heavy, one-handed). PSO has no axe; it borrows the partisan's frames.
+##   Normal combo/full 17/39, 14/30, -/33    Heavy 24/46, 19/35, -/35
+func _axe() -> WeaponData:
+	var w := WeaponData.new()
+	w.display_name = "Axe"
+	w.weapon_type = &"axe"
+	w.weapon_class = WeaponData.WeaponClass.MELEE
+	w.weight = WeaponData.Weight.HEAVY
+	w.base_damage = 28.0
+	w.mesh_size = Vector3(0.1, 0.35, 0.8)
+	w.mesh_color = Color(0.55, 0.45, 0.4)
+	var specs := [
+		["Chop", AttackData.Swing.OVERHEAD, 1.0, 15, 17, 39],
+		["Hack", AttackData.Swing.SLASH_LEFT, 1.1, 12, 14, 30],
+		["Cleaver", AttackData.Swing.OVERHEAD, 1.4, 14, 33, 33],
+		["Heavy Chop", AttackData.Swing.OVERHEAD, 1.8, 22, 24, 46],
+		["Heavy Hack", AttackData.Swing.SLASH_LEFT, 1.95, 17, 19, 35],
+		["Executioner", AttackData.Swing.OVERHEAD, 2.4, 16, 35, 35]]
+	var attacks: Array[AttackData] = []
+	for spec in specs:
+		attacks.append(_attack(spec[0], spec[1], spec[2], spec[3], spec[4], spec[5]))
+	w.normal_attacks = attacks.slice(0, 3)
+	w.hard_attacks = attacks.slice(3, 6)
+	return w
+
+
+## Light shield: LT blocks 60% with a parry window when the block starts.
+## The hand button deflects: a quick bash that opens a parry window.
+func _shield() -> WeaponData:
+	var w := WeaponData.new()
+	w.display_name = "Shield"
+	w.weapon_type = &"shield"
+	w.weapon_class = WeaponData.WeaponClass.MELEE
+	w.is_shield = true
+	w.no_combo = true
+	w.block_strength = 0.6
+	w.base_damage = 8.0
+	w.mesh_size = Vector3(0.6, 0.7, 0.08)
+	w.mesh_color = Color(0.35, 0.55, 0.85)
+	var deflect := _attack("Deflect", AttackData.Swing.THRUST, 0.5, 3, 12, 12)
+	deflect.opens_parry = _f(8)
+	deflect.lunge_distance = 0.0
+	deflect.reach = 0.9
+	deflect.hitbox_size = Vector3(1.6, 1.6, 1.2)
+	w.normal_attacks = [deflect]
+	w.hard_attacks = [deflect]
+	return w
+
+
+## Heavy shield: LT blocks 85%. The hand button shoves enemies back.
+func _heavy_shield() -> WeaponData:
+	var w := WeaponData.new()
+	w.display_name = "Heavy Shield"
+	w.weapon_type = &"heavy_shield"
+	w.weapon_class = WeaponData.WeaponClass.MELEE
+	w.weight = WeaponData.Weight.HEAVY
+	w.is_shield = true
+	w.no_combo = true
+	w.block_strength = 0.85
+	w.base_damage = 12.0
+	w.mesh_size = Vector3(0.8, 1.0, 0.12)
+	w.mesh_color = Color(0.45, 0.45, 0.55)
+	var shove := _attack("Shove", AttackData.Swing.THRUST, 0.6, 8, 20, 20)
+	shove.knockback = 9.0
+	shove.lunge_distance = 0.4
+	shove.reach = 1.0
+	shove.hitbox_size = Vector3(2.0, 1.6, 1.4)
+	w.normal_attacks = [shove]
+	w.hard_attacks = [shove]
 	return w

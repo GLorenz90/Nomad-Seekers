@@ -272,6 +272,13 @@ font_size = 64
 outline_size = 12
 text = "Low tunnel"
 
+[node name="BlockLabel" type="Label3D" parent="Labels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 4.0, 3)
+billboard = 1
+font_size = 64
+outline_size = 12
+text = "Block practice"
+
 [node name="Player" parent="." instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 8)
 
@@ -299,5 +306,15 @@ weak_to = 2
 [node name="DummyE" parent="Dummies" instance=ExtResource("4_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 10)
 behavior = 2
+
+[node name="Swinger" parent="Dummies" instance=ExtResource("4_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 8)
+attack_mode = 2
+max_hp = 400.0
+
+[node name="Shooter" parent="Dummies" instance=ExtResource("4_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -2)
+attack_mode = 1
+max_hp = 400.0
 
 [node name="HUD" parent="." instance=ExtResource("5_hud")]

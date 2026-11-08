@@ -10,6 +10,9 @@ enum WeaponClass { MELEE, RANGED, MAGIC }
 enum Weight { LIGHT, HEAVY }
 
 @export var display_name := ""
+## Weapons of the same type powerstance together, even different items
+## (a Sword and a Frost Sword).
+@export var weapon_type: StringName = &""
 @export var weapon_class: WeaponClass = WeaponClass.MELEE
 @export var weight: Weight = Weight.LIGHT
 @export var two_handed := false
@@ -20,6 +23,11 @@ enum Weight { LIGHT, HEAVY }
 ## Holding the button runs sustained_attack for as long as it's held, in place
 ## of a Hard attack (North Star "Sustained" tag).
 @export var sustained := false
+## Shields block with LT; their hand button deflects (light) or shoves (heavy).
+@export var is_shield := false
+## Fraction of damage stopped when blocking with LT. Shields set their own;
+## two-handed weapons default to about half a light shield.
+@export_range(0.0, 1.0) var block_strength := 0.3
 @export var base_damage := 10.0
 @export var damage_type: Element.Type = Element.Type.GENERIC
 
@@ -47,6 +55,10 @@ func get_attack(step: int, hard: bool, spell_slot: int = 0) -> AttackData:
 	if list.is_empty():
 		return null
 	return list[clampi(step - 1, 0, list.size() - 1)]
+
+
+func is_heavy() -> bool:
+	return weight == Weight.HEAVY
 
 
 func get_spell_name(spell_slot: int) -> String:

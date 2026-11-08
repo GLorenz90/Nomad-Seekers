@@ -15,6 +15,10 @@ var _hits: Array[float] = []
 var _feedback: Array[String] = []
 var _started: Array[String] = []
 
+# Default loadout slots (CombatController.DEFAULT_LOADOUTS).
+const WAND := 4
+const DERVISH := 6
+
 
 func _initialize() -> void:
 	_main = load("res://scenes/main.tscn").instantiate()
@@ -26,6 +30,8 @@ func _run() -> void:
 	_player = _main.get_node("Player")
 	_combat = _player.combat
 	_combat.stats.luck = 0.0  # no random crits in tests
+	# Never depend on (or overwrite) the player's saved loadouts.
+	_combat.apply_loadout_set(CombatController.make_default_loadouts())
 	_dummy = _main.get_node("Dummies/DummyA")
 	_combat.hit_landed.connect(func(_t, _i, amount): _hits.append(amount))
 	_combat.combo_feedback.connect(func(text): _feedback.append(text))
@@ -134,7 +140,9 @@ func _run() -> void:
 	Input.action_press("loadout_next")
 	await _frames(2)
 	Input.action_release("loadout_next")
-	_check("LB/RB switches to the wand loadout", _combat.current_weapon(CombatController.Hand.LEFT).display_name == "Wand")
+	_check("LB/RB cycles to the next loadout (now %d)" % (_combat.loadout_index + 1), _combat.loadout_index == 1)
+	_set_loadout(WAND)
+	_check("wand loadout equipped", _combat.current_weapon(CombatController.Hand.LEFT).display_name == "Wand")
 	_dummy.health.multipliers[Element.Type.FIRE] = 2.0
 	await _tap("hand_x")
 	await _idle()
@@ -150,7 +158,7 @@ func _run() -> void:
 	_check("Shift casts the second spell (%s)" % [_started], _started == ["Frost Lance"])
 	_check("Frost Lance deals Ice damage (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], 18.0 * 0.85 * 1.3))
 	_dummy.health.multipliers.erase(Element.Type.FIRE)
-	_combat.loadout_index = 0
+	_set_loadout(0)
 
 	# --- Mobility: rooted vs moving attacks (PSU-style) ---
 	var run := _player.move_speed
@@ -160,17 +168,17 @@ func _run() -> void:
 	_check("Normal pistol shots keep you moving at half speed (%.1f m/s)" % pistol_tap, absf(pistol_tap - run * 0.5) < 0.8)
 	var pistol_hold := await _speed_while(0, "hand_y", true)
 	_check("Charged pistol shots root you (%.1f m/s)" % pistol_hold, pistol_hold < 1.0)
-	var wand_tap := await _speed_while(1, "hand_x", false)
+	var wand_tap := await _speed_while(WAND, "hand_x", false)
 	_check("Normal spells keep you moving at half speed (%.1f m/s)" % wand_tap, absf(wand_tap - run * 0.5) < 0.8)
-	var wand_hold := await _speed_while(1, "hand_x", true)
+	var wand_hold := await _speed_while(WAND, "hand_x", true)
 	_check("Hard spells root you (%.1f m/s)" % wand_hold, wand_hold < 1.0)
-	var dervish_tap := await _speed_while(3, "hand_x", false)
+	var dervish_tap := await _speed_while(DERVISH, "hand_x", false)
 	_check("Dervish Blades slashes keep you moving (%.1f m/s)" % dervish_tap, absf(dervish_tap - run * 0.5) < 0.8)
-	var dervish_hold := await _speed_while(3, "hand_x", true)
+	var dervish_hold := await _speed_while(DERVISH, "hand_x", true)
 	_check("Dervish Blades spin keeps you moving (%.1f m/s)" % dervish_hold, absf(dervish_hold - run * 0.6) < 0.8)
 
 	# --- Dervish Blades: two-handed combo and sustained spin ---
-	_set_loadout(3)
+	_set_loadout(DERVISH)
 	await _reset(Vector3(0, 0.1, -6.5))
 	_check("two-handed Dervish Blades answer both buttons",
 		_combat.current_weapon(CombatController.Hand.RIGHT) == _combat.current_weapon(CombatController.Hand.LEFT))
@@ -187,7 +195,7 @@ func _run() -> void:
 	var spinning := _combat.is_attacking() and _combat._current.sustained
 	Input.action_release("hand_x")
 	await _frames(30)
-	_check("holding X spins and hits repeatedly (%d hits in 1 s)" % _hits.size(), spinning and _hits.size() >= 4)
+	_check("holding X spins and hits about every 0.2 s (%d hits in 1 s)" % _hits.size(), spinning and _hits.size() >= 3 and _hits.size() <= 5)
 	_check("releasing ends the spin", not _combat.is_attacking())
 	_set_loadout(0)
 
@@ -219,8 +227,7 @@ func _run() -> void:
 
 
 func _set_loadout(index: int) -> void:
-	_combat.loadout_index = index
-	_combat._equip_visuals()
+	_combat.select_loadout(index)
 
 
 ## Runs forward in an empty corner, attacks, and returns the speed mid-attack.

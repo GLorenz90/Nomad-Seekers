@@ -58,10 +58,12 @@ duration = 0.3
 lunge_distance = 0.0
 reach = 0.0
 hitbox_size = Vector3(3.6, 1.6, 3.6)
+sustained_tick = 0.2
 
 [resource]
 script = ExtResource("2_ynhqo")
 display_name = "Dervish Blades"
+weapon_type = &"dervish_blades"
 two_handed = true
 sustained = true
 base_damage = 11.0
