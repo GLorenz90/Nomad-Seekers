@@ -5,9 +5,13 @@ extends Resource
 ## level of that stat, and the SyncAIDa's level is the sum (max 200). Each
 ## stat level adds STAT_BONUS to the paired Seeker's matching stat.
 ##
-## Evolution (PSO-style formulas): at level 10 it takes a form from its
-## Seeker's job, at 35 from its strongest stat, and from 50 on (re-checked
-## every 5 levels) from its two strongest stats. Level 100 adds "Prime".
+## Evolution (PSO-style formulas): at level 10 and again at 35 it takes a form
+## from its strongest stat, and from 50 on (re-checked every 5 levels) from its
+## two strongest stats. Level 100 adds "Prime". Forms depend only on the
+## SyncAIDa's own stats, never its Seeker's job, so one character can raise a
+## SyncAIDa for another (PSO's mag meta-progression).
+##
+## Starters: every Seeker picks one of four, each already level 5 in one stat.
 ## Each evolution milestone unlocks a Sync Burst (up to 3, one active).
 
 const XP_PER_LEVEL := 100.0
@@ -21,7 +25,9 @@ const STAT_COLORS := {&"def": Color(0.55, 0.7, 0.95), &"str": Color(1.0, 0.4, 0.
 
 ## Milestones: level -> evolution stage.
 const MILESTONES := [10, 35, 50]
-const JOB_FORMS := ["Vanguard", "Tracker", "Lumen"]  # Striker, Ranger, Invoker
+## Level 10 form by strongest stat.
+const FIRST_FORMS := {&"def": "Shell", &"str": "Ember", &"dex": "Flit", &"sol": "Glimmer"}
+## Level 35 form by strongest stat.
 const STAT_FORMS := {&"def": "Bastion", &"str": "Talon", &"dex": "Kestrel", &"sol": "Wisp"}
 ## Two strongest stats (sorted by STATS order) -> form.
 const PAIR_FORMS := {
@@ -38,6 +44,10 @@ const BURST_TEXT := [
 ]
 ## Burst unlocked by each evolution stage (1, 2, 3).
 const STAGE_BURSTS := [Burst.LUMEN_NOVA, Burst.AEGIS_PULSE, Burst.MENDING_BLOOM]
+
+## The four starters: [name, stat], each starting at STARTER_LEVEL in its stat.
+const STARTERS := [["Aegi", &"def"], ["Kindle", &"str"], ["Swift", &"dex"], ["Lumi", &"sol"]]
+const STARTER_LEVEL := 5
 
 ## What feeding each item does (stat XP; negatives as in PSO's mag feeding).
 ## Consumables come from the inventory, Lumidium from the bank.
@@ -72,6 +82,20 @@ static func create(name: String) -> SyncAIDaData:
 	s.display_name = name
 	s.stat_xp = {&"def": 0.0, &"str": 0.0, &"dex": 0.0, &"sol": 0.0}
 	return s
+
+
+## Starter index 0-3 (STARTERS): level 5 in its stat.
+static func starter(index: int) -> SyncAIDaData:
+	var spec: Array = STARTERS[clampi(index, 0, STARTERS.size() - 1)]
+	var s := create(spec[0])
+	s.stat_xp[spec[1]] = STARTER_LEVEL * XP_PER_LEVEL
+	return s
+
+
+static func starter_text(index: int) -> String:
+	var spec: Array = STARTERS[index]
+	return "%s  (%s Lv %d: +%d %s)" % [spec[0], STAT_NAMES[spec[1]], STARTER_LEVEL,
+		roundi(STARTER_LEVEL * STAT_BONUS), STAT_NAMES[spec[1]]]
 
 
 func stat_level(stat: StringName) -> int:
@@ -120,9 +144,8 @@ static func can_eat(item: StringName) -> bool:
 	return FEEDS.has(item)
 
 
-## Feeds one item. job: CharacterData.Job of the paired Seeker (decides the
-## level-10 form). Returns the list of events: "level", "evolved", "burst".
-func feed(item: StringName, job: int) -> Array[String]:
+## Feeds one item. Returns the list of events: "level", "evolved", "burst".
+func feed(item: StringName) -> Array[String]:
 	var events: Array[String] = []
 	if not FEEDS.has(item):
 		return events
@@ -136,7 +159,7 @@ func feed(item: StringName, job: int) -> Array[String]:
 	var after := level()
 	if after != before:
 		events.append("level")
-	if _evolve(after, job):
+	if _evolve(after):
 		events.append("evolved")
 	while bursts.size() < mini(stage, 3):
 		bursts.append(STAGE_BURSTS[bursts.size()])
@@ -145,13 +168,13 @@ func feed(item: StringName, job: int) -> Array[String]:
 
 
 ## PSO-style evolution checks. Returns true if the form changed.
-func _evolve(lv: int, job: int) -> bool:
+func _evolve(lv: int) -> bool:
 	var old_form := form
 	while stage < MILESTONES.size() and lv >= MILESTONES[stage]:
 		stage += 1
 		match stage:
 			1:
-				form = JOB_FORMS[clampi(job, 0, 2)]
+				form = FIRST_FORMS[dominant_stat()]
 			2:
 				form = STAT_FORMS[dominant_stat()]
 			3:

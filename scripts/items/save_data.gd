@@ -27,15 +27,16 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 	s.inventory.add_consumable(&"hp_gel", 3)
 	s.inventory.add_consumable(&"lp_cell", 2)
 	s.inventory.add_consumable(&"cure_salt", 1)
-	s._add_starters()
 	return s
 
 
-## New Seekers start with two SyncAIDa so pairing can be tried right away.
-func _add_starters() -> void:
-	syncaida.append(SyncAIDaData.create("Pip"))
-	syncaida.append(SyncAIDaData.create("Nyx"))
-	paired = 0
+## Gives the Seeker their starting SyncAIDa (SyncAIDaData.STARTERS index).
+## Until one is chosen, they have none; the menu's SyncAIDa tab offers the four.
+func choose_starter(index: int) -> SyncAIDaData:
+	var s := SyncAIDaData.starter(index)
+	syncaida.append(s)
+	paired = syncaida.size() - 1
+	return s
 
 
 func paired_syncaida() -> SyncAIDaData:
@@ -70,6 +71,4 @@ func _fill_missing(default_loadouts: LoadoutSet) -> void:
 		loadouts = default_loadouts
 	if inventory == null:
 		inventory = Inventory.new()
-	if syncaida.is_empty():
-		_add_starters()
 	loadouts.ensure_slots()

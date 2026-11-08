@@ -111,6 +111,15 @@ func use_save(data: SaveData) -> void:
 		syncaida.pair(save.paired_syncaida())
 
 
+## Takes one of the four starter SyncAIDa (SyncAIDaData.STARTERS) and pairs it.
+func choose_starter(index: int) -> void:
+	if save == null:
+		return
+	save.choose_starter(index)
+	syncaida.pair(save.paired_syncaida())
+	save_game()
+
+
 ## Pairs a different owned SyncAIDa.
 func pair_syncaida(index: int) -> void:
 	if save == null or index < 0 or index >= save.syncaida.size():

@@ -92,7 +92,7 @@ func feed(item: StringName, free: bool = false) -> Array[String]:
 			inv.lumidium[item] = int(inv.lumidium[item]) - 1
 		else:
 			return none
-	var events := data.feed(item, player.save.character.job)
+	var events := data.feed(item)
 	if events.is_empty():
 		events.append("fed")
 	apply_stats()
@@ -120,7 +120,9 @@ func _physics_process(delta: float) -> void:
 ## Fires the active Sync Burst if the gauge is full. Returns true on success.
 func fire() -> bool:
 	if not is_ready():
-		if data and data.active() < 0:
+		if data == null:
+			player.combat.combo_feedback.emit("Choose a SyncAIDa in the menu")
+		elif data.active() < 0:
 			player.combat.combo_feedback.emit("No Sync Burst yet (level 10)")
 		return false
 	var burst := data.active()

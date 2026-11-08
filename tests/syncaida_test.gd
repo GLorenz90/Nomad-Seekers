@@ -35,12 +35,24 @@ func _run() -> void:
 
 	# --- Starting state ----------------------------------------------------
 	var save := _player.save
-	_check("a new Seeker owns two SyncAIDa and pairs the first (%s)" % _sync.data.display_name,
-		save.syncaida.size() == 2 and _sync.data == save.syncaida[0])
-	var pip := _sync.data
-	_check("it starts at level 0 as a Mote, with no burst", pip.level() == 0 and pip.form == "Mote" and pip.bursts.is_empty())
+	_check("a new Seeker has no SyncAIDa until they pick a starter", save.syncaida.is_empty() and _sync.data == null
+		and not _sync.visible)
+	_check("L3 does nothing without one", not _sync.fire())
 	var base_str := _combat.stats.strength
 	var base_def := _combat.stats.defense
+	_player.choose_starter(1)
+	var pip := _sync.data
+	_check("choosing Kindle pairs it: STR Lv 5, level 5, a Mote, no burst (%s Lv %d)" % [pip.display_name, pip.level()],
+		pip.display_name == "Kindle" and pip.stat_level(&"str") == 5 and pip.level() == 5 and pip.form == "Mote"
+		and pip.bursts.is_empty() and _sync.visible)
+	_check("and gives the Seeker +10 STR right away (+%.0f)" % (_combat.stats.strength - base_str),
+		is_equal_approx(_combat.stats.strength - base_str, 10.0))
+	var starter_stats := []
+	for i in 4:
+		var st := SyncAIDaData.starter(i)
+		starter_stats.append(st.dominant_stat() if st.level() == 5 else &"?")
+	_check("the four starters are Lv 5 in DEF, STR, DEX and SOL (%s)" % [starter_stats],
+		starter_stats == [&"def", &"str", &"dex", &"sol"])
 
 	# --- Feeding -----------------------------------------------------------
 	var gels := save.inventory.count(&"hp_gel")
@@ -62,13 +74,14 @@ func _run() -> void:
 		if "evolved" in e:
 			evolved_at = pip.level()
 			break
-	_check("level 10 evolves it by job: Striker -> Vanguard (%s at %d)" % [pip.form, evolved_at],
-		evolved_at == 10 and pip.form == "Vanguard")
+	_check("level 10 evolves it by its strongest stat: STR -> Ember (%s at %d)" % [pip.form, evolved_at],
+		evolved_at == 10 and pip.form == "Ember")
 	_check("and unlocks the first burst, Lumen Nova (%s)" % pip.burst_name(), pip.active() == SyncAIDaData.Burst.LUMEN_NOVA)
 	var str_levels := pip.stat_level(&"str")
 	_check("each STR level adds 2 STR to the Seeker (+%.0f for %d levels)" % [_combat.stats.strength - base_str, str_levels],
 		is_equal_approx(_combat.stats.strength - base_str, str_levels * 2.0))
 
+	_player.choose_starter(3)
 	var nyx := save.syncaida[1]
 	_player.pair_syncaida(1)
 	_check("pairing the other SyncAIDa swaps the bonus out", is_equal_approx(_combat.stats.strength, base_str)
@@ -93,14 +106,15 @@ func _run() -> void:
 	_check("DEF bonus follows DEF levels (+%.0f)" % (_combat.stats.defense - base_def),
 		is_equal_approx(_combat.stats.defense - base_def, pip.stat_level(&"def") * 2.0))
 
-	var ranger := SyncAIDaData.create("Test")
-	while ranger.level() < 10:
-		ranger.feed(&"raw", CharacterData.Job.RANGER)
-	_check("a Ranger's SyncAIDa becomes a Tracker at 10 (%s)" % ranger.form, ranger.form == "Tracker")
-	var inv_job := SyncAIDaData.create("Test2")
-	while inv_job.level() < 10:
-		inv_job.feed(&"lp_cell", CharacterData.Job.INVOKER)
-	_check("an Invoker's becomes a Lumen (%s)" % inv_job.form, inv_job.form == "Lumen")
+	# Forms follow stats only, so a Striker can raise a SOL SyncAIDa for an Invoker alt.
+	var forms := []
+	for item: StringName in [&"hp_gel", &"ice", &"lp_cell"]:
+		var test := SyncAIDaData.create("Test")
+		while test.level() < 10:
+			test.feed(item)
+		forms.append(test.form)
+	_check("level-10 forms follow stats, not the job: DEF / DEX / SOL -> %s" % [forms],
+		forms[0] == "Shell" and forms[1] == "Flit" and forms[2] == "Glimmer")
 
 	# Back to a modest SyncAIDa for the burst checks, so bonuses stay small.
 	_player.pair_syncaida(1)

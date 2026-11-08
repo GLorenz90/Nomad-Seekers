@@ -73,6 +73,9 @@ func _process(_delta: float) -> void:
 		_sync_label.text = "%s  %s  Lv %d   Burst: %s%s%s" % [d.display_name, d.form, d.level(), d.burst_name(),
 			"  READY (L3)" if companion.is_ready() else "",
 			"   Aegis %.0fs" % combat.aegis_time_left() if combat.aegis_active() else ""]
+	elif companion:
+		_sync_bar.value = 0.0
+		_sync_label.text = "No SyncAIDa yet: choose your starter (Start / Tab > SyncAIDa)"
 	var pips := ""
 	for i in CombatController.MAX_CHAIN:
 		pips += ("● " if i < combat.chain_step else "○ ")

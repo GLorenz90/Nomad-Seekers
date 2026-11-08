@@ -41,6 +41,8 @@ var _race: OptionButton
 var _gender: OptionButton
 var _job: OptionButton
 var _sync_owned: VBoxContainer
+var _sync_starter_title: Label
+var _sync_starters: VBoxContainer
 var _sync_info: Label
 var _sync_feeds: GridContainer
 var _sync_burst: OptionButton
@@ -72,6 +74,9 @@ func open() -> void:
 	_rebuild_picker()
 	_load_character()
 	_tabs.current_tab = 0
+	var seeker := _player()
+	if seeker and seeker.save and seeker.save.syncaida.is_empty():
+		_tabs.current_tab = _tabs.get_tab_idx_from_control(_tabs.get_node("SyncAIDa"))
 	visible = true
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -511,6 +516,17 @@ func _build_syncaida_tab() -> void:
 	left.add_child(_label("Your SyncAIDa (pick one to pair)", 18))
 	_sync_owned = VBoxContainer.new()
 	left.add_child(_sync_owned)
+	_sync_starter_title = _label("", 18)
+	left.add_child(_sync_starter_title)
+	_sync_starters = VBoxContainer.new()
+	left.add_child(_sync_starters)
+	for i in SyncAIDaData.STARTERS.size():
+		var b := Button.new()
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text = SyncAIDaData.starter_text(i)
+		b.modulate = SyncAIDaData.STAT_COLORS[SyncAIDaData.STARTERS[i][1]].lightened(0.3)
+		b.pressed.connect(_on_starter.bind(i))
+		_sync_starters.add_child(b)
 
 	var mid := VBoxContainer.new()
 	mid.custom_minimum_size.x = 420.0
@@ -528,7 +544,7 @@ func _build_syncaida_tab() -> void:
 			_refresh_syncaida())
 	burst_row.add_child(_sync_burst)
 	mid.add_child(burst_row)
-	mid.add_child(_label("Forms: Lv 10 by job, Lv 35 by strongest stat, Lv 50+ by the two strongest\n(re-checked every 5 levels). Each of those milestones unlocks a Sync Burst.", 13))
+	mid.add_child(_label("Forms: Lv 10 and Lv 35 by strongest stat, Lv 50+ by the two strongest\n(re-checked every 5 levels). Each of those milestones unlocks a Sync Burst.\nForms only depend on stats, so you can raise one for another character.", 13))
 
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 6)
@@ -549,7 +565,9 @@ func _build_syncaida_tab() -> void:
 		_sync_feeds.add_child(effect)
 	var free := CheckButton.new()
 	free.text = "Free feeding (debug)"
-	free.toggled.connect(func(on: bool): free_feeding = on)
+	free.toggled.connect(func(on: bool):
+		free_feeding = on
+		_refresh_syncaida())
 	right.add_child(free)
 	_sync_message = _label("", 16)
 	_sync_message.modulate = Color(1.0, 0.85, 0.5)
@@ -570,13 +588,24 @@ func _paired_data() -> SyncAIDaData:
 	return seeker.save.paired_syncaida() if seeker and seeker.save else null
 
 
+func _on_starter(index: int) -> void:
+	var seeker := _player()
+	if seeker == null:
+		return
+	seeker.choose_starter(index)
+	_sync_message.text = "%s joined you." % seeker.syncaida.data.display_name
+	_refresh_syncaida()
+
+
 func _on_feed(item: StringName) -> void:
 	var seeker := _player()
 	if seeker == null:
 		return
 	var events := seeker.syncaida.feed(item, free_feeding)
 	var d := seeker.syncaida.data
-	if events.is_empty():
+	if d == null:
+		_sync_message.text = "Choose a starter first."
+	elif events.is_empty():
 		_sync_message.text = "You don't have any to feed."
 	elif "evolved" in events:
 		_sync_message.text = "%s evolved into %s!" % [d.display_name, d.form]
@@ -606,9 +635,22 @@ func _refresh_syncaida() -> void:
 			_sync_message.text = "Paired with %s." % d.display_name
 			_refresh_syncaida())
 		_sync_owned.add_child(b)
+	var inv := seeker.save.inventory
+	for child in _sync_feeds.get_children():
+		if child is Button:
+			var item: StringName = child.get_meta("item")
+			var have := inv.count(item) if Inventory.CONSUMABLES.has(item) else int(inv.lumidium.get(item, 0))
+			var label: String = Inventory.CONSUMABLES.get(item, "%s Lumidium" % String(item).capitalize())
+			(child as Button).text = "%s x%d" % [label, have]
+	var none := seeker.save.syncaida.is_empty()
+	_sync_starter_title.text = "Choose your starting SyncAIDa" if none else "\nAdopt another starter (debug)"
+	_sync_starters.visible = none or free_feeding
+	_sync_starter_title.visible = _sync_starters.visible
 	var d := seeker.save.paired_syncaida()
 	if d == null:
-		_sync_info.text = "No SyncAIDa."
+		_sync_info.text = "No SyncAIDa yet. Pick a starter on the left:\neach begins at level 5 in one stat."
+		_sync_burst.clear()
+		_sync_burst.disabled = true
 		return
 	var next := d.next_milestone()
 	var bonus := d.bonuses()
@@ -627,10 +669,3 @@ func _refresh_syncaida() -> void:
 	else:
 		_sync_burst.disabled = false
 		_sync_burst.select(clampi(d.active_burst, 0, d.bursts.size() - 1))
-	var inv := seeker.save.inventory
-	for child in _sync_feeds.get_children():
-		if child is Button:
-			var item: StringName = child.get_meta("item")
-			var have := inv.count(item) if Inventory.CONSUMABLES.has(item) else int(inv.lumidium.get(item, 0))
-			var label: String = Inventory.CONSUMABLES.get(item, "%s Lumidium" % String(item).capitalize())
-			(child as Button).text = "%s x%d" % [label, have]

@@ -83,13 +83,15 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Save file:** `user://save.tres` holds the character, loadouts and inventory. It's written when the menu closes and at teleporters. Part 3's `loadouts.tres` is imported once.
 
 ## Part 6: SyncAIDa
-- **Your SyncAIDa** floats over your right shoulder. Its color follows its strongest stat and its shape changes with each evolution. New Seekers own two (Pip and Nyx). Pair one in the menu's **SyncAIDa** tab.
+- **Your SyncAIDa** floats over your right shoulder. Its color follows its strongest stat and its shape changes with each evolution.
+- **Starter choice:** a new Seeker picks one of four starters in the menu's **SyncAIDa** tab (the menu opens there until you've chosen). Each starts at **level 5 in one stat**, so it boosts what your character needs right away: Aegi (DEF), Kindle (STR), Swift (DEX), Lumi (SOL). You can own several and pair one; with Free feeding on, the tab also lets you adopt more starters for testing.
 - **Feeding** (SyncAIDa tab): consumables come from your inventory and Lumidium from your bank. Each item raises some of **DEF / STR / DEX / SOL** and may lower another, as in PSO. Every 100 XP in a stat is one stat level. The SyncAIDa's level is the sum of its stat levels, up to **200**. Each stat level adds +2 to your matching stat (DEF → DEF, STR → STR, DEX → DEX, SOL → SOL).
 - **Evolution** (PSO-style formulas):
-  - **Level 10:** takes a form from your job (Vanguard, Tracker or Lumen).
+  - **Level 10:** takes a form from its strongest stat (Shell, Ember, Flit or Glimmer).
   - **Level 35:** takes a form from its strongest stat (Bastion, Talon, Kestrel or Wisp).
   - **Level 50 and up:** takes a form from its two strongest stats (Bulwark, Sentinel, Oracle, Falcon, Pyre or Zephyr), re-checked every 5 levels.
   - **Level 100:** adds "Prime".
+  - Forms depend only on the SyncAIDa's stats, never your job, so one character can raise a SyncAIDa for another (PSO's mag meta-progression).
 - **Sync Burst** (L3 / R when the gauge is full). The gauge fills from damage you deal and take. Each milestone (10 / 35 / 50) unlocks a burst, up to 3. Choose the active one in the SyncAIDa tab.
   - **Lumen Nova:** Light damage to every enemy within 8 m. Scales with level and SOL.
   - **Aegis Pulse:** for 15 s, nearby Seekers deal +30% damage and take -30%.
@@ -163,7 +165,7 @@ godot --headless --path . --script res://tests/syncaida_test.gd
 
 - `loot_test.gd` (in the arena): the full weapon list and every emblem's favored families, job locks, the 7 rares covering all 10 emblems, drop rates and emblem weighting, tag tiers, tag names and RT specials, the +30% vs Beast bonus, Gush / Mind / King's / Hell effects (and Hell never killing a boss), the Charge special paying Oro, Shotgun pellets, a Grenade arc and its blast (and its prediction), the Boomerang lock chain, the Gigarang hitting out and back, the Thrown Daggers finisher, Machine Pistol automatic fire, the Staff's four spells, Heal and Cure, EXP and drops, pickups and an HP Gel, a Lumidium node breaking, losing carried Lumidium on death, a teleporter deposit, and a save round-trip.
 
-- `syncaida_test.gd` (in the arena): two starters with the first paired, feeding from inventory and bank, the stat math, the Seeker stat bonus following the paired SyncAIDa, every evolution (job, strongest stat, top two, Prime), burst unlocks, the 200 cap, the gauge from damage dealt and taken, L3 firing Lumen Nova (in range only), Aegis Pulse in both directions, Mending Bloom, feeding from the menu, and a save round-trip.
+- `syncaida_test.gd` (in the arena): no SyncAIDa until a starter is chosen, the four starters at level 5 in their stat and the instant bonus, level-10 forms following stats rather than job, feeding from inventory and bank, the stat math, the Seeker stat bonus following the paired SyncAIDa, every evolution (job, strongest stat, top two, Prime), burst unlocks, the 200 cap, the gauge from damage dealt and taken, L3 firing Lumen Nova (in range only), Aegis Pulse in both directions, Mending Bloom, feeding from the menu, and a save round-trip.
 
 The tests always use a fresh save and never write yours.
 
