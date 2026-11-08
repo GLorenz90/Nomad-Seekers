@@ -1,6 +1,8 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/combat/combat_controller.gd" id="2_combat"]
+[ext_resource type="Script" path="res://scripts/combat/health.gd" id="3_health"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -44,3 +46,9 @@ mesh = SubResource("CapsuleMesh_body")
 [node name="Visor" type="MeshInstance3D" parent="Visual"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.33)
 mesh = SubResource("BoxMesh_visor")
+
+[node name="Combat" type="Node3D" parent="."]
+script = ExtResource("2_combat")
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("3_health")

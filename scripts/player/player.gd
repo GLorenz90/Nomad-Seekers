@@ -9,6 +9,9 @@ extends CharacterBody3D
 ## Feel goals, borrowed from Spiral Knights: snappy acceleration, no slippery
 ## stops, a forgiving jump (coyote time + input buffer), and a dash you can
 ## chain into a jump.
+##
+## While an attack plays (see CombatController) the Seeker is rooted apart from
+## the attack's lunge. Dashing cancels an attack once its hit is out.
 
 signal jumped
 signal landed
@@ -63,6 +66,14 @@ var _air_dashes_left := 0
 var _squash_tween: Tween
 
 @onready var _visual: Node3D = $Visual
+@onready var combat: CombatController = $Combat
+@onready var health: Health = $Health
+
+
+func _ready() -> void:
+	add_to_group("player")
+	health.max_hp = combat.stats.max_hp
+	health.hp = health.max_hp
 
 
 func _physics_process(delta: float) -> void:
@@ -75,10 +86,13 @@ func _physics_process(delta: float) -> void:
 	var move_dir := _get_move_direction()
 
 	if Input.is_action_just_pressed("dash") and _can_dash():
+		combat.cancel()
 		_start_dash(move_dir)
 
 	if state == State.DASH:
 		_process_dash(delta)
+	elif combat.is_attacking():
+		_process_attacking(delta)
 	else:
 		_process_movement(delta, move_dir)
 
@@ -97,6 +111,13 @@ func get_lock_target() -> Node3D:
 
 func is_invulnerable() -> bool:
 	return _invuln_timer > 0.0
+
+
+## Snap to face a direction (used when an attack starts).
+func face_direction(direction: Vector3) -> void:
+	direction.y = 0.0
+	if direction.length_squared() > 0.0001:
+		rotation.y = atan2(-direction.x, -direction.z)
 
 
 func get_debug_text() -> String:
@@ -128,6 +149,20 @@ func _process_movement(delta: float, move_dir: Vector3) -> void:
 	if not on_floor:
 		rate *= air_control
 	horizontal = horizontal.move_toward(desired, rate * delta)
+	velocity.x = horizontal.x
+	velocity.z = horizontal.z
+
+
+## Rooted while attacking, apart from the attack's own lunge.
+func _process_attacking(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y = maxf(velocity.y - _gravity_down * delta, -max_fall_speed)
+	var lunge := combat.get_lunge_velocity()
+	var horizontal := Vector3(velocity.x, 0.0, velocity.z)
+	if lunge != Vector3.ZERO:
+		horizontal = lunge
+	else:
+		horizontal = horizontal.move_toward(Vector3.ZERO, deceleration * delta)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 
@@ -179,8 +214,10 @@ func _camera_forward() -> Vector3:
 
 
 func _update_facing(delta: float, move_dir: Vector3) -> void:
-	var face := Vector3.ZERO
 	var target := get_lock_target()
+	if combat.is_attacking() and target == null:
+		return  # The attack set our facing.
+	var face := Vector3.ZERO
 	if target:
 		face = target.global_position - global_position
 	elif state == State.DASH:
@@ -198,6 +235,8 @@ func _update_facing(delta: float, move_dir: Vector3) -> void:
 
 func _can_dash() -> bool:
 	if state == State.DASH or _dash_cooldown_timer > 0.0:
+		return false
+	if not combat.can_dash_cancel():
 		return false
 	return is_on_floor() or _coyote_timer > 0.0 or _air_dashes_left > 0
 
