@@ -47,6 +47,11 @@ func _run() -> void:
 		and pip.bursts.is_empty() and _sync.visible)
 	_check("and gives the Seeker +10 STR right away (+%.0f)" % (_combat.stats.strength - base_str),
 		is_equal_approx(_combat.stats.strength - base_str, 10.0))
+	var lumi := SyncAIDaData.starter(3)
+	var swift := SyncAIDaData.starter(2)
+	_check("DEX and SOL levels give +1 each, STR and DEF +2 (Lumi +%d SOL, Swift +%d DEX, %s)" % [lumi.bonuses()[&"sol"], swift.bonuses()[&"dex"], SyncAIDaData.starter_text(3)],
+		is_equal_approx(lumi.bonuses()[&"sol"], 5.0) and is_equal_approx(swift.bonuses()[&"dex"], 5.0)
+		and is_equal_approx(SyncAIDaData.starter(0).bonuses()[&"def"], 10.0))
 	var starter_stats := []
 	for i in 4:
 		var st := SyncAIDaData.starter(i)

@@ -315,6 +315,31 @@ func _run() -> void:
 	front.queue_free()
 	back.queue_free()
 
+	# Point-blank: Arbalest and Gigarang fire straight ahead and still hit.
+	for type in ["arbalest", "gigarang"]:
+		_combat.set_job("R" if type == "arbalest" else "S")
+		_equip(null, _w(type))
+		var close := _spawn("grub_hound", ARENA + Vector3(0.3, 0, -1.6))
+		await _place(ARENA)
+		_player.camera_rig.lock_target = close
+		await _frames(3)
+		_hits.clear()
+		_count_new()
+		await _tap("hand_x")
+		await _until_fired()
+		var worst := 0.0
+		for p in _projectiles():
+			if not p.has_meta("counted"):
+				var flat := Vector3(p.velocity.x, 0, p.velocity.z).normalized()
+				worst = maxf(worst, rad_to_deg(flat.angle_to(-_player.global_basis.z)))
+		_count_new()
+		await _frames(60)
+		_player.camera_rig.lock_target = null
+		_check("%s at point blank flies straight (%.1f deg off facing) and hits" % [type, worst],
+			worst <= CombatController.MAX_AIM_YAW + 0.5 and _hit(close))
+		await _idle()
+		close.queue_free()
+
 	# Only Boomerang, Gigarang and Arbalest pass through enemies (and specific rares).
 	var piercers := []
 	for type in ["pistol", "rifle", "bow", "crossbow", "shotgun", "machine_pistol", "assault_rifle", "arbalest", "gigarang"]:

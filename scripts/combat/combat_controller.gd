@@ -78,6 +78,13 @@ const LOCK_CHAIN_HOP := 9.0
 ## Aegis Pulse (Sync Burst): damage dealt x AEGIS_POWER, taken x AEGIS_GUARD.
 const AEGIS_POWER := 1.3
 const AEGIS_GUARD := 0.7
+## Shots start this high on the Seeker, and this fraction of the way out
+## toward the firing hand (0 = dead centre).
+const MUZZLE_HEIGHT := 1.1
+const MUZZLE_SIDE_SCALE := 0.3
+## A straight shot never leaves more than this many degrees (left or right)
+## from the direction the Seeker faces.
+const MAX_AIM_YAW := 8.0
 ## PSO-shotgun targeting picks enemies within this half-angle of the aim.
 const MULTI_TARGET_CONE := 50.0
 ## Heal and Cure reach every Seeker this close to the caster.
@@ -1053,11 +1060,15 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
     var attack: AttackData = strike[1]
     if not attack.is_projectile:
       continue
-    var muzzle := _pivots[_holding_hand(strike[3])].global_position + cur.direction * 0.6
+    # Shots leave from near the Seeker's centre line (a little toward the firing
+    # hand), so a close target straight ahead doesn't pull the shot sideways.
+    var hand_side := _pivots[_holding_hand(strike[3])].global_position - _player.global_position
+    hand_side = hand_side.project(_player.global_basis.x) * MUZZLE_SIDE_SCALE
+    var muzzle := _player.global_position + Vector3.UP * MUZZLE_HEIGHT + hand_side + cur.direction * 0.6
     var target: Node3D = cur.target if is_instance_valid(cur.target) else null
     var aim := cur.direction
     if target:
-      aim = (CameraRig.get_lock_point(target) - muzzle).normalized()
+      aim = _clamp_aim((CameraRig.get_lock_point(target) - muzzle).normalized(), cur.direction)
     # PSO-shotgun targeting: one projectile per picked enemy, each only able to
     # hit its own target.
     if attack.multi_target > 0:
@@ -1094,6 +1105,21 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
         p.velocity = _lob_velocity(muzzle, dir, target if i == count / 2 else null, attack)
       if not chain.is_empty():
         p.chain = chain.duplicate()
+
+
+## Keeps a shot within MAX_AIM_YAW degrees of the facing direction (left /
+## right only; up and down are free), so a target very close to the muzzle
+## can't send it off at a wild angle.
+func _clamp_aim(aim: Vector3, facing: Vector3) -> Vector3:
+  var flat := Vector3(aim.x, 0.0, aim.z)
+  if flat.length_squared() < 0.0001:
+    return aim
+  var yaw := facing.signed_angle_to(flat.normalized(), Vector3.UP)
+  var limit := deg_to_rad(MAX_AIM_YAW)
+  if absf(yaw) <= limit:
+    return aim
+  var clamped := facing.rotated(Vector3.UP, clampf(yaw, -limit, limit))
+  return (clamped * flat.length() + Vector3.UP * aim.y).normalized()
 
 
 ## Launch velocity for a lobbed shot: lands on the target (or, with no target,

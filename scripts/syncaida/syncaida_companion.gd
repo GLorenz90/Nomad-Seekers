@@ -16,6 +16,8 @@ const GAUGE_PER_TAKEN := 0.35
 const NOVA_RADIUS := 8.0
 const PARTY_RADIUS := 10.0
 const AEGIS_SECONDS := 15.0
+## Hover point relative to the Seeker (x right, y up, +z behind).
+const SHOULDER_OFFSET := Vector3(0.6, 1.7, 0.35)
 
 var player: Player
 var data: SyncAIDaData
@@ -107,8 +109,10 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("sync_burst"):
 		fire()
 	_age += delta
-	# Hover over the right shoulder, trailing a little.
-	var goal := player.global_transform * Vector3(0.75, 2.0 + sin(_age * 2.4) * 0.12, 0.55)
+	# Hover just over and slightly behind the right shoulder, low enough to keep
+	# the view clear. (Twin SyncAIDa will mirror this on the left: x -> -x.)
+	var goal := player.global_transform * Vector3(SHOULDER_OFFSET.x, SHOULDER_OFFSET.y + sin(_age * 2.4) * 0.08,
+		SHOULDER_OFFSET.z)
 	global_position = global_position.lerp(goal, 1.0 - exp(-8.0 * delta))
 	_body.rotation.y += delta * 1.5
 	if is_ready():

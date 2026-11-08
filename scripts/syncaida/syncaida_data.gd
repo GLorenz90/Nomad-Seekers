@@ -3,7 +3,7 @@ extends Resource
 ## One SyncAIDa (North Star §7.1, PSO's MAGs). Feeding raises its four stats,
 ## DEF / STR / DEX / SOL, by experience: every XP_PER_LEVEL in a stat is one
 ## level of that stat, and the SyncAIDa's level is the sum (max 200). Each
-## stat level adds STAT_BONUS to the paired Seeker's matching stat.
+## stat level adds STAT_BONUS[stat] to the paired Seeker's matching stat.
 ##
 ## Evolution (PSO-style formulas): at level 10 and again at 35 it takes a form
 ## from its strongest stat, and from 50 on (re-checked every 5 levels) from its
@@ -17,7 +17,9 @@ extends Resource
 const XP_PER_LEVEL := 100.0
 const MAX_LEVEL := 200
 ## Seeker stat points per SyncAIDa stat level.
-const STAT_BONUS := 2.0
+## Seeker stat points per SyncAIDa stat level (Grayson, 2026-11-08): STR and DEF
+## +2, DEX and SOL +1, to keep ranged and magic in balance.
+const STAT_BONUS := {&"def": 2.0, &"str": 2.0, &"dex": 1.0, &"sol": 1.0}
 const STATS: Array[StringName] = [&"def", &"str", &"dex", &"sol"]
 const STAT_NAMES := {&"def": "DEF", &"str": "STR", &"dex": "DEX", &"sol": "SOL"}
 const STAT_COLORS := {&"def": Color(0.55, 0.7, 0.95), &"str": Color(1.0, 0.4, 0.3),
@@ -96,7 +98,7 @@ static func starter(index: int) -> SyncAIDaData:
 static func starter_text(index: int) -> String:
 	var spec: Array = STARTERS[index]
 	return "%s  (%s Lv %d: +%d %s)" % [spec[0], STAT_NAMES[spec[1]], STARTER_LEVEL,
-		roundi(STARTER_LEVEL * STAT_BONUS), STAT_NAMES[spec[1]]]
+		roundi(STARTER_LEVEL * float(STAT_BONUS[spec[1]])), STAT_NAMES[spec[1]]]
 
 
 func stat_level(stat: StringName) -> int:
@@ -119,7 +121,7 @@ func level() -> int:
 func bonuses() -> Dictionary:
 	var out := {}
 	for stat in STATS:
-		out[stat] = stat_level(stat) * STAT_BONUS
+		out[stat] = stat_level(stat) * float(STAT_BONUS[stat])
 	return out
 
 
