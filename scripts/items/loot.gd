@@ -12,10 +12,18 @@ const RARE_DIR := "res://data/weapons/rare/"
 
 ## Two favored weapon families per emblem (index = emblem).
 const FAVORED := [
-	[&"sword", &"great_sword"], [&"pistol", &"rifle"], [&"wand", &"staff"],
-	[&"dagger", &"thrown_daggers"], [&"spear", &"halberd"], [&"shotgun", &"hand_shotgun"],
-	[&"cane", &"talisman"], [&"axe", &"great_axe"], [&"boomerang", &"cards"],
-	[&"mace", &"maul"],
+	[&"sword", &"great_sword"],  # Crimson
+	[&"axe", &"great_axe"],  # Orange
+	[&"mace", &"maul"],  # Gold
+	[&"bow", &"crossbow"],  # Green
+	[&"spear", &"halberd"],  # Teal
+	[&"cane", &"talisman"],  # Cyan
+	[&"pistol", &"rifle"],  # Blue
+	[&"wand", &"staff"],  # Purple
+	[&"boomerang", &"cards"],  # Magenta
+	[&"dagger", &"thrown_daggers"],  # Pink
+	[&"shotgun", &"hand_shotgun"],  # White
+	[&"bladestaff", &"glove"],  # Black
 ]
 
 const DROP_CHANCE := 0.6

@@ -63,7 +63,16 @@ func _run() -> void:
 		for e in r.get_meta("emblems", []):
 			rare_emblems[e] = true
 	_check("7 rares, and every emblem pool has one (%d emblems)" % rare_emblems.size(),
-		Loot.rare_weapons().size() == 7 and rare_emblems.size() == 10)
+		Loot.rare_weapons().size() == 7 and rare_emblems.size() == CharacterData.EMBLEMS.size())
+	var who := CharacterData.new()
+	var emblems := []
+	for job in 3:
+		who.job = job as CharacterData.Job
+		emblems.append(who.emblem_name())
+	_check("12 emblems, and the job changes the emblem (Striker / Ranger / Invoker: %s)" % [emblems],
+		CharacterData.EMBLEMS.size() == 12 and Loot.FAVORED.size() == 12
+		and emblems[0] != emblems[1] and emblems[1] != emblems[2] and emblems[0] != emblems[2])
+	_check("the job can't be changed in the Character tab", (_main.loadout_menu as LoadoutMenu)._job.disabled)
 	var ember := _rare("Emberfang")
 	_check("Emberfang: rare, Burning (Heat tier 4), Fire, +30%% base",
 		ember != null and ember.rare and ember.tag.line_name == "Heat" and ember.tag_tier == 3

@@ -111,4 +111,4 @@ normal_attacks = Array[ExtResource("1_jpw0q")]([SubResource("Resource_s3vwq"), S
 hard_attacks = Array[ExtResource("1_jpw0q")]([SubResource("Resource_rltto"), SubResource("Resource_pluaf"), SubResource("Resource_mt4os")])
 mesh_size = Vector3(0.25, 0.25, 1.2)
 mesh_color = Color(0.45, 0.45, 0.5, 1)
-metadata/emblems = [4, 9]
+metadata/emblems = [3, 8]

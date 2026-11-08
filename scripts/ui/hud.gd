@@ -110,7 +110,7 @@ func _process(_delta: float) -> void:
 			c.seeker_name, c.job_name(), c.emblem_name(), c.experience, inv.oro,
 			player.carried_lumidium_total(), inv.lumidium_total(),
 			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt")]
-		_wallet.modulate = c.emblem_color().lightened(0.5)
+		_wallet.modulate = c.emblem_text_color()
 	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE
 	if _panel.visible:
 		_debug.text = "%s\n%s\n%s\nFPS: %d" % [

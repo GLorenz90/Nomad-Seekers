@@ -72,10 +72,10 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
   - **Ranged:** Pistol, Machine Pistol (tap = 3-round burst, hold = automatic), Hand Shotgun and Shotgun (pellet spreads), Rifle (piercing, long chain window), Assault Rifle (hold = automatic), Bazooka (rocket, big blast), Grenade (thrown in an arc; 3 in a row ends with a double throw), Grenade Launcher (lobbed, status-heavy), Thrown Daggers (3 in a row ends with a fan), Boomerang (homes in on up to 5 enemies in turn), Gigarang (hits on the way out and back), Bow, Crossbow, Arbalest.
   - **Magic:** Wand, Cane (stronger, slower damage spells), Staff (two-handed, four spells: X, Y, RT + X, RT + Y), Talisman and Totem (Heal and Cure), Cards (SOL damage, thrown).
   - **Shields:** Shield, Heavy Shield, Ward, Barrier.
-- **Jobs.** Each weapon lists the jobs that can use it (S Striker, R Ranger, I Invoker). Loadouts holding a weapon your job can't use say "job locked" and LB/RB skips them. Change job in the menu's Character tab.
+- **Jobs.** Each weapon lists the jobs that can use it (S Striker, R Ranger, I Invoker). Loadouts holding a weapon your job can't use say "job locked" and LB/RB skips them. The job is chosen at character creation and can't change afterwards (unlike PSU); the Levels tab has a debug switch for testing.
 - **Special tags.** Found weapons can roll a tag line in tiers (PSO's specials: Heat → Fire → Flame → Burning, Dim → … → Hell, Draw → … → Gush, and so on). The tag names the weapon ("Flame Sword"), gives elemental lines their element, and unlocks the weapon's **RT special**: hold RT and press that hand. The special is a stronger first attack that costs LP and applies the tag: elemental status buildup, instant kill (never bosses), heal from damage, LP steal, EXP steal, HP cut, or the Charge line's x3 hit (paid in Oro, LP or HP).
 - **Monster-type bonuses** (PSO's "% vs Native"): +5–30% damage vs one of the six monster types.
-- **Drops.** Enemies give EXP and roll a drop where they fall: Oro, a consumable, or a weapon. Weapons come from your **emblem's pool**: each of the 10 emblems (from name + race + gender, like PSO section IDs) favors two weapon families and carries its own **rares** (Emberfang, Glacier Maw, Stormcaller, Gravesong, Lifeleech Coil, Lumen Edge, Kingmaker). Pickups drift to you when you're close.
+- **Drops.** Enemies give EXP and roll a drop where they fall: Oro, a consumable, or a weapon. Weapons come from your **emblem's pool**: each of the 12 emblems (Crimson, Orange, Gold, Green, Teal, Cyan, Blue, Purple, Magenta, Pink, White, Black; from name + race + gender + job, like PSO section IDs) favors two weapon families and carries its own **rares** (Emberfang, Glacier Maw, Stormcaller, Gravesong, Lifeleech Coil, Lumen Edge, Kingmaker). Pickups drift to you when you're close.
 - **Heal and Cure** (Talisman, Totem, Staff): Heal restores HP, Cure clears every status. Both reach other Seekers within 10 m.
 - **Consumables:** HP Gel, LP Cell, Cure Salt. D-pad left / up / right or 1 / 2 / 3.
 - **Lumidium.** Crystal deposits in the arena break after 3 hits into Lumidium of their color. Carried Lumidium is lost when you die; stand on a **teleporter** pad to bank it.
@@ -106,7 +106,7 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 |---|---|
 | Loadouts | 8 loadouts, weapon picker (job-locked weapons are grey; A on one says which job needs it), Double-Heavy augment |
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
-| Character | Name (New name button for gamepads), race, gender, job, emblem and drop pool |
+| Character | Name (New name button for gamepads), race, gender, emblem and drop pool. The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst |
 | Levels | Prototype only: level select, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |

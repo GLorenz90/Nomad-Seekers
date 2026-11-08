@@ -494,9 +494,12 @@ func _build_character_tab() -> void:
 	_race = _option(grid, "Race", CharacterData.Race.keys())
 	_gender = _option(grid, "Gender", CharacterData.Gender.keys())
 	_job = _option(grid, "Job", CharacterData.Job.keys())
+	# Chosen at character creation and fixed afterwards (debug: Levels tab).
+	_job.disabled = true
+	_job.focus_mode = Control.FOCUS_NONE
 	_character_info = _label("", 18)
 	box.add_child(_character_info)
-	box.add_child(_label("The emblem comes from name, race and gender (PSO section IDs). It picks the weapon\nfamilies and rares your drops favor. Jobs lock weapons: S = Striker, R = Ranger, I = Invoker.", 14))
+	box.add_child(_label("The emblem comes from name, race, gender and job (like PSO section IDs). It picks the weapon\nfamilies and rares your drops favor. The job is set at character creation and can't change\n(Levels tab has a debug switch). Jobs lock weapons: S = Striker, R = Ranger, I = Invoker.", 14))
 
 
 func _option(parent: Node, caption: String, names: Array) -> OptionButton:
@@ -528,13 +531,19 @@ func _apply_character() -> void:
 	c.seeker_name = _name_edit.text if _name_edit.text.strip_edges() != "" else "Seeker"
 	c.race = _race.selected as CharacterData.Race
 	c.gender = _gender.selected as CharacterData.Gender
-	var job_changed := c.job != _job.selected
-	c.job = _job.selected as CharacterData.Job
-	if job_changed:
-		combat.job_code = c.job_code()
-		_rebuild_picker()
-		_refresh()
 	_refresh_character()
+
+
+## Debug only (Levels tab): the job is otherwise fixed at creation.
+func _tool_cycle_job() -> void:
+	var seeker := _player()
+	var c := seeker.save.character
+	c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
+	combat.job_code = c.job_code()
+	_job.select(c.job)
+	_rebuild_picker()
+	_refresh()
+	_level_message.text = "Job is now %s (emblem %s)." % [c.job_name(), c.emblem_name()]
 
 
 func _refresh_character() -> void:
@@ -549,7 +558,7 @@ func _refresh_character() -> void:
 	_character_info.text = "Emblem: %s    EXP: %d\nFavored drops: %s, %s\nRares in this pool: %s" % [
 		c.emblem_name(), c.experience, String(favored[0]).capitalize(), String(favored[1]).capitalize(),
 		", ".join(rares) if not rares.is_empty() else "none"]
-	_character_info.modulate = c.emblem_color().lightened(0.4)
+	_character_info.modulate = c.emblem_text_color()
 
 
 # --- SyncAIDa tab (Part 6) -------------------------------------------------------
@@ -834,7 +843,8 @@ func _build_levels_tab() -> void:
 	right.add_child(_label("Testing tools", 22))
 	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
 			["+1000 Oro", _tool_oro], ["+5 of each consumable", _tool_items],
-			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn]]:
+			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn],
+			["Change job (debug; fixed at creation)", _tool_cycle_job]]:
 		var b := Button.new()
 		b.text = spec[0]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT

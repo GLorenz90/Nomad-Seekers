@@ -102,4 +102,4 @@ base_name = "Sword"
 normal_attacks = Array[ExtResource("1_jdie8")]([SubResource("Resource_mo1wv"), SubResource("Resource_meqid"), SubResource("Resource_8n67a")])
 hard_attacks = Array[ExtResource("1_jdie8")]([SubResource("Resource_5bxto"), SubResource("Resource_qvmkl"), SubResource("Resource_h0urs")])
 mesh_color = Color(0.82, 0.85, 0.9, 1)
-metadata/emblems = [0, 5]
+metadata/emblems = [0, 1]
