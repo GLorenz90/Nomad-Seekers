@@ -21,6 +21,8 @@ const LUMIDIUM_COLORS := {
 @export var consumables: Dictionary = {}  # StringName -> int
 @export var oro := 0
 @export var lumidium: Dictionary = {}  # StringName -> int (banked)
+## Spell / trap discs kept to read later: [{"id": "gifoie", "level": 4}, ...].
+@export var discs: Array = []
 
 
 func add_weapon(w: WeaponData) -> void:

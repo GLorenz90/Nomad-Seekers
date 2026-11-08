@@ -190,17 +190,8 @@ func _wand() -> WeaponData:
 	w.mesh_size = Vector3(0.05, 0.05, 0.45)
 	w.mesh_color = Color(0.95, 0.78, 0.3)
 
-	var fire := SpellData.new()
-	fire.display_name = "Fire Bolt"
-	fire.normal = _spell_attack("Fire Bolt", Element.Type.FIRE, 1.0, 6.0, 15, 35, 16.0, 0.18, false, false)
-	fire.hard = _spell_attack("Fire Bolt (Hard)", Element.Type.FIRE, 2.2, 14.0, 24, 45, 15.0, 0.32, false, true)
-
-	var frost := SpellData.new()
-	frost.display_name = "Frost Lance"
-	frost.normal = _spell_attack("Frost Lance", Element.Type.ICE, 0.85, 8.0, 15, 35, 24.0, 0.12, true, false)
-	frost.hard = _spell_attack("Frost Lance (Hard)", Element.Type.ICE, 1.9, 18.0, 24, 45, 24.0, 0.2, true, true)
-
-	w.spells = [fire, frost]
+	# Part 6: spells are assigned per loadout hand; the Wand is the plain caster.
+	w.spells = []
 	return w
 
 
@@ -674,18 +665,16 @@ func _full_list() -> Array[WeaponData]:
 	list.append(arb)
 
 	# --- Magic ---
-	# Cane: damage-spell bonus, slower and stronger (x1.25 power, x1.2 cast time).
-	list.append(_caster("Cane", &"cane", true, false, 1.25, 1.2,
-		[_fire_bolt(), _frost_lance()], Vector3(0.06, 0.06, 0.9), Color(0.75, 0.6, 0.35)))
-	# Staff: 4 spells (X, Y, RT+X, RT+Y); a balanced mix.
-	list.append(_caster("Staff", &"staff", false, true, 1.1, 1.1,
-		[_fire_bolt(), _frost_lance(), _spark(), _heal(0.25)], Vector3(0.07, 0.07, 1.7), Color(0.6, 0.45, 0.3)))
-	# Talisman: support-spell bonus, quick.
-	list.append(_caster("Talisman", &"talisman", false, false, 1.25, 1.0,
-		[_heal(0.25), _cure()], Vector3(0.3, 0.4, 0.04), Color(0.95, 0.9, 0.7)))
-	# Totem: support-spell bonus, slower with stronger effects.
-	list.append(_caster("Totem", &"totem", true, false, 1.6, 1.3,
-		[_heal(0.25), _cure()], Vector3(0.18, 0.5, 0.18), Color(0.55, 0.35, 0.25)))
+	# Casting items hold whatever spells you assign (Part 6). The item sets
+	# damage-spell power, support-spell power and cast speed.
+	# Cane: stronger damage spells, slower (x1.25 power, x1.2 cast time).
+	list.append(_caster("Cane", &"cane", true, false, 1.25, 1.0, 1.2, Vector3(0.06, 0.06, 0.9), Color(0.75, 0.6, 0.35)))
+	# Staff: two-handed, 4 slots (X, Y, RT+X, RT+Y); a little of both.
+	list.append(_caster("Staff", &"staff", false, true, 1.1, 1.1, 1.1, Vector3(0.07, 0.07, 1.7), Color(0.6, 0.45, 0.3)))
+	# Talisman: stronger support spells, quick.
+	list.append(_caster("Talisman", &"talisman", false, false, 1.0, 1.25, 1.0, Vector3(0.3, 0.4, 0.04), Color(0.95, 0.9, 0.7)))
+	# Totem: much stronger support spells, slower.
+	list.append(_caster("Totem", &"totem", true, false, 1.0, 1.6, 1.3, Vector3(0.18, 0.5, 0.18), Color(0.55, 0.35, 0.25)))
 	# Cards: thrown, SOL-scaling; three in a row ends with extra cards.
 	var cards := _gun(_weapon("Cards", &"cards", WeaponData.WeaponClass.MAGIC, false, false, 14.0,
 		Vector3(0.2, 0.3, 0.02), Color(0.9, 0.9, 0.95)), HANDGUN_N, HANDGUN_H, 1.0, 28.0, 22.0, true, 1.0, 2.0)
@@ -764,25 +753,14 @@ func _auto_fire(name: String, tick: float, speed: float, range_m: float, mobile:
 	return a
 
 
-func _caster(name: String, type: StringName, heavy: bool, two_hand: bool, power: float,
-		cast_scale: float, spells: Array, mesh: Vector3, color: Color) -> WeaponData:
+func _caster(name: String, type: StringName, heavy: bool, two_hand: bool, spell_power: float,
+		support_power: float, cast_speed: float, mesh: Vector3, color: Color) -> WeaponData:
 	var w := _weapon(name, type, WeaponData.WeaponClass.MAGIC, heavy, two_hand, 18.0, mesh, color)
 	w.casting = true
 	w.no_combo = true
-	var list: Array[SpellData] = []
-	for spell in spells:
-		var sp := (spell as SpellData)
-		for a: AttackData in [sp.normal, sp.hard]:
-			var support: bool = a.support != AttackData.Support.NONE
-			# Damage items boost damage spells; support items boost support spells.
-			var boosts: bool = (type == &"talisman" or type == &"totem") == support or type == &"staff"
-			if boosts:
-				a.damage_mult *= power
-				a.support_amount *= power
-			for field in ["duration", "active_start", "active_end", "window_open", "window_close"]:
-				a.set(field, float(a.get(field)) * cast_scale)
-		list.append(sp)
-	w.spells = list
+	w.spell_power = spell_power
+	w.support_power = support_power
+	w.cast_speed = cast_speed
 	return w
 
 

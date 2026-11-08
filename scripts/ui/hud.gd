@@ -127,7 +127,7 @@ func _weapon_label(hand: int) -> String:
 		return "-"
 	if w.casting:
 		var slot := player.combat.spell_slot(w, hand, Input.is_action_pressed("shift"))
-		return "%s (%s)" % [w.display_name, w.get_spell_name(slot)]
+		return "%s (%s)" % [w.display_name, player.combat.spell_name_in(hand, slot)]
 	return w.display_name
 
 

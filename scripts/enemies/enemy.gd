@@ -106,6 +106,12 @@ func on_parried() -> void:
 	_glow(Color(0.3, 0.6, 1.0), 1.5)
 
 
+## Gravity pull (Granmalbo): moves it without interrupting.
+func apply_pull(velocity_add: Vector3) -> void:
+	velocity_add.y = 0.0
+	_knockback = velocity_add
+
+
 func apply_knockback(push: Vector3) -> void:
 	push.y = 0.0
 	_knockback = push

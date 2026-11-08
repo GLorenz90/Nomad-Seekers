@@ -101,6 +101,20 @@ func _initialize() -> void:
 		pad.set_script(load("res://scripts/world/teleporter.gd"))
 		pad.position = spec[1]
 		_add(gather, pad)
+	# Part 6: hidden PSO-style floor traps (Goluman see them).
+	var hazards := Node3D.new()
+	hazards.name = "Hazards"
+	_add(_root, hazards)
+	for spec in [["HazardConfuse", 5, Vector3(1.6, 0, 9.5)], ["HazardSlow", 2, Vector3(5.0, 0, 3.0)],
+			["HazardDamage", 0, Vector3(1.2, 0, -15.0)], ["HazardParalyze", 6, Vector3(-1.2, 0, -17.0)],
+			["HazardPoison", 4, Vector3(-4.0, 0, -29.0)], ["HazardFreeze", 1, Vector3(4.0, 0, -34.0)]]:
+		var hazard := Area3D.new()
+		hazard.name = spec[0]
+		hazard.set_script(load("res://scripts/world/hazard_trap.gd"))
+		hazard.set("kind", spec[1])
+		hazard.position = spec[2]
+		_add(hazards, hazard)
+
 	# The end of the arena: back to the gym once every room is cleared.
 	var exit := Area3D.new()
 	exit.name = "TeleporterExit"

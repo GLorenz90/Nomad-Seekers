@@ -24,6 +24,9 @@ const JOB_CODES := ["S", "R", "I"]
 @export var gender: Gender = Gender.MALE
 @export var job: Job = Job.STRIKER
 @export var experience := 0
+## Learned spells and traps: id -> level (Part 6). Learned levels are kept even
+## if SOL later drops (like PSO).
+@export var spells: Dictionary = {}
 
 
 ## PSO-style: the name's character codes plus race, gender and job, mod 12.
@@ -58,3 +61,59 @@ func job_name() -> String:
 
 func race_name() -> String:
 	return Race.keys()[race].capitalize()
+
+
+# --- Magic (Part 6) ---------------------------------------------------------------
+
+## Highest spell level this Seeker can learn (Grayson, 2026-11-08): 20, +5 for an
+## Invoker, +5 for a Lumera, -5 for a Striker, -5 for a Coresian. Goluman can't
+## use magic at all (0); their traps use the same cap from Goluman's base.
+func spell_level_cap() -> int:
+	var cap := 20
+	match job:
+		Job.INVOKER:
+			cap += 5
+		Job.STRIKER:
+			cap -= 5
+	match race:
+		Race.LUMERA:
+			cap += 5
+		Race.CORESIAN:
+			cap -= 5
+	return cap
+
+
+func can_use_magic() -> bool:
+	return race != Race.GOLUMAN
+
+
+func can_use_traps() -> bool:
+	return race == Race.GOLUMAN
+
+
+## Max level for one spell or trap: its own maximum and the Seeker's cap.
+func level_cap_for(spell: SpellDef) -> int:
+	if spell.is_trap() and not can_use_traps():
+		return 0
+	if not spell.is_trap() and not can_use_magic():
+		return 0
+	return mini(spell.max_level, spell_level_cap())
+
+
+func spell_level(id: StringName) -> int:
+	return int(spells.get(id, 0))
+
+
+## "" when this level can be learned with the given stat (SOL, or DEX for traps).
+func learn_error(spell: SpellDef, level: int, stat_value: float) -> String:
+	if spell.is_trap() and not can_use_traps():
+		return "Only Goluman can use traps."
+	if not spell.is_trap() and not can_use_magic():
+		return "Goluman can't use magic."
+	if level > level_cap_for(spell):
+		return "%s can reach level %d at most." % [seeker_name, level_cap_for(spell)]
+	if stat_value < spell.requirement(level):
+		return "Needs %d %s (you have %d)." % [spell.requirement(level), spell.requirement_stat(), roundi(stat_value)]
+	if spell_level(spell.id) >= level:
+		return "Already known at level %d." % spell_level(spell.id)
+	return ""

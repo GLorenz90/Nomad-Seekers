@@ -128,6 +128,53 @@ func pair_syncaida(index: int) -> void:
 	syncaida.pair(save.paired_syncaida())
 
 
+# --- Spell discs (Part 6) -------------------------------------------------------------
+
+## SOL (or DEX for traps) counted for learning: base stats plus SyncAIDa.
+func learning_stat(spell: SpellDef) -> float:
+	return combat.stats.dexterity if spell.is_trap() else combat.stats.soul
+
+
+## Reads a disc. Learns it when allowed; otherwise, from a pickup, it's stored
+## to read later, or sold for Oro if it can never be useful (already known
+## at that level or higher). Returns a message for the player.
+func read_disc(id: StringName, level: int, from_pickup: bool) -> String:
+	var spell := SpellBook.get_spell(id)
+	if spell == null or save == null:
+		return "Unknown disc"
+	var c := save.character
+	var error := c.learn_error(spell, level, learning_stat(spell))
+	if error == "":
+		c.spells[id] = level
+		SpellCaster.clear_cache()
+		return "Learned %s %d" % [spell.display_name, level]
+	if not from_pickup:
+		return error
+	if c.spell_level(id) >= level or c.level_cap_for(spell) == 0:
+		var oro := 20 * level
+		save.inventory.oro += oro
+		return "%s %d: %s Sold for %d Oro." % [spell.display_name, level, error, oro]
+	save.inventory.discs.append({"id": String(id), "level": level})
+	return "%s %d stored: %s" % [spell.display_name, level, error]
+
+
+## Reads a disc from the stash (menu). Removes it once learned.
+func read_stored_disc(index: int) -> String:
+	if save == null or index < 0 or index >= save.inventory.discs.size():
+		return ""
+	var disc: Dictionary = save.inventory.discs[index]
+	var result := read_disc(StringName(disc.id), int(disc.level), false)
+	if result.begins_with("Learned"):
+		save.inventory.discs.remove_at(index)
+	return result
+
+
+## Revive spell: back on its feet with this fraction of max HP.
+func revive(fraction: float) -> void:
+	health.hp = maxf(health.max_hp * fraction, 1.0)
+	status.clear_all()
+
+
 func grant_invulnerability(seconds: float) -> void:
 	_invuln_timer = maxf(_invuln_timer, seconds)
 

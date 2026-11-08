@@ -27,7 +27,13 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 	s.inventory.add_consumable(&"hp_gel", 3)
 	s.inventory.add_consumable(&"lp_cell", 2)
 	s.inventory.add_consumable(&"cure_salt", 1)
+	# First spells (Part 6): level 1 Fajro, Glacio and Fulmo (SOL 40 each).
+	for id in STARTING_SPELLS:
+		s.character.spells[id] = 1
 	return s
+
+
+const STARTING_SPELLS: Array[StringName] = [&"fajro", &"glacio", &"fulmo"]
 
 
 ## Gives the Seeker their starting SyncAIDa (SyncAIDaData.STARTERS index).

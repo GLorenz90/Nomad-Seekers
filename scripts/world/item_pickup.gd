@@ -88,6 +88,9 @@ func describe() -> String:
 		return (contents.weapon as WeaponData).display_name
 	if contents.has("lumidium"):
 		return "%s Lumidium" % String(contents.lumidium).capitalize()
+	if contents.has("disc"):
+		var spell := SpellBook.get_spell(StringName(contents.disc.id))
+		return "Disc: %s %d" % [spell.display_name if spell else "?", int(contents.disc.level)]
 	return "?"
 
 
@@ -101,6 +104,8 @@ func color() -> Color:
 		return Color(1.0, 0.35, 0.9) if w.rare else Color(0.6, 0.8, 1.0)
 	if contents.has("lumidium"):
 		return Inventory.LUMIDIUM_COLORS.get(contents.lumidium, Color.WHITE)
+	if contents.has("disc"):
+		return Color(0.6, 0.95, 1.0)
 	return Color.WHITE
 
 
@@ -129,5 +134,7 @@ func collect(seeker: Player) -> void:
 		seeker.add_lumidium(contents.lumidium)
 		queue_free()
 		return
+	elif contents.has("disc"):
+		text = seeker.read_disc(StringName(contents.disc.id), int(contents.disc.level), true)
 	seeker.item_collected.emit(text)
 	queue_free()

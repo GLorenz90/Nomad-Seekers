@@ -4,97 +4,6 @@
 [ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_xwtov"]
 [ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_6k8r8"]
 
-[sub_resource type="Resource" id="Resource_la8sb"]
-script = ExtResource("1_iud6i")
-display_name = "Fire Bolt (Hard)"
-damage_mult = 2.75
-override_damage_type = true
-damage_type = 1
-lp_cost = 14.0
-swing = 5
-duration = 1.7999999999999998
-active_start = 0.96
-active_end = 1.08
-window_open = 1.7999999999999998
-window_close = 1.7999999999999998
-lunge_distance = 0.0
-is_projectile = true
-projectile_speed = 15.0
-projectile_radius = 0.32
-projectile_range = 28.0
-
-[sub_resource type="Resource" id="Resource_56lrw"]
-script = ExtResource("1_iud6i")
-display_name = "Fire Bolt"
-damage_mult = 1.25
-override_damage_type = true
-damage_type = 1
-lp_cost = 6.0
-swing = 5
-move_speed_scale = 0.5
-duration = 1.4000000000000001
-active_start = 0.6
-active_end = 0.72
-window_open = 1.4000000000000001
-window_close = 1.4000000000000001
-lunge_distance = 0.0
-is_projectile = true
-projectile_speed = 16.0
-projectile_radius = 0.18
-projectile_range = 28.0
-
-[sub_resource type="Resource" id="Resource_qfnl7"]
-script = ExtResource("3_6k8r8")
-display_name = "Fire Bolt"
-normal = SubResource("Resource_56lrw")
-hard = SubResource("Resource_la8sb")
-
-[sub_resource type="Resource" id="Resource_5u6n0"]
-script = ExtResource("1_iud6i")
-display_name = "Frost Lance (Hard)"
-damage_mult = 2.375
-override_damage_type = true
-damage_type = 2
-lp_cost = 18.0
-swing = 5
-duration = 1.7999999999999998
-active_start = 0.96
-active_end = 1.08
-window_open = 1.7999999999999998
-window_close = 1.7999999999999998
-lunge_distance = 0.0
-is_projectile = true
-projectile_speed = 24.0
-projectile_radius = 0.2
-projectile_range = 28.0
-projectile_pierce = true
-
-[sub_resource type="Resource" id="Resource_pt4o3"]
-script = ExtResource("1_iud6i")
-display_name = "Frost Lance"
-damage_mult = 1.0625
-override_damage_type = true
-damage_type = 2
-lp_cost = 8.0
-swing = 5
-move_speed_scale = 0.5
-duration = 1.4000000000000001
-active_start = 0.6
-active_end = 0.72
-window_open = 1.4000000000000001
-window_close = 1.4000000000000001
-lunge_distance = 0.0
-is_projectile = true
-projectile_speed = 24.0
-projectile_range = 28.0
-projectile_pierce = true
-
-[sub_resource type="Resource" id="Resource_j3llb"]
-script = ExtResource("3_6k8r8")
-display_name = "Frost Lance"
-normal = SubResource("Resource_pt4o3")
-hard = SubResource("Resource_5u6n0")
-
 [resource]
 script = ExtResource("2_xwtov")
 display_name = "Cane"
@@ -103,8 +12,9 @@ weapon_class = 2
 weight = 1
 no_combo = true
 casting = true
+spell_power = 1.25
+cast_speed = 1.2
 base_damage = 18.0
 jobs = PackedStringArray("I")
-spells = Array[ExtResource("3_6k8r8")]([SubResource("Resource_qfnl7"), SubResource("Resource_j3llb")])
 mesh_size = Vector3(0.06, 0.06, 0.9)
 mesh_color = Color(0.75, 0.6, 0.35, 1)

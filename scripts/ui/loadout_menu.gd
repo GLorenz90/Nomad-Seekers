@@ -56,6 +56,10 @@ var _race: OptionButton
 var _gender: OptionButton
 var _job: OptionButton
 var _sync_owned: VBoxContainer
+var _spells_tab: SpellsTab
+var _learn_pick: OptionButton
+var _learn_level := 1
+var _learn_level_label: Label
 var _sync_starter_title: Label
 var _sync_starters: VBoxContainer
 var _sync_info: Label
@@ -139,6 +143,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		var step := 1 if event.is_action_pressed("loadout_next") else -1
 		_close_picker()
 		_tabs.current_tab = posmod(_tabs.current_tab + step, _tabs.get_tab_count())
+		get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Spells" and _clear_input(event) == 1:
+		if _spells_tab.clear_focused_slot():
+			get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Spells" and event.is_action_pressed("ui_cancel") and _spells_tab.back():
 		get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Loadouts" and not _picker.visible and _clear_input(event) != 0:
 		_clear_focused_slot(_clear_input(event) == 2)
@@ -231,6 +240,8 @@ func _refresh() -> void:
 	_refresh_character()
 	_refresh_syncaida()
 	_refresh_levels()
+	if _spells_tab:
+		_spells_tab.refresh()
 
 
 func _lt_short(l: Loadout) -> String:
@@ -317,6 +328,8 @@ func _build() -> void:
 	columns.name = "Loadouts"
 	columns.add_theme_constant_override("separation", 24)
 	_tabs.add_child(columns)
+	_spells_tab = SpellsTab.new(self)
+	_tabs.add_child(_spells_tab)
 	_build_inventory_tab()
 	_build_character_tab()
 	_build_syncaida_tab()
@@ -833,6 +846,9 @@ func _focus_tab() -> void:
 		return
 	if page.name == "SyncAIDa" and _focus_paired():
 		return
+	if page == _spells_tab:
+		_spells_tab.focus_default()
+		return
 	var first := page if page.focus_mode == Control.FOCUS_ALL else _first_focusable(page)
 	if first:
 		first.grab_focus()
@@ -913,12 +929,36 @@ func _build_levels_tab() -> void:
 	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
 			["+1000 Oro", _tool_oro], ["+5 of each consumable", _tool_items],
 			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn],
-			["Change job (debug; fixed at creation)", _tool_cycle_job]]:
+			["Change job (debug; fixed at creation)", _tool_cycle_job],
+			["Learn every spell or trap your race can use, at your max level", _tool_learn_all],
+			["Forget every spell and trap", _tool_forget_all],
+			["+50 SOL and +50 DEX (until you leave the level)", _tool_stats_up]]:
 		var b := Button.new()
 		b.text = spec[0]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.pressed.connect(spec[1])
 		right.add_child(b)
+	# Learn one spell or trap at any level, ignoring requirements (testing).
+	var learn_row := HBoxContainer.new()
+	_learn_pick = OptionButton.new()
+	for spell in SpellBook.all():
+		_learn_pick.add_item("%s (%s)" % [spell.display_name, spell.element_name()])
+	learn_row.add_child(_learn_pick)
+	var minus := Button.new()
+	minus.text = " - "
+	minus.pressed.connect(func(): _set_learn_level(_learn_level - 1))
+	learn_row.add_child(minus)
+	_learn_level_label = _label("Lv 1", 16)
+	learn_row.add_child(_learn_level_label)
+	var plus := Button.new()
+	plus.text = " + "
+	plus.pressed.connect(func(): _set_learn_level(_learn_level + 1))
+	learn_row.add_child(plus)
+	var learn := Button.new()
+	learn.text = "Learn"
+	learn.pressed.connect(_tool_learn_one)
+	learn_row.add_child(learn)
+	right.add_child(learn_row)
 	_debug_toggle = CheckButton.new()
 	_debug_toggle.text = "Debug readout (Select / F3)"
 	_debug_toggle.toggled.connect(func(on: bool):
@@ -1083,3 +1123,50 @@ func _reset_character() -> void:
 	combat.lp = combat.stats.max_lp
 	_refresh_character()
 	_character_message.text = "Back to level 1 (EXP 0). Character levels aren't in yet, so EXP is all this resets for now."
+
+
+# --- Spell testing tools (Levels tab) ------------------------------------------
+
+func _set_learn_level(level: int) -> void:
+	var spell: SpellDef = SpellBook.all()[maxi(_learn_pick.selected, 0)]
+	_learn_level = clampi(level, 1, spell.max_level)
+	_learn_level_label.text = "Lv %d" % _learn_level
+
+
+func _tool_learn_one() -> void:
+	var spell: SpellDef = SpellBook.all()[maxi(_learn_pick.selected, 0)]
+	_set_learn_level(_learn_level)
+	_player().save.character.spells[spell.id] = _learn_level
+	SpellCaster.clear_cache()
+	_level_message.text = "Learned %s %d (requirements ignored for testing)." % [spell.display_name, _learn_level]
+	if not _player().save.character.can_use_traps() and spell.is_trap() \
+			or _player().save.character.can_use_traps() and not spell.is_trap():
+		_level_message.text += " Your race can't use it, though."
+	_refresh()
+
+
+func _tool_learn_all() -> void:
+	var c := _player().save.character
+	var n := 0
+	for spell in SpellBook.all():
+		var cap := c.level_cap_for(spell)
+		if cap > 0:
+			c.spells[spell.id] = cap
+			n += 1
+	SpellCaster.clear_cache()
+	_level_message.text = "Learned %d at your max level (%d)." % [n, c.spell_level_cap()]
+	_refresh()
+
+
+func _tool_forget_all() -> void:
+	_player().save.character.spells.clear()
+	SpellCaster.clear_cache()
+	_level_message.text = "Every spell and trap forgotten."
+	_refresh()
+
+
+func _tool_stats_up() -> void:
+	combat.stats.soul += 50.0
+	combat.stats.dexterity += 50.0
+	_level_message.text = "SOL %d, DEX %d (resets when the level reloads)." % [roundi(combat.stats.soul), roundi(combat.stats.dexterity)]
+	_refresh()

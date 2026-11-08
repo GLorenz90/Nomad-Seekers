@@ -203,17 +203,19 @@ func _run() -> void:
 	await _tap("hand_x")
 	await _idle()
 	await _frames(30)
-	var bolt := 18.0 * 1.3 * 2.0
-	_check("Fire Bolt does double to a fire-weak dummy (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], bolt))
+	# Part 6: PSO technique damage, (SOL 40 + Foie Lv 1 power 110) / 5 = 30.
+	var bolt := (40.0 + 110.0) / 5.0 * 2.0
+	_check("Fajro (the Wand's first spell) does double to a fire-weak dummy (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], bolt))
 	await _reset(Vector3(0, 0.1, -5.5))
 	Input.action_press("shift")
 	await _tap("hand_x")
 	Input.action_release("shift")
 	await _idle()
 	await _frames(30)
-	_check("Shift casts the second spell (%s)" % [_started], _started == ["Frost Lance"])
-	# Frost Lance pierces, so it can also catch the patrolling DummyB behind DummyA.
-	_check("Frost Lance deals Ice damage (%s)" % [_hits], _hits.size() >= 1 and is_equal_approx(_hits[0], 18.0 * 0.85 * 1.3))
+	_check("Shift casts the second spell (%s)" % [_started], _started == ["Glacio"])
+	# Glacio pierces, so it can also catch the patrolling DummyB behind DummyA.
+	_check("Glacio deals Ice damage, (SOL 40 + Barta Lv 1 power 50) / 5 (%s)" % [_hits],
+		_hits.size() >= 1 and is_equal_approx(_hits[0], (40.0 + 50.0) / 5.0))
 	_dummy.health.multipliers.erase(Element.Type.FIRE)
 	_set_loadout(0)
 

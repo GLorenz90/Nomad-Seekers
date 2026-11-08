@@ -29,6 +29,8 @@ const FAVORED := [
 const DROP_CHANCE := 0.6
 const WEAPON_SHARE := 0.35
 const ORO_SHARE := 0.4
+## Spell discs (Part 6); the rest of the drops are consumables.
+const DISC_SHARE := 0.1
 const TAG_CHANCE := 0.35
 const BONUS_CHANCE := 0.4
 const RARE_CHANCE := 0.04
@@ -71,7 +73,8 @@ static func rares_for(emblem: int) -> Array[WeaponData]:
 
 ## What an enemy leaves behind: {} (nothing), {"oro": n}, {"consumable": id},
 ## or {"weapon": WeaponData}.
-static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator) -> Dictionary:
+static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator,
+		traps := false) -> Dictionary:
 	if rng.randf() > DROP_CHANCE:
 		return {}
 	var r := rng.randf()
@@ -79,8 +82,26 @@ static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator)
 		return {"weapon": roll_weapon(emblem, rng)}
 	if r < WEAPON_SHARE + ORO_SHARE:
 		return {"oro": int(round(rng.randf_range(10.0, 30.0) * enemy.max_hp / 100.0))}
+	if r < WEAPON_SHARE + ORO_SHARE + DISC_SHARE:
+		return {"disc": roll_disc(rng, traps)}
 	var ids := Inventory.CONSUMABLES.keys()
 	return {"consumable": ids[rng.randi() % ids.size()]}
+
+
+## A spell disc (or a trap disc for Goluman): any spell, low levels most often
+## (PSO-style; the level will follow area difficulty once there are areas).
+static func roll_disc(rng: RandomNumberGenerator, traps := false) -> Dictionary:
+	var pool := SpellBook.traps_only() if traps else SpellBook.spells_only()
+	var spell: SpellDef = pool[rng.randi() % pool.size()]
+	var roll := rng.randf()
+	var level := 1
+	if roll > 0.95:
+		level = rng.randi_range(4, 5)
+	elif roll > 0.85:
+		level = 3
+	elif roll > 0.6:
+		level = 2
+	return {"id": String(spell.id), "level": mini(level, spell.max_level)}
 
 
 static func roll_weapon(emblem: int, rng: RandomNumberGenerator) -> WeaponData:
