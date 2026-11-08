@@ -1,11 +1,20 @@
 class_name CameraRig
 extends Node3D
-## PSO-style over-the-shoulder camera with Dark Souls-style lock-on.
+## PSO-style follow camera with Dark Souls-style lock-on.
+##
+## Follow modes:
+##   LOOSE (default): the camera trails the Seeker like someone walking behind
+##     them with a camera on a leash. It doesn't turn when the Seeker turns; it
+##     only swings around as the Seeker walks away from it. Walk toward it and it
+##     backs up. leash_radius sets how lazily it swings.
+##   RIGID: the camera keeps its angle until you turn it (third-person shooter style).
 ##
 ## Layout: CameraRig (follows the player, rotates for yaw) > Pitch > SpringArm3D > Camera3D
 ##
 ## Lock-on (R3): picks the lockable target closest to where the camera faces.
 ## With nothing in range, R3 recenters the camera behind the Seeker instead.
+## The recenter angle is captured when R3 is pressed, so turning during the
+## recenter doesn't make the camera chase a moving angle.
 ## While locked, flicking the right stick (or sweeping the mouse) switches to the
 ## next target on that side of the screen.
 ##
@@ -16,20 +25,26 @@ signal lock_target_changed(target: Node3D)
 
 const WORLD_MASK := 1
 
+enum FollowMode { LOOSE, RIGID }
+
 @export_group("Framing")
+@export var follow_mode: FollowMode = FollowMode.LOOSE
+## LOOSE mode only. Bigger = the camera swings around more lazily.
+@export var leash_radius := 4.5
 @export var pivot_height := 1.55
 @export var shoulder_offset := 0.45
 @export var distance := 4.5
-@export var follow_speed := 18.0
+## Positional lag. Lower = looser, more like a person keeping up.
+@export var follow_speed := 9.0
 ## Lower than follow_speed so jumps don't jerk the camera.
-@export var vertical_follow_speed := 9.0
+@export var vertical_follow_speed := 6.0
 
 @export_group("Look")
 ## Right-stick turn speed in radians per second (yaw, pitch).
 @export var stick_speed := Vector2(3.2, 2.2)
 @export var mouse_sensitivity := 0.0025
 @export var invert_y := false
-@export var default_pitch_deg := -12.0
+@export var default_pitch_deg := -20.0
 @export var min_pitch_deg := -65.0
 @export var max_pitch_deg := 35.0
 @export var recenter_speed := 14.0
@@ -40,7 +55,7 @@ const WORLD_MASK := 1
 ## Targets further than this from the camera's facing are ignored.
 @export var lock_max_angle_deg := 75.0
 @export var lock_turn_speed := 10.0
-@export var lock_pitch_offset_deg := -10.0
+@export var lock_pitch_offset_deg := -18.0
 @export var switch_stick_threshold := 0.7
 @export var switch_mouse_pixels := 80.0
 
@@ -50,6 +65,7 @@ var lock_target: Node3D = null
 var _yaw := 0.0
 var _pitch := 0.0
 var _recentering := false
+var _recenter_yaw := 0.0
 var _switch_armed := true
 var _mouse_switch_accum := 0.0
 
@@ -131,6 +147,7 @@ func _toggle_lock() -> void:
 		_set_lock(best)
 	else:
 		_recentering = true
+		_recenter_yaw = player.rotation.y  # Fixed at press time.
 
 
 func _set_lock(target: Node3D) -> void:
@@ -238,15 +255,35 @@ func _process(delta: float) -> void:
 	if player == null:
 		return
 
+	# Where the "camera operator" stood before the Seeker moved this frame.
+	var trail := _leash_point()
+	_follow(delta)
+
 	if is_instance_valid(lock_target):
+		_recentering = false
 		_track_lock_target(delta)
 	else:
+		if follow_mode == FollowMode.LOOSE and not _recentering:
+			_apply_leash(trail)
 		_free_look(delta)
 
 	_pitch = clampf(_pitch, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
 	_apply_rotation()
-	_follow(delta)
 	_update_marker()
+
+
+func _leash_point() -> Vector3:
+	return global_position + Vector3(sin(_yaw), 0.0, cos(_yaw)) * leash_radius
+
+
+## Turn so the camera stays where it was standing, only dragged along by the
+## Seeker. Moving away pulls it around behind; turning on the spot does nothing.
+func _apply_leash(trail: Vector3) -> void:
+	var offset := trail - global_position
+	offset.y = 0.0
+	if offset.length_squared() < 0.01:
+		return
+	_yaw = atan2(offset.x, offset.z)
 
 
 func _free_look(delta: float) -> void:
@@ -258,9 +295,10 @@ func _free_look(delta: float) -> void:
 
 	if _recentering:
 		var t := 1.0 - exp(-recenter_speed * delta)
-		_yaw = lerp_angle(_yaw, player.rotation.y, t)
+		_yaw = lerp_angle(_yaw, _recenter_yaw, t)
 		_pitch = lerpf(_pitch, deg_to_rad(default_pitch_deg), t)
-		if absf(angle_difference(_yaw, player.rotation.y)) < 0.01:
+		if absf(angle_difference(_yaw, _recenter_yaw)) < 0.01:
+			_yaw = _recenter_yaw
 			_recentering = false
 
 
