@@ -126,6 +126,7 @@ script = ExtResource("2_nv23v")
 display_name = "Machine Pistol"
 weapon_type = &"machine_pistol"
 weapon_class = 1
+no_combo = true
 sustained = true
 base_damage = 3.0
 jobs = PackedStringArray("R")

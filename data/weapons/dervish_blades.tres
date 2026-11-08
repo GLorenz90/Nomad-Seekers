@@ -65,6 +65,7 @@ script = ExtResource("2_ynhqo")
 display_name = "Dervish Blades"
 weapon_type = &"dervish_blades"
 two_handed = true
+no_combo = true
 sustained = true
 base_damage = 11.0
 jobs = PackedStringArray("S")

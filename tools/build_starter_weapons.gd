@@ -42,6 +42,10 @@ const JOBS := {
 
 
 func _save(weapon: WeaponData, file: String) -> void:
+	# Sustained weapons don't combo (Grayson, 2026-11-08): hold to sustain, and a
+	# tap is one standalone attack.
+	if weapon.sustained:
+		weapon.no_combo = true
 	if JOBS.has(weapon.weapon_type):
 		var codes := PackedStringArray()
 		for c in String(JOBS[weapon.weapon_type]):
