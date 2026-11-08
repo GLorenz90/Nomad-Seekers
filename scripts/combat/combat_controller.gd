@@ -10,12 +10,15 @@ extends Node3D
 ##
 ## Combo rules:
 ## - A chain has 3 steps. Any attack from either hand can fill the next step.
-## - The chain window opens when the attack ends (window_open = its duration)
-##   and stays open briefly after (window_close). Pressing while the attack is
-##   still playing breaks the combo; too late and a new chain starts. Timing is
-##   judged when the button goes DOWN, so holding for a Hard attack that starts
-##   in the window still chains. Hard attacks are slower, so chaining them takes
-##   longer (and is riskier), not tighter.
+## - PSO windows: the chain window opens when the swing ends (PSO's "combo"
+##   frame, just after the hit) and closes when the recovery ends (PSO's "full"
+##   frame). Chaining cancels the rest of the recovery, exactly like PSO.
+## - Timing is judged when the button goes DOWN, so a Hard hold that starts in
+##   the window still chains even though it fires hold_threshold later.
+## - early_tolerance is an input buffer: a press up to that long before the
+##   window opens counts, and the next attack starts the moment the window
+##   opens (it never cuts the current swing short). Earlier than that breaks
+##   the combo; later than window_close starts a new chain.
 ## - Each weapon's animation step counts its own consecutive uses: Sword, Pistol,
 ##   Sword plays the sword's step 1 both times. Committing to one weapon gives its
 ##   step 2 and 3 attacks and their bonus damage.
@@ -78,8 +81,9 @@ const DEFAULT_LOADOUTS := [
 ## Melee attacks snap to face an enemy this close (PSO-style auto-turn).
 @export var melee_turn_range := 4.0
 @export var show_hitboxes := true
-## A press this close to the end of an attack still counts as on time.
-@export var early_tolerance := 0.25
+## Input buffer: a press up to this long before the chain window opens still
+## counts and fires the moment the window opens. 0.15 s is about 4.5 PSO frames.
+@export var early_tolerance := 0.15
 ## Load the player's saved loadouts from user:// on start.
 @export var use_saved_loadouts := true
 
@@ -134,6 +138,8 @@ var _held: Array[float] = [-1.0, -1.0]
 var _hard_fired: Array[bool] = [false, false]
 ## Whether each hand's current press landed in the chain window (judged at press).
 var _press_chains: Array[bool] = [false, false]
+## A buffered chain press waiting for the window to open: [hand, hard, slot, twin, special].
+var _queued: Array = []
 var _blocking := false
 var _block_time := 0.0
 var _parry_until := -1.0
@@ -301,6 +307,7 @@ func can_dash_cancel() -> bool:
 
 func cancel() -> void:
   _current = null
+  _queued = []
   chain_step = 0
   _chain_locked = false
   _blocking = false
@@ -463,7 +470,7 @@ func _judge_press() -> bool:
         _chain_locked = true
         combo_feedback.emit("Too early!")
       return false
-    return chain_open  # within early_tolerance of the end
+    return chain_open  # in the window, or buffered just before it
   return chain_open and _time <= _chain_expire
 
 
@@ -478,8 +485,11 @@ func _request_attack(hand: int, hard: bool) -> void:
   var on_time := _press_chains[hand] and not _chain_locked and not standalone
 
   if _current:
-    # Only a press in the last early_tolerance seconds can cut the attack short.
     if not on_time:
+      return
+    if _current.elapsed < _current.attack.window_open:
+      # Buffered: start the next step the moment the window opens.
+      _queued = [hand, hard, slot, twin, special]
       return
     _resolve_pending_hit(_current)
   _begin(hand, weapon, hard, slot, on_time, twin, special)
@@ -556,6 +566,14 @@ func _update_attack(delta: float) -> void:
   if cur.sustained:
     _update_sustained(cur, delta)
     return
+  if not _queued.is_empty() and cur.elapsed >= a.window_open:
+    var q := _queued
+    _queued = []
+    _resolve_pending_hit(cur)
+    var weapon := current_weapon(q[0])
+    if weapon:
+      _begin(q[0], weapon, q[1], q[2], true, q[3], q[4])
+      return
   if a.is_projectile:
     if not cur.fired and cur.elapsed >= a.active_start:
       cur.fired = true

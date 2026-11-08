@@ -69,8 +69,41 @@ func _run() -> void:
 		await _tap("hand_y")
 	await _idle()
 	var pistol: WeaponData = _combat.current_weapon(CombatController.Hand.RIGHT)
-	_check("mashing the pistol during a shot doesn't chain (window opens at the end, %.2f s)" % pistol.normal_attacks[0].window_open,
-		is_equal_approx(pistol.normal_attacks[0].window_open, pistol.normal_attacks[0].duration) and _started.size() <= 2)
+	_check("mashing the pistol can't beat PSO's 14-frame window (opens %.2f s)" % pistol.normal_attacks[0].window_open,
+		is_equal_approx(pistol.normal_attacks[0].window_open, 14.0 / 30.0) and _started.size() <= 2)
+
+	# --- PSO cadence: a rhythm sword chain moves on at PSO's combo frames ---
+	await _reset(Vector3(0, 0.1, -5.5))
+	var starts: Array[float] = []
+	var t0 := Time.get_ticks_msec()
+	var on_start := func(_h, _w, _a, _c, _hd): starts.append(_combat._time)
+	_combat.attack_started.connect(on_start)
+	await _tap("hand_x")
+	await _until_window()
+	await _tap("hand_x")
+	await _idle()
+	_combat.attack_started.disconnect(on_start)
+	var gap := starts[1] - starts[0] if starts.size() == 2 else 99.0
+	_check("Slash chains into Return Slash about 0.43 s in, like PSO's saber (gap %.2f s)" % gap, gap > 0.4 and gap < 0.6)
+
+	# --- Input buffer: a slightly early press fires right when the window opens ---
+	await _reset(Vector3(0, 0.1, -5.5))
+	await _tap("hand_x")
+	var first: AttackData = _combat._current.attack
+	while _combat._current.elapsed < first.window_open - 0.1:
+		await physics_frame
+	var opened_hits := 0
+	Input.action_press("hand_x")
+	await physics_frame
+	Input.action_release("hand_x")
+	for i in 30:
+		await physics_frame
+		if _started.size() == 2:
+			break
+	opened_hits = _hits.size()
+	await _idle()
+	_check("a press 0.1 s early is buffered and chains (%s)" % [_started], _started == ["Slash", "Return Slash"])
+	_check("the buffered press doesn't cut the first swing short (%d hits before step 2)" % opened_hits, opened_hits >= 1)
 
 	# --- Three Hard attacks chain: slower, not tighter ---
 	await _reset(Vector3(0, 0.1, -5.5))
@@ -84,7 +117,7 @@ func _run() -> void:
 		await _frames(2)
 		hard_chain = maxi(hard_chain, _combat.chain_step)
 	await _idle()
-	_check("three Hard attacks chain when each starts after the last ends (%s)" % [_started],
+	_check("three Hard attacks chain when each hold starts in the window (%s)" % [_started],
 		hard_chain == 3 and _started == ["Heavy Slash", "Heavy Return", "Piercing Thrust"])
 
 	# --- Too early breaks the combo ---
@@ -96,11 +129,10 @@ func _run() -> void:
 	await _tap("hand_x")  # would have chained
 	await _frames(2)
 	_check("early press shows 'Too early!'", "Too early!" in _feedback)
-	_check("after a broken combo, the next attack starts over at step 1 (%s)" % [_started],
-		_started == ["Slash", "Slash"] and _combat.chain_step == 1)
+	_check("after a too-early press, an in-window press doesn't chain (%s)" % [_started],
+		_started == ["Slash"])
 	await _idle()
-	await _frames(30)  # let the post-attack chain window run out
-	_check("the chain ends once its window passes", _combat.chain_step == 0)
+	_check("the chain ends after a broken combo", _combat.chain_step == 0)
 
 	# --- Late press starts a fresh chain ---
 	await _reset(Vector3(0, 0.1, -5.5))
@@ -284,13 +316,13 @@ func _reset(at: Vector3, heal := true) -> void:
 	_started.clear()
 
 
-## The chain window opens when the current attack ends.
+## Waits until the current attack's chain window is open (PSO: just after the hit).
 func _until_window() -> void:
 	for i in 180:
-		if not _combat.is_attacking():
-			break
+		var cur = _combat._current
+		if cur == null or cur.elapsed >= cur.attack.window_open + 0.03:
+			return
 		await physics_frame
-	await physics_frame
 
 
 func _idle() -> void:

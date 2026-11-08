@@ -36,11 +36,11 @@ func _f(frames: float) -> float:
 	return frames / PSO_FPS
 
 
-## hit = frame the attack comes out; full = whole animation. In PSO the next
-## step could start from the "combo" frame until "full". Here the attack always
-## plays out in full, and the chain window opens when it ends and stays open for
-## the same length PSO gave it (full - combo). Hard attacks are longer, so a
-## Hard chain is slower and riskier rather than tighter.
+## hit = frame the attack comes out; combo = PSO's earliest frame the next
+## step can start (the swing is over, recovery begins); full = the whole
+## animation. The chain window is combo..full, exactly PSO's window: chaining
+## cancels the remaining recovery. If the combo ends here, the Seeker is locked
+## until full.
 func _attack(name: String, swing: AttackData.Swing, mult: float, hit: float,
 		combo: float, full: float) -> AttackData:
 	var a := AttackData.new()
@@ -50,8 +50,8 @@ func _attack(name: String, swing: AttackData.Swing, mult: float, hit: float,
 	a.active_start = _f(hit)
 	a.active_end = _f(hit + 3.0)
 	a.duration = _f(full)
-	a.window_open = _f(full)
-	a.window_close = _f(full + maxf(full - combo, 10.0))
+	a.window_open = _f(combo)
+	a.window_close = _f(full)
 	return a
 
 
