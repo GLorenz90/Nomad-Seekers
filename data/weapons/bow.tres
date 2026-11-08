@@ -20,7 +20,6 @@ is_projectile = true
 projectile_speed = 45.0
 projectile_radius = 0.16
 projectile_range = 40.0
-projectile_pierce = true
 
 [sub_resource type="Resource" id="Resource_2hkv3"]
 script = ExtResource("1_rnhwh")
@@ -38,7 +37,6 @@ is_projectile = true
 projectile_speed = 45.0
 projectile_radius = 0.16
 projectile_range = 40.0
-projectile_pierce = true
 
 [sub_resource type="Resource" id="Resource_fxw16"]
 script = ExtResource("1_rnhwh")
@@ -56,7 +54,6 @@ is_projectile = true
 projectile_speed = 45.0
 projectile_radius = 0.16
 projectile_range = 40.0
-projectile_pierce = true
 
 [sub_resource type="Resource" id="Resource_gm5bu"]
 script = ExtResource("1_rnhwh")

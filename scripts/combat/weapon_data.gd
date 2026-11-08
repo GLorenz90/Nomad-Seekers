@@ -54,6 +54,10 @@ enum Weight { LIGHT, HEAVY }
 @export var spells: Array[SpellData] = []
 ## Sustained weapons only. Its duration is the wind-down after release.
 @export var sustained_attack: AttackData
+## Gunblade: the attacks used while locked on (a gun between pistol and rifle).
+## Empty for every other weapon. Unlocked, it uses normal / hard attacks.
+@export var locked_normal_attacks: Array[AttackData] = []
+@export var locked_hard_attacks: Array[AttackData] = []
 ## RT (Shift) + this hand's button uses this instead of the normal step
 ## (North Star §5.2 special tags, filled in by Part 5). Null = no special, so
 ## RT + the button is just a normal attack. There is no Hard special.
@@ -64,7 +68,12 @@ enum Weight { LIGHT, HEAVY }
 @export var mesh_color := Color(0.8, 0.8, 0.85)
 
 
-func get_attack(step: int, hard: bool, spell_slot: int = 0, special: bool = false) -> AttackData:
+func has_lock_mode() -> bool:
+	return not locked_normal_attacks.is_empty()
+
+
+func get_attack(step: int, hard: bool, spell_slot: int = 0, special: bool = false,
+		locked: bool = false) -> AttackData:
 	if special and not casting:
 		var tagged := get_special()
 		if tagged:
@@ -79,6 +88,8 @@ func get_attack(step: int, hard: bool, spell_slot: int = 0, special: bool = fals
 	if hard and sustained:
 		return sustained_attack
 	var list := hard_attacks if hard else normal_attacks
+	if locked and has_lock_mode():
+		list = locked_hard_attacks if hard else locked_normal_attacks
 	if list.is_empty():
 		return null
 	return list[clampi(step - 1, 0, list.size() - 1)]

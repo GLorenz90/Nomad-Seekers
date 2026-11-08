@@ -28,6 +28,9 @@ var explosion_radius := 0.0
 ## runs out the projectile is spent.
 var chain: Array[Node3D] = []
 var returns := false
+## Only bodies in `chain` can be hit (PSO-shotgun targeting: one projectile per
+## enemy). It flies through everything else.
+var exclusive := false
 
 var _travelled := 0.0
 var _reflected := false
@@ -99,6 +102,8 @@ func _physics_process(delta: float) -> void:
 	for result in space.intersect_shape(params, 8):
 		var body: Node = result.collider
 		if body in _already_hit:
+			continue
+		if exclusive and not body in chain:
 			continue
 		_already_hit.append(body)
 		damage.hit_position = to

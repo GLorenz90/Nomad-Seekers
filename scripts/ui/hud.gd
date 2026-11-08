@@ -98,7 +98,10 @@ func _process(_delta: float) -> void:
 	var y_hand := CombatController.Hand.RIGHT if combat.x_is_left else CombatController.Hand.LEFT
 	var two_hand := combat.get_loadout().two_handed_weapon()
 	if two_hand:
-		_hands.text = "%d  X / Y: %s (both hands)" % [combat.loadout_index + 1, two_hand.display_name]
+		var mode := ""
+		if two_hand.has_lock_mode():
+			mode = "  [gun: locked on]" if player.get_lock_target() else "  [blade]"
+		_hands.text = "%d  X / Y: %s (both hands)%s" % [combat.loadout_index + 1, two_hand.display_name, mode]
 	else:
 		_hands.text = "%d  X: %s    Y: %s" % [combat.loadout_index + 1, _weapon_label(x_hand), _weapon_label(y_hand)]
 	_lt.text = combat.get_lt_text()

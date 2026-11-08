@@ -259,19 +259,100 @@ func _run() -> void:
 	await _idle()
 	target.queue_free()
 
-	# Thrown Daggers: three in a row ends with a fan of 4 knives.
+	# PSO-shotgun targeting: one projectile per enemy, each enemy hit once.
+	var crowd: Array[Enemy] = []
+	for x in [-4.0, -2.0, 0.0, 2.0, 4.0, 6.0]:
+		var e := _spawn("grub_hound", ARENA + Vector3(x, 0, -9))
+		e.health.max_hp = 9000.0
+		e.health.hp = 9000.0
+		crowd.append(e)
+	await _frames(5)
+	var expected := {"thrown_daggers": [1, 3, 5], "cards": [1, 2, 4], "burstbow": [3, 3, 5]}
+	for type in expected:
+		_combat.set_job("R" if type != "cards" else "I")
+		_equip(null, _w(type))
+		await _place(ARENA)
+		var counts: Array[int] = []
+		var once := true
+		for i in 3:
+			_count_new()
+			await _tap("hand_x")
+			await _until_fired()
+			var targets := {}
+			for p in _projectiles():
+				if not p.has_meta("counted"):
+					if p.exclusive and p.chain.size() == 1:
+						targets[p.chain[0]] = true
+			var n := _count_new()
+			counts.append(n)
+			once = once and targets.size() == n  # one projectile per enemy, all different
+			if i < 2:
+				await _until_window()
+		_check("%s targets %s enemies, one projectile each (%s), never the same enemy twice" % [type, expected[type], counts],
+			counts == expected[type] and once)
+		await _idle()
+	for e in crowd:
+		e.queue_free()
+	await _frames(5)
+
+	# A targeted knife flies past enemies that aren't its target.
 	_combat.set_job("R")
 	_equip(null, _w("thrown_daggers"))
+	var front := _spawn("grub_hound", ARENA + Vector3(0, 0, -3))
+	var back := _spawn("grub_hound", ARENA + Vector3(0, 0, -8))
 	await _place(ARENA)
-	var counts: Array[int] = []
-	for i in 3:
-		_count_new()
-		await _tap("hand_x")
-		await _until_fired()
-		counts.append(_count_new())
-		await _until_window()
-	_check("Thrown Daggers finisher throws 4 (%s)" % [counts], counts[0] == 1 and counts[1] == 1 and counts[2] == 4)
+	_player.camera_rig.lock_target = back
+	await _frames(3)
+	_hits.clear()
+	await _tap("hand_x")
+	await _frames(70)
+	_player.camera_rig.lock_target = null
+	_check("a targeted knife passes the enemy in front and hits the locked one", _hit(back) and not _hit(front))
 	await _idle()
+	front.queue_free()
+	back.queue_free()
+
+	# Only Boomerang, Gigarang and Arbalest pass through enemies (and specific rares).
+	var piercers := []
+	for type in ["pistol", "rifle", "bow", "crossbow", "shotgun", "machine_pistol", "assault_rifle", "arbalest", "gigarang"]:
+		var w := _w(type)
+		if w.normal_attacks[0].projectile_pierce or w.hard_attacks[0].projectile_pierce:
+			piercers.append(type)
+	_check("only Arbalest and Gigarang pierce (Boomerang homes through) (%s)" % [piercers],
+		piercers == ["arbalest", "gigarang"] and _w("boomerang").normal_attacks[0].lock_targets > 0)
+	_check("the rare Stormcaller rifle pierces", _rare("Stormcaller").normal_attacks[0].projectile_pierce)
+
+	# Gunblade: melee unlocked, a gun when locked on.
+	_combat.set_job("S")
+	var gb := _w("gunblade")
+	_check("Gunblade is Heavy and two-handed (%s)" % gb.jobs_text(), gb.is_heavy() and gb.two_handed)
+	_equip(null, gb)
+	var gb_target := _spawn("grub_hound", ARENA + Vector3(0, 0, -6))
+	await _place(ARENA)
+	_started.clear()
+	_count_new()
+	await _tap("hand_x")
+	await _until_fired()
+	var unlocked_shots := _count_new()
+	await _idle()
+	_player.camera_rig.lock_target = gb_target
+	await _frames(3)
+	await _tap("hand_x")
+	await _until_fired()
+	var locked_shots := _count_new()
+	await _idle()
+	_player.camera_rig.lock_target = null
+	_check("Gunblade swings unlocked and shoots when locked on (%d shots, then %d)" % [unlocked_shots, locked_shots],
+		unlocked_shots == 0 and locked_shots == 1)
+	var gb_shot := gb.locked_normal_attacks[0]
+	var pistol_shot := _w("pistol").normal_attacks[0]
+	var rifle_shot := _w("rifle").normal_attacks[0]
+	_check("its gun is between Pistol and Rifle speed (%.2f s vs %.2f / %.2f)" % [gb_shot.duration, pistol_shot.duration, rifle_shot.duration],
+		gb_shot.duration > pistol_shot.duration and gb_shot.duration < rifle_shot.duration)
+	var gs := _w("great_sword").normal_attacks[0]
+	_check("its blade is between Sword and Great Sword speed (%.2f s vs %.2f / %.2f)" % [gb.normal_attacks[0].duration, _w("sword").normal_attacks[0].duration, gs.duration],
+		gb.normal_attacks[0].duration > _w("sword").normal_attacks[0].duration and gb.normal_attacks[0].duration < gs.duration)
+	gb_target.queue_free()
 
 	# Machine Pistol: hold for automatic fire.
 	_equip(null, _w("machine_pistol"))
@@ -287,6 +368,19 @@ func _run() -> void:
 	Input.action_release("hand_x")
 	await _idle()
 	_check("Machine Pistol automatic fire (%d shots in 1 s)" % fired, fired >= 6)
+	_equip(_w("machine_pistol"), _w("machine_pistol"))
+	await _place(ARENA)
+	fired = 0
+	Input.action_press("hand_x")
+	for i in 60:
+		await physics_frame
+		for p in _projectiles():
+			if not p.has_meta("seen"):
+				p.set_meta("seen", true)
+				fired += 1
+	Input.action_release("hand_x")
+	await _idle()
+	_check("two Machine Pistols (powerstance) keep firing while held (%d shots in 1 s)" % fired, fired >= 12)
 	var mp := _w("machine_pistol")
 	var ar := _w("assault_rifle")
 	_check("Machine Pistol: single-shot taps, half its old damage, the AR's old rate (count %d, base %.1f, tick %.2f)" % [

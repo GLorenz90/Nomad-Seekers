@@ -36,7 +36,7 @@ const JOBS := {
 	&"pistol": "SRI", &"machine_pistol": "R", &"hand_shotgun": "R", &"rifle": "R",
 	&"assault_rifle": "R", &"shotgun": "R", &"bazooka": "R", &"grenade": "RS",
 	&"grenade_launcher": "R", &"thrown_daggers": "RS", &"boomerang": "SR", &"gigarang": "S",
-	&"bow": "R", &"crossbow": "R", &"arbalest": "R", &"wand": "SRI", &"cane": "I",
+	&"bow": "R", &"crossbow": "R", &"arbalest": "R", &"gunblade": "SR", &"burstbow": "R", &"wand": "SRI", &"cane": "I",
 	&"staff": "I", &"cards": "IR", &"talisman": "I", &"totem": "I", &"ward": "IS", &"barrier": "I",
 }
 
@@ -567,12 +567,11 @@ func _full_list() -> Array[WeaponData]:
 		a.projectile_count = 5
 		a.spread_deg = 22.0
 	list.append(hs)
-	# Rifle: one-shot sniper rounds that pierce; PSO rifle frames with the long
-	# "slow combo" window (15 extra frames after each shot).
+	# Rifle: one-shot sniper rounds; PSO rifle frames with the long "slow combo"
+	# window (15 extra frames after each shot). Only specific rares pierce.
 	var rifle := _gun(_weapon("Rifle", &"rifle", WeaponData.WeaponClass.RANGED, true, true, 22.0,
 		Vector3(0.08, 0.14, 1.3), gun), RIFLE_N, RIFLE_H, 1.0, 60.0, 45.0, false, 2.0, 4.0)
 	for a in rifle.normal_attacks + rifle.hard_attacks:
-		a.projectile_pierce = true
 		a.window_close += _f(15)
 	list.append(rifle)
 	# Assault Rifle: heavy repeater; taps are rifle shots, hold = automatic fire at a
@@ -627,11 +626,11 @@ func _full_list() -> Array[WeaponData]:
 		a.status_power = 3.0
 		a.lp_cost = 3.0
 	list.append(gl)
-	# Thrown Daggers: DEX throws; three in a row ends with a fan of extra knives.
+	# Thrown Daggers: DEX throws with PSO-shotgun targeting. Each knife flies at a
+	# different enemy (one per enemy): 1, then 3, then 5 targets.
 	var td := _gun(_weapon("Thrown Daggers", &"thrown_daggers", WeaponData.WeaponClass.RANGED, false, false, 10.0,
 		Vector3(0.05, 0.05, 0.35), steel), HANDGUN_N, HANDGUN_H, 1.0, 30.0, 22.0, true, 0.0, 0.0)
-	td.normal_attacks[2].finisher_volley = 3
-	td.normal_attacks[2].spread_deg = 25.0
+	_multi(td, [1, 3, 5])
 	list.append(td)
 	# Boomerang: PSO slicer; homes in on up to 5 enemies, one after another.
 	var bm := _gun(_weapon("Boomerang", &"boomerang", WeaponData.WeaponClass.RANGED, false, false, 12.0,
@@ -653,11 +652,9 @@ func _full_list() -> Array[WeaponData]:
 		a.returns = true
 		a.lp_cost = 2.0
 	list.append(gg)
-	# Bow: rifle frames x0.9; Normal shots walk, Charged shots pierce.
+	# Bow: rifle frames x0.9; Normal shots walk. Only specific rares pierce.
 	var bow := _gun(_weapon("Bow", &"bow", WeaponData.WeaponClass.RANGED, false, true, 16.0,
 		Vector3(0.05, 1.2, 0.1), wood), RIFLE_N, RIFLE_H, 0.9, 45.0, 40.0, true, 1.0, 2.0)
-	for a in bow.hard_attacks:
-		a.projectile_pierce = true
 	list.append(bow)
 	# Crossbow: PSU style one-hander; handgun frames x1.1, fast bolts.
 	list.append(_gun(_weapon("Crossbow", &"crossbow", WeaponData.WeaponClass.RANGED, false, false, 14.0,
@@ -691,12 +688,61 @@ func _full_list() -> Array[WeaponData]:
 	# Cards: thrown, SOL-scaling; three in a row ends with extra cards.
 	var cards := _gun(_weapon("Cards", &"cards", WeaponData.WeaponClass.MAGIC, false, false, 14.0,
 		Vector3(0.2, 0.3, 0.02), Color(0.9, 0.9, 0.95)), HANDGUN_N, HANDGUN_H, 1.0, 28.0, 22.0, true, 1.0, 2.0)
+	# Like Thrown Daggers, but magic (SOL) and 1, 2, then 4 targets.
 	for a in cards.normal_attacks + cards.hard_attacks:
 		a.ranged_hit = true
-	cards.normal_attacks[2].finisher_volley = 2
-	cards.normal_attacks[2].spread_deg = 20.0
+	_multi(cards, [1, 2, 4])
 	list.append(cards)
+
+	# --- New types (Grayson, 2026-11-08) ---
+	list.append(_gunblade())
+	# Burstbow: PSO's shotgun. Rifle speed; 3 targets, 3 targets, then 5.
+	var bb := _gun(_weapon("Burstbow", &"burstbow", WeaponData.WeaponClass.RANGED, true, true, 15.0,
+		Vector3(0.6, 0.5, 0.12), Color(0.5, 0.42, 0.3)), RIFLE_N, RIFLE_H, 1.0, 40.0, 24.0, false, 2.0, 4.0)
+	_multi(bb, [3, 3, 5])
+	list.append(bb)
 	return list
+
+
+## PSO-shotgun targeting per step (normal and hard alike).
+func _multi(w: WeaponData, counts: Array) -> void:
+	for attacks in [w.normal_attacks, w.hard_attacks]:
+		for i in attacks.size():
+			attacks[i].multi_target = counts[mini(i, counts.size() - 1)]
+			attacks[i].finisher_volley = 0
+			attacks[i].spread_deg = 0.0
+
+
+## Gunblade: Heavy, two-handed. Unlocked it's melee between the Sword (PSO saber)
+## and the Great Sword (PSO sword); locked on it's a gun between the Pistol (PSO
+## handgun) and the Rifle. Frame tables are the averages of each pair; damage is
+## the average base (Sword 20 / Great Sword 34 -> 27; Pistol 12 / Rifle 22 -> 17).
+func _gunblade() -> WeaponData:
+	var gb := _melee(_weapon("Gunblade", &"gunblade", WeaponData.WeaponClass.MELEE, true, true, 27.0,
+		Vector3(0.1, 0.14, 1.3), Color(0.55, 0.6, 0.7)), _avg(SABER_N, SWORD_N), _avg(SABER_H, SWORD_H), 1.0,
+		SLASHES, 1.25, Vector3(2.0, 1.6, 2.0), 0.5)
+	gb.block_strength = 0.35
+	var gun_mode := _gun(_weapon("Gunblade (gun)", &"gunblade", WeaponData.WeaponClass.RANGED, true, true, 17.0,
+		Vector3.ONE, Color.WHITE), _avg(HANDGUN_N, RIFLE_N), _avg(HANDGUN_H, RIFLE_H), 1.0, 50.0, 38.0, true, 1.0, 3.0)
+	var ratio := 17.0 / 27.0  # one base damage per weapon: scale the gun shots
+	for a in gun_mode.normal_attacks + gun_mode.hard_attacks:
+		a.damage_mult *= ratio
+		if a.move_speed_scale > 0.0:
+			a.move_speed_scale = 0.35  # heavier than a pistol, lighter than a rooted rifle
+	gb.locked_normal_attacks = gun_mode.normal_attacks
+	gb.locked_hard_attacks = gun_mode.hard_attacks
+	return gb
+
+
+## Frame-by-frame average of two PSO tables.
+func _avg(a: Array, b: Array) -> Array:
+	var out := []
+	for i in a.size():
+		var row := []
+		for j in a[i].size():
+			row.append((float(a[i][j]) + float(b[i][j])) * 0.5)
+		out.append(row)
+	return out
 
 
 func _auto_fire(name: String, tick: float, speed: float, range_m: float, mobile: float, lp: float) -> AttackData:
@@ -822,5 +868,9 @@ func _rares() -> Array[WeaponData]:
 		Loot.apply_tag(w, lines[spec[2]], spec[3])
 		w.type_bonus = {spec[4]: spec[5]}
 		w.set_meta("emblems", spec[6])
+		# Only specific rares pierce (Grayson, 2026-11-08): Stormcaller, a rare rifle.
+		if spec[0] == "Stormcaller":
+			for a in w.normal_attacks + w.hard_attacks:
+				a.projectile_pierce = true
 		out.append(w)
 	return out

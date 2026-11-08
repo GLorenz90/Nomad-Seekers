@@ -78,6 +78,8 @@ const LOCK_CHAIN_HOP := 9.0
 ## Aegis Pulse (Sync Burst): damage dealt x AEGIS_POWER, taken x AEGIS_GUARD.
 const AEGIS_POWER := 1.3
 const AEGIS_GUARD := 0.7
+## PSO-shotgun targeting picks enemies within this half-angle of the aim.
+const MULTI_TARGET_CONE := 50.0
 ## Heal and Cure reach every Seeker this close to the caster.
 const SUPPORT_RANGE := 10.0
 const WEAPON_DIR := "res://data/weapons/"
@@ -579,13 +581,15 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
   var same_weapon := streak_id == _last_hand or (weapon.two_handed and weapon == _last_weapon)
   if continuing and same_weapon:
     next_streak = _weapon_streak + 1
-  var sustained := hard and weapon.sustained and not twin
+  # Twin sustained works too (two Machine Pistols both fire while held).
+  var sustained := hard and weapon.sustained
   if weapon.no_combo or weapon.casting or sustained:
     next_step = 0
     next_streak = 1
 
   # The pressed hand may use its special; the other twin hand swings normally.
-  var attack := weapon.get_attack(next_streak, hard, slot, special)
+  var locked := _player.get_lock_target() != null  # Gunblade: gun while locked on
+  var attack := weapon.get_attack(next_streak, hard, slot, special, locked)
   if attack == null:
     return
   var other_weapon: WeaponData = null
@@ -593,7 +597,7 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
   var cost := attack.lp_cost
   if twin:
     other_weapon = current_weapon(1 - hand)
-    other_attack = other_weapon.get_attack(next_streak, hard, 0, false)
+    other_attack = other_weapon.get_attack(next_streak, hard, 0, false, locked)
     if other_attack:
       cost += other_attack.lp_cost
   var uses_special := special and not weapon.casting and weapon.get_special() != null
@@ -695,11 +699,12 @@ func _update_sustained(cur: ActiveAttack, delta: float) -> void:
   if not cur.releasing and Input.is_action_pressed(_action_for(cur.hand)):
     cur.tick -= delta
     if cur.tick <= 0.0:
-      if a.lp_cost > 0.0 and lp < a.lp_cost:
+      var tick_cost := a.lp_cost + (cur.other_attack.lp_cost if cur.twin and cur.other_attack else 0.0)
+      if tick_cost > 0.0 and lp < tick_cost:
         combo_feedback.emit("Not enough LP")
         cur.releasing = true
       else:
-        lp -= a.lp_cost
+        lp -= tick_cost
         cur.tick = a.sustained_tick
         if a.lp_cost > 0.0:
           _lp_regen_delay = 0.75
@@ -779,7 +784,8 @@ func predict_targets(hand: int) -> Array[Node3D]:
   if _current and _current.sustained:
     attack = _current.attack
   else:
-    attack = weapon.get_attack(_predicted_step(hand), false, spell_slot(weapon, hand, special), special)
+    attack = weapon.get_attack(_predicted_step(hand), false, spell_slot(weapon, hand, special), special,
+      _player.get_lock_target() != null)
   if attack == null or attack.support != AttackData.Support.NONE:
     return []
   var aim := _choose_aim(attack)
@@ -823,6 +829,10 @@ func _predict_melee(attack: AttackData, dir: Vector3) -> Array[Node3D]:
 func _predict_projectile(attack: AttackData, target: Node3D, dir: Vector3) -> Array[Node3D]:
   if attack.lock_targets > 0:
     return _lock_chain(attack, target, dir)
+  if attack.multi_target > 0:
+    var picked := _multi_targets(attack, target, dir)
+    if not picked.is_empty():
+      return picked
   var origin := _player.global_position + Vector3.UP * 1.1
   var aim := dir
   if target:
@@ -868,6 +878,40 @@ func _predict_projectile(attack: AttackData, target: Node3D, dir: Vector3) -> Ar
       if n and not n in found and n.global_position.distance_to(center) <= attack.explosion_radius:
         found.append(n)
   return found
+
+
+## PSO-shotgun targeting: the aimed target first, then the nearest other enemies
+## within MULTI_TARGET_CONE degrees of the aim and in range with a clear line,
+## up to attack.multi_target. Each gets its own projectile.
+func _multi_targets(attack: AttackData, first: Node3D, dir: Vector3) -> Array[Node3D]:
+  var origin := _player.global_position + Vector3.UP * 1.1
+  var space := get_world_3d().direct_space_state
+  var pool: Array[Node3D] = []
+  for node in get_tree().get_nodes_in_group("lockable"):
+    var n := node as Node3D
+    if n == null or not n.is_visible_in_tree() or n == first:
+      continue
+    var to := n.global_position - _player.global_position
+    to.y = 0.0
+    if to.length() > attack.projectile_range or to.length() < 0.01:
+      continue
+    if rad_to_deg(dir.angle_to(to.normalized())) > MULTI_TARGET_CONE:
+      continue
+    var los := PhysicsRayQueryParameters3D.create(origin, CameraRig.get_lock_point(n), 1, [_player.get_rid()])
+    if not space.intersect_ray(los).is_empty():
+      continue
+    pool.append(n)
+  pool.sort_custom(func(a: Node3D, b: Node3D) -> bool:
+    return a.global_position.distance_squared_to(_player.global_position) \
+      < b.global_position.distance_squared_to(_player.global_position))
+  var picked: Array[Node3D] = []
+  if first and first.global_position.distance_to(_player.global_position) <= attack.projectile_range:
+    picked.append(first)
+  for n in pool:
+    if picked.size() >= attack.multi_target:
+      break
+    picked.append(n)
+  return picked
 
 
 ## Homing chain for lock_targets throws: the aimed target (or the nearest enemy
@@ -942,14 +986,18 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   var info := DamageInfo.new()
   info.weapon = weapon
   info.special = special
-  var stat := stats.attack_stat(weapon.weapon_class)
+  # Gunblade shots are ranged (DEX, EVA) even though the weapon is melee.
+  var cls := weapon.weapon_class
+  if attack.is_projectile and cls == WeaponData.WeaponClass.MELEE:
+    cls = WeaponData.WeaponClass.RANGED
+  var stat := stats.attack_stat(cls)
   info.amount = weapon.base_damage * attack.damage_mult * (1.0 + stat / 100.0) * scale
   if _blocking:
     info.amount *= shield_attack_damage_scale
   if aegis_active():
     info.amount *= AEGIS_POWER
   info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
-  info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(weapon.weapon_class)
+  info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(cls)
   info.status_power = attack.status_power
   info.is_hard = hard
   if randf() < stats.crit_chance():
@@ -1010,6 +1058,21 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
     var aim := cur.direction
     if target:
       aim = (CameraRig.get_lock_point(target) - muzzle).normalized()
+    # PSO-shotgun targeting: one projectile per picked enemy, each only able to
+    # hit its own target.
+    if attack.multi_target > 0:
+      var picked := _multi_targets(attack, target, cur.direction)
+      if not picked.is_empty():
+        for t in picked:
+          var tinfo := _make_damage(strike[0], attack, cur.hard, strike[2], strike[4])
+          var tcolor := Element.color_of(tinfo.damage_type)
+          if tinfo.damage_type == Element.Type.GENERIC:
+            tcolor = Color(1.0, 0.85, 0.5)
+          var tdir := (CameraRig.get_lock_point(t) - muzzle).normalized()
+          var tp := Projectile.spawn(_player.get_parent(), muzzle, tdir, attack, tinfo, tcolor, _player, self)
+          tp.chain.append(t)
+          tp.exclusive = true
+        continue
     # Volleys: pellets / extra throws fan out evenly; finishers add finisher_volley.
     var count := maxi(attack.projectile_count, 1) + attack.finisher_volley
     var chain: Array[Node3D] = []

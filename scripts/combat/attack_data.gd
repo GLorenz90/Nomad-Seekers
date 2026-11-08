@@ -75,6 +75,10 @@ enum Support { NONE, HEAL, CURE }
 ## Thrown weapons: step 3 of a chain that used this weapon for all three steps
 ## throws this many extra projectiles (North Star step-3 finisher).
 @export var finisher_volley := 0
+## PSO-shotgun targeting (Thrown Daggers, Cards, Burstbow): up to this many
+## enemies ahead are picked, and one projectile flies at each. Each projectile
+## can only hit its own target, so no enemy is hit twice by one attack.
+@export var multi_target := 0
 ## Thrown weapons that scale off a different stat still count as ranged hits.
 @export var ranged_hit := false
 
