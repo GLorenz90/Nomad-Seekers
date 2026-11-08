@@ -60,7 +60,8 @@ func _run() -> void:
 	menu.equip(EMPTY_SLOT, 1, w.call("pistol"))
 	menu.equip(EMPTY_SLOT, 0, w.call("great_sword"))
 	var slot := _combat.loadout_set.loadouts[EMPTY_SLOT]
-	_check("equipping a two-handed weapon clears the other hand", slot.left.display_name == "Great Sword" and slot.right == null)
+	_check("a two-handed weapon goes in the right hand and clears the left",
+		slot.right.display_name == "Great Sword" and slot.left == null)
 	menu.equip(EMPTY_SLOT, 1, w.call("pistol"))
 	_check("equipping a one-handed weapon clears a two-handed one", slot.left == null and slot.right.display_name == "Pistol")
 	menu.equip(EMPTY_SLOT, 0, w.call("axe"))
@@ -99,7 +100,8 @@ func _run() -> void:
 	for m in _combat._meshes:
 		if m.mesh != null:
 			meshes += 1
-	_check("Great Sword shows as one weapon, not two (%d meshes)" % meshes, meshes == 1)
+	_check("Great Sword shows as one weapon, in the right hand (%d meshes)" % meshes,
+		meshes == 1 and _combat._meshes[CombatController.Hand.RIGHT].mesh != null)
 	_check("both buttons use the one Great Sword",
 		_combat.current_weapon(0) == _combat.current_weapon(1) and _combat.current_weapon(0).display_name == "Great Sword")
 
@@ -119,6 +121,29 @@ func _run() -> void:
 	await _hit_after(SHIELD_SWORD, true, 30, true)
 	_check("blocks don't cover your back (took %.0f)" % _last_taken, is_equal_approx(_last_taken, 20.0))
 	_check("blocking slows you to 40%% speed", is_equal_approx(_combat.block_move_scale, 0.4))
+
+	# With a shield you keep blocking while attacking, at 66% damage.
+	_combat.select_loadout(SHIELD_SWORD)
+	await _reset(Vector3(0, 0.1, -5.5))
+	Input.action_press("block")
+	await _frames(20)
+	await _tap("hand_y")
+	var still_blocking := _combat.is_blocking()
+	await _idle()
+	Input.action_release("block")
+	_check("shield stays up while you attack (blocking: %s)" % still_blocking, still_blocking)
+	_check("attacks made while shield-blocking deal 66%% (%s)" % [_hits],
+		_hits.size() == 1 and is_equal_approx(_hits[0], 20.0 * 1.3 * 0.66))
+	_combat.select_loadout(SWORD_PISTOL)
+	await _reset(Vector3(0, 0.1, -5.5))
+	Input.action_press("block")
+	await _frames(20)
+	await _tap("hand_x")
+	var arms_up_blocking := _combat.is_blocking()
+	await _idle()
+	Input.action_release("block")
+	_check("an arms-up block drops for the attack, at full damage (%s)" % [_hits],
+		not arms_up_blocking and _hits.size() == 1 and is_equal_approx(_hits[0], 20.0 * 1.3))
 
 	# Shield hand button: Deflect opens a parry window.
 	await _setup_facing_swinger(SHIELD_SWORD)

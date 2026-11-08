@@ -91,13 +91,15 @@ func _unhandled_input(event: InputEvent) -> void:
 ## loadout's rule error ("" when valid). Used by the menu and by tests.
 func equip(index: int, hand: int, weapon: WeaponData) -> String:
 	var l := _set.loadouts[index]
-	l.set_hand(hand, weapon)
 	if weapon and weapon.two_handed:
+		# A two-handed weapon is one item, held in the right hand.
+		l.right = weapon
+		l.left = null
+		return l.validate(_set.double_heavy_augment)
+	l.set_hand(hand, weapon)
+	var other := l.get_hand(1 - hand)
+	if other and other.two_handed and weapon != null:
 		l.set_hand(1 - hand, null)
-	else:
-		var other := l.get_hand(1 - hand)
-		if other and other.two_handed and weapon != null:
-			l.set_hand(1 - hand, null)
 	return l.validate(_set.double_heavy_augment)
 
 

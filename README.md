@@ -32,9 +32,12 @@ Built in playable parts (see the Prototype Roadmap in the Claude project). Curre
   - Two-handed weapon: weak block (Great Sword 35%, Dervish Blades 30%).
   - Anything else, including a powerstanced pair: arms-up block, 25%.
   - Blocks and parries only cover the front (140°). Blocking slows you to 40% speed.
+  - With a shield you can attack without dropping the block; those attacks deal 66% damage. Other blocks drop while you attack.
 - **Powerstance**: a pair of the same weapon type (even different items, like Sword + Frost Sword) always attacks with both weapons, each at 75% (1.5x total), on either button. Twin attacks chain their own 3 steps. Twin casting items cast both spells at full power and full LP.
 - **RT + a hand's button** uses the special of the weapon in that hand (`WeaponData.special_attack`); with a powerstanced pair, the other hand swings normally at the same time. No weapon has a special until Part 5, so for now RT + a button is a normal attack (or the second spell on a casting item).
-- **Two-handed weapons are one item**: one weapon in one hand's slot, shown once, and used by both buttons.
+- **Two-handed weapons are one item**, held in the right hand and used by both buttons.
+- **Target markers** (PSU-style, `scripts/ui/target_markers.gd`): small yellow rings mark every enemy your next attack would hit, so you can see a Great Sword sweep catching two enemies, or a piercing Frost Lance lining up a row. The locked-on enemy gets a larger red ring, dimmed when your next attack won't reach it. The preview follows the last hand you pressed, includes the attack's lunge, and updates with RT held (specials and second spells).
+- **Sword hitbox narrowed** to match PSO's single-target saber; the Great Sword is the wide sweep.
 - **Shield hand button**: Shield **Deflect** opens a parry window; Heavy Shield **Shove** knocks enemies back.
 - **Dodge**: hits during the dash's i-frames are dodged.
 - **New weapons**: Shield, Heavy Shield, Great Sword (PSO sword frames), Axe (PSO partisan frames), Frost Sword (an Ice sword that powerstances with the Sword).
@@ -85,12 +88,15 @@ Run from the project folder. Each prints `ok` or `FAIL` per check and exits with
 godot --headless --path . --script res://tests/movement_test.gd
 godot --headless --path . --script res://tests/combat_test.gd
 godot --headless --path . --script res://tests/loadout_test.gd
+godot --headless --path . --script res://tests/targeting_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
 - `combat_test.gd`: tap and hold, 3-step rhythm combos, PSO pistol cadence, rooted vs mobile attacks, Dervish Blades combo and spin, step damage bonuses, too-early and too-late presses, mixed-weapon steps, LP, projectiles, spells and Shift, elemental weakness, dash cancel, death and respawn, navmesh bake, chase and patrol pathing.
 
 - `loadout_test.gd`: one-Heavy and two-handed rules, the augment, cycling past empty and invalid loadouts, LT mode per loadout, shield / arms-up / two-handed block percentages, parry and stagger, no block from behind, Deflect, dash dodge, Heavy Shield shove, blocking a real Shooter bolt, powerstance twin hits and twin combos, twin pistols, the powerstance option, and the menu opening and pausing.
+
+- `targeting_test.gd`: Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release.
 
 The tests always use the default loadouts and never overwrite your saved ones.
 

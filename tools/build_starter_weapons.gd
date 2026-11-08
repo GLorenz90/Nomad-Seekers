@@ -70,6 +70,8 @@ func _sword() -> WeaponData:
 	var n3 := _attack("Cleave", AttackData.Swing.OVERHEAD, 1.3, 8, 31, 31)
 	n3.lunge_distance = 0.8
 	w.normal_attacks = [n1, n2, n3]
+	# PSO's saber "attacks 1 enemy": a narrow hitbox, so it rarely catches two.
+	# (The Great Sword is the wide, multi-target sweep.)
 
 	var h1 := _attack("Heavy Slash", AttackData.Swing.SLASH_RIGHT, 1.8, 20, 21, 37)
 	var h2 := _attack("Heavy Return", AttackData.Swing.SLASH_LEFT, 1.95, 15, 15, 29)
@@ -80,6 +82,8 @@ func _sword() -> WeaponData:
 	h3.reach = 1.6
 	h3.hitbox_size = Vector3(1.2, 1.4, 2.6)
 	w.hard_attacks = [h1, h2, h3]
+	for a in [n1, n2, n3, h1, h2]:
+		a.hitbox_size = Vector3(1.2, 1.6, 1.8)
 	return w
 
 

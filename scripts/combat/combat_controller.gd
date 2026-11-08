@@ -31,7 +31,11 @@ extends Node3D
 ##   parry) or shoves (heavy, knocks back).
 ## - Two-handed weapon: weak block (the weapon's block_strength).
 ## - Anything else: arms-up block (Loadout.ARMS_UP_BLOCK).
-## Blocks only stop hits from the front (block_arc_deg).
+## Blocks only stop hits from the front (block_arc_deg). With a shield you can
+## keep blocking while you attack, at shield_attack_damage_scale damage.
+##
+## Target preview (PSU): predict_targets() returns every enemy the next attack
+## from preview_hand would hit; TargetMarkers draws them.
 ##
 ## Powerstance: a matching pair (same weapon_type, e.g. Sword + Frost Sword)
 ## always attacks with both hands, each at TWIN_DAMAGE_SCALE. RT + a hand's
@@ -56,11 +60,11 @@ const TWIN := 2
 ## Casting twins cast both spells at full power and full LP.
 const TWIN_DAMAGE_SCALE := 0.75
 const WEAPON_DIR := "res://data/weapons/"
-## Default loadouts as [left hand, right hand]; "" is empty. An empty hand next
-## to a two-handed weapon means both buttons use it.
+## Default loadouts as [left hand, right hand]; "" is empty. Two-handed weapons
+## go in the right hand, and both buttons use them.
 const DEFAULT_LOADOUTS := [
 	["sword", "pistol"], ["shield", "sword"], ["sword", "frost_sword"], ["pistol", "pistol"],
-	["wand", "sword"], ["great_sword", ""], ["dervish_blades", ""], ["", ""]]
+	["wand", "sword"], ["", "great_sword"], ["", "dervish_blades"], ["", ""]]
 
 @export var stats: Stats
 ## North Star: the player chooses which face button is which hand.
@@ -80,6 +84,11 @@ const DEFAULT_LOADOUTS := [
 ## Blocks only stop hits from inside this arc in front of the Seeker.
 @export var block_arc_deg := 140.0
 @export_range(0.0, 1.0) var block_move_scale := 0.4
+## With a shield you can attack without dropping the block, at this much damage.
+@export_range(0.0, 1.0) var shield_attack_damage_scale := 0.66
+
+## Hand whose next attack the target markers preview (the last hand pressed).
+var preview_hand := 0
 
 var lp := 0.0
 var loadout_set: LoadoutSet
@@ -140,6 +149,7 @@ func _ready() -> void:
 	_build_hand(Vector3(-0.5, 1.05, -0.1))
 	_build_hand(Vector3(0.5, 1.05, -0.1))
 	_build_hitbox_debug()
+	preview_hand = Hand.LEFT if x_is_left else Hand.RIGHT
 	if use_saved_loadouts:
 		apply_loadout_set(LoadoutSet.load_or_default(make_default_loadouts()))
 	else:
@@ -383,6 +393,7 @@ func _read_hand(hand: int, delta: float) -> void:
 	if Input.is_action_just_pressed(action):
 		_held[hand] = 0.0
 		_hard_fired[hand] = false
+		preview_hand = hand
 	elif _held[hand] >= 0.0:
 		if Input.is_action_pressed(action):
 			_held[hand] += delta
@@ -413,7 +424,9 @@ func _update_block(delta: float) -> void:
 	var lt_down := Input.is_action_pressed("block")
 	var fresh_press := lt_down and not _lt_was_down
 	_lt_was_down = lt_down
-	var wants := can_block and _current == null and lt_down
+	# Shields stay up while you attack; other blocks drop for the attack.
+	var keeps_block := mode == Loadout.LTMode.SHIELD
+	var wants := can_block and (_current == null or keeps_block) and lt_down
 	if wants and not _blocking:
 		_blocking = true
 		# Only a fresh LT press gets the parry window; resuming after an attack doesn't.
@@ -489,7 +502,8 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 
 	if not continuing:
 		_chain_locked = false
-	_blocking = false
+	if get_lt_mode() != Loadout.LTMode.SHIELD:
+		_blocking = false
 	chain_step = next_step
 	_weapon_streak = next_streak
 	_last_hand = streak_id
@@ -589,18 +603,25 @@ func _resolve_pending_hit(cur: ActiveAttack) -> void:
 
 
 func _aim(a: ActiveAttack) -> void:
+	var aim := _choose_aim(a.attack)
+	a.target = aim[0]
+	a.direction = aim[1]
+	_player.face_direction(a.direction)
+
+
+## [target or null, flat direction] an attack would aim at right now.
+func _choose_aim(attack: AttackData) -> Array:
 	var target := _player.get_lock_target()
 	if target == null:
-		if a.attack.is_projectile:
+		if attack.is_projectile:
 			target = _find_soft_target(soft_aim_range, soft_aim_angle_deg)
 		else:
 			target = _find_soft_target(melee_turn_range, 80.0)
-	a.target = target
 
 	var dir := -_player.global_basis.z
 	if target:
 		dir = target.global_position - _player.global_position
-	elif a.attack.move_speed_scale > 0.0:
+	elif attack.move_speed_scale > 0.0:
 		# Mobile attack with nothing to aim at: fire where the stick points.
 		var move := _player.get_move_input_direction()
 		if move.length_squared() > 0.04:
@@ -609,8 +630,89 @@ func _aim(a: ActiveAttack) -> void:
 	if dir.length_squared() < 0.0001:
 		dir = -_player.global_basis.z
 		dir.y = 0.0
-	a.direction = dir.normalized()
-	_player.face_direction(a.direction)
+	return [target, dir.normalized()]
+
+
+# --- Target preview (PSU target cursor) ---------------------------------------
+
+## Every enemy the next attack from preview_hand would hit, as things stand now.
+func predict_targets() -> Array[Node3D]:
+	var weapon := current_weapon(preview_hand)
+	if weapon == null or weapon.is_shield:
+		return []
+	var special := Input.is_action_pressed("shift")
+	var attack: AttackData
+	if _current and _current.sustained:
+		attack = _current.attack
+	else:
+		attack = weapon.get_attack(_predicted_step(preview_hand), false, 1 if special else 0, special)
+	if attack == null:
+		return []
+	var aim := _choose_aim(attack)
+	if attack.is_projectile:
+		return _predict_projectile(attack, aim[0], aim[1])
+	return _predict_melee(attack, aim[1])
+
+
+func _predicted_step(hand: int) -> int:
+	var streak_id := TWIN if is_powerstance() else hand
+	var chaining := chain_step > 0 and chain_step < MAX_CHAIN and not _chain_locked \
+		and (_current != null or _time <= _chain_expire)
+	if chaining and streak_id == _last_hand:
+		return mini(_weapon_streak + 1, MAX_CHAIN)
+	return 1
+
+
+func _predict_melee(attack: AttackData, dir: Vector3) -> Array[Node3D]:
+	var found: Array[Node3D] = []
+	var shape := BoxShape3D.new()
+	shape.size = attack.hitbox_size
+	var params := PhysicsShapeQueryParameters3D.new()
+	params.shape = shape
+	var xform := _hitbox_transform_for(attack, dir)
+	if attack.move_speed_scale <= 0.0:
+		xform.origin += dir * attack.lunge_distance  # rooted swings lunge forward first
+	params.transform = xform
+	params.collision_mask = ENEMY_MASK
+	for result in get_world_3d().direct_space_state.intersect_shape(params, 16):
+		var body := result.collider as Node3D
+		var health := Health.find(body)
+		if body and health and not health.is_dead() and not body in found:
+			found.append(body)
+	return found
+
+
+## Shots hit the first enemy along the aim line; piercing shots hit every one.
+func _predict_projectile(attack: AttackData, target: Node3D, dir: Vector3) -> Array[Node3D]:
+	var origin := _player.global_position + Vector3.UP * 1.1
+	var aim := dir
+	if target:
+		aim = (CameraRig.get_lock_point(target) - origin).normalized()
+	var found: Array[Node3D] = []
+	var first: Node3D = null
+	var first_distance := INF
+	var space := get_world_3d().direct_space_state
+	for node in get_tree().get_nodes_in_group("lockable"):
+		var n := node as Node3D
+		if n == null or not n.is_visible_in_tree():
+			continue
+		var rel := CameraRig.get_lock_point(n) - origin
+		var along := rel.dot(aim)
+		if along < 0.0 or along > attack.projectile_range:
+			continue
+		if (rel - aim * along).length() > attack.projectile_radius + 0.5:
+			continue
+		var los := PhysicsRayQueryParameters3D.create(origin, origin + rel, 1, [_player.get_rid()])
+		if not space.intersect_ray(los).is_empty():
+			continue
+		if attack.projectile_pierce:
+			found.append(n)
+		elif along < first_distance:
+			first_distance = along
+			first = n
+	if first:
+		found.append(first)
+	return found
 
 
 func _find_soft_target(max_range: float, max_angle_deg: float) -> Node3D:
@@ -643,6 +745,8 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
 	var info := DamageInfo.new()
 	var stat := stats.attack_stat(weapon.weapon_class)
 	info.amount = weapon.base_damage * attack.damage_mult * (1.0 + stat / 100.0) * scale
+	if _blocking:
+		info.amount *= shield_attack_damage_scale
 	info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
 	info.is_hard = hard
 	if randf() < stats.crit_chance():
@@ -662,8 +766,12 @@ func _strikes(cur: ActiveAttack) -> Array:
 
 
 func _hitbox_transform(cur: ActiveAttack) -> Transform3D:
-	var origin := _player.global_position + Vector3.UP * 1.0 + cur.direction * cur.attack.reach
-	return Transform3D(Basis.looking_at(cur.direction), origin)
+	return _hitbox_transform_for(cur.attack, cur.direction)
+
+
+func _hitbox_transform_for(attack: AttackData, dir: Vector3) -> Transform3D:
+	var origin := _player.global_position + Vector3.UP * 1.0 + dir * attack.reach
+	return Transform3D(Basis.looking_at(dir), origin)
 
 
 func _melee_hits(cur: ActiveAttack) -> void:
@@ -724,20 +832,30 @@ func _build_hand(shoulder: Vector3) -> void:
 	_meshes.append(mesh)
 
 
-## The hand that actually holds the weapon used by this button. A two-handed
-## weapon is one item: it lives in one hand's slot and both buttons use it.
+## The hand that visibly holds the weapon used by this button. A two-handed
+## weapon is one item, always held in the right hand; both buttons use it.
 func _holding_hand(hand: int) -> int:
 	var l := get_loadout()
-	if l and l.get_hand(hand) == null and l.get_hand(1 - hand) and l.get_hand(1 - hand).two_handed:
-		return 1 - hand
+	if l and l.two_handed_weapon():
+		return Hand.RIGHT
 	return hand
+
+
+## What each hand visibly holds (a two-handed weapon shows in the right hand only).
+func _held_weapon(hand: int) -> WeaponData:
+	var l := get_loadout()
+	if l == null:
+		return null
+	var two_hand := l.two_handed_weapon()
+	if two_hand:
+		return two_hand if hand == Hand.RIGHT else null
+	return l.get_hand(hand)
 
 
 func _equip_visuals() -> void:
 	rotation.y = 0.0
 	for hand in [Hand.LEFT, Hand.RIGHT]:
-		var l := get_loadout()
-		var w: WeaponData = l.get_hand(hand) if l else null
+		var w := _held_weapon(hand)
 		var mesh_instance := _meshes[hand]
 		if w == null:
 			mesh_instance.mesh = null
@@ -775,8 +893,7 @@ func _block_pose() -> void:
 	for hand in [Hand.LEFT, Hand.RIGHT]:
 		if _tweens[hand]:
 			_tweens[hand].kill()
-		var l := get_loadout()
-		var w: WeaponData = l.get_hand(hand) if l else null
+		var w := _held_weapon(hand)
 		if w == null:
 			continue
 		if w.two_handed:

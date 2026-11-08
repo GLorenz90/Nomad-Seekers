@@ -12,6 +12,7 @@ const KILL_HEIGHT := -20.0
 
 var _spawn := Transform3D.IDENTITY
 var loadout_menu: LoadoutMenu
+var target_markers: TargetMarkers
 
 @onready var player: Player = $Player
 @onready var camera_rig: CameraRig = $CameraRig
@@ -28,6 +29,10 @@ func _ready() -> void:
 	add_child(loadout_menu)
 	loadout_menu.setup(player.combat)
 	player.health.died.connect(_respawn_player)
+	target_markers = TargetMarkers.new()
+	add_child(target_markers)
+	target_markers.setup(player.combat, camera_rig)
+	camera_rig.show_lock_marker = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_bake_navmesh()
 
