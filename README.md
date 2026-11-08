@@ -2,7 +2,9 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 3, loadouts and blocking**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 4, enemies and rooms**.
+
+Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` has two wave rooms full of real enemies (open it and press F6).
 
 ## Part 1: movement
 - **Seeker controller** (`scripts/player/player.gd`): camera-relative movement with snappy acceleration, a variable-height jump with coyote time and an input buffer, and a dash/dodge with i-frames, one air dash, and dash-jump (jump during a ground dash to keep momentum).
@@ -44,6 +46,26 @@ Built in playable parts (see the Prototype Roadmap in the Claude project). Curre
 - **Block practice** in the test room: the Swinger glows orange, then swings; the Shooter fires slow pink bolts. Parry the Swinger to stagger it (it glows blue).
 - **Taking damage**: the Seeker now has HP that enemies can reduce, and respawns at the start on death.
 
+## Part 4: enemies and rooms
+- **Arena** (`scenes/arena.tscn`, built by `tools/build_arena.gd`): a start corridor and two PSO-style **wave rooms**. Walking in closes the doors (glowing orange), each wave spawns when the last enemy of the previous one falls, and the doors open after the final wave. Room A has three waves, Room B two (the last one has all six enemy types).
+- **Wave rooms** (`scripts/rooms/wave_room.gd`): add `WaveData` resources (a list of enemies) to `waves`, put CSG doors under `Doors` (outside the Navigation region, so the navmesh is baked with the doorways open) and `Marker3D` spawn points under `SpawnPoints`.
+- **Enemies** (`scripts/enemies/enemy.gd`, data in `data/enemies/*.tres`): navmesh AI. They idle until you come within aggro range or hit them, then path to you. Melee enemies close in; ranged and spell enemies hold their distance and back off if you get too close. Every attack is telegraphed: the enemy glows in its element's color, then strikes. Hard hits and big hits stagger them, a parry staggers them longer, and a shove knocks them back.
+- **One enemy per monster type** (North Star §2.6):
+
+| Enemy | Type | Fights by | Element |
+|---|---|---|---|
+| Grub Hound | BEAST | Charges and swipes | — |
+| Mutated Crawler | MUTATED | Fast, evasive bite | Nature (Poison) |
+| Sentry Drone | SYNTHETIC | Hovers, keeps ~9 m, shoots | Lightning (Shock) |
+| Umbral Eye | DARK | Floats back, slow casts | Dark (Drain) |
+| Caustic Ooze | ALCHEMIC | Slow, tanky, slams all around it | Fire (Burn) |
+| Lumen Sprite | LIGHT | Evasive, darting caster | Light (Blind) |
+
+- **Status effects** (`scripts/combat/status_effects.gd`) on enemies, dummies and the Seeker: elemental hits build up; past the threshold the status starts. Burn and Poison deal damage over time, Ice Slows (more Ice while Slowed Freezes), Lightning Shocks (stunned), Light Blinds (half your attacks miss), Dark Drains (damage over time that heals whoever applied it). Frozen or shocked means no moving, attacking or dodging. Your statuses show above the HUD bars; enemies list theirs under their HP.
+- **Defense stats**: DEF reduces melee damage, RES reduces magic, EVA reduces ranged and gives a chance for melee and ranged attacks to miss (spells always land). Reduction is 100 / (100 + stat). Enemies have their own DEF / RES / EVA, weaknesses and resistances.
+- **Ward and Barrier** (magic shields): block 50% / 75%. Their hand button (Reflect) and a fresh LT press open a reflect window: an enemy shot or spell that hits you then flies back at the shooter, faster. They can't parry melee, only block it. Add them to a loadout in the menu.
+- **All hits go through `HitResolver`**, so blocks, parries, reflects, misses, defense and status work the same for every weapon and enemy.
+
 ## Controls
 | Action | Gamepad | Keyboard / mouse |
 |---|---|---|
@@ -76,7 +98,8 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 ## Known limits (deliberate for now)
 - No animation: capsules, with weapons swung by simple tweens. Melee hitboxes show as red boxes (`show_hitboxes`).
 - Normal attacks fire when the button is released, so tap and hold can share one button.
-- Weapon specials (RT on a tagged weapon) come with Part 5. The magic shields (Ward, Barrier) and their reflect come with Part 4, when enemies cast spells.
+- Weapon specials (RT on a tagged weapon) come with Part 5.
+- Enemies don't drop anything yet (loot is Part 5), and there's no Cure spell for statuses yet; they wear off.
 - The game pauses while the loadout menu is open. Co-op will need a non-pausing version.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
 - No step-up for small ledges yet. Input is bound to all devices until couch co-op.
@@ -89,6 +112,7 @@ godot --headless --path . --script res://tests/movement_test.gd
 godot --headless --path . --script res://tests/combat_test.gd
 godot --headless --path . --script res://tests/loadout_test.gd
 godot --headless --path . --script res://tests/targeting_test.gd
+godot --headless --path . --script res://tests/enemy_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
@@ -98,6 +122,8 @@ godot --headless --path . --script res://tests/targeting_test.gd
 
 - `targeting_test.gd`: default buttons (X = right hand); Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; blue / yellow / green per hand, and using one hand doesn't hide the other hand's marker; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release.
 
+- `enemy_test.gd` (in the arena): all six monster types, DEF / RES / EVA math and miss rate, every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard-hit stagger, a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open).
+
 The tests always use the default loadouts and never overwrite your saved ones.
 
-`tools/build_starter_weapons.gd` regenerates the starter weapon `.tres` files with their default values (this overwrites any edits).
+`tools/build_starter_weapons.gd`, `tools/build_enemies.gd` and `tools/build_arena.gd` regenerate the weapons, enemies and arena with their default values (this overwrites any edits).
