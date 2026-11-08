@@ -89,6 +89,11 @@ const MAX_AIM_YAW := 8.0
 const MULTI_TARGET_CONE := 50.0
 ## Heal and Cure reach every Seeker this close to the caster.
 const SUPPORT_RANGE := 10.0
+const STAT_FOR_CLASS := {
+  WeaponData.WeaponClass.MELEE: &"strength",
+  WeaponData.WeaponClass.RANGED: &"dexterity",
+  WeaponData.WeaponClass.MAGIC: &"soul",
+}
 const WEAPON_DIR := "res://data/weapons/"
 ## Default loadouts as [left hand, right hand]; "" is empty. Two-handed weapons
 ## go in the right hand, and both buttons use them.
@@ -174,6 +179,8 @@ var _block_time := 0.0
 var _parry_until := -1.0
 var _lt_was_down := false
 var _aegis_until := -1.0
+## Weapon hits landed in the current combo (Accuracy streak bonus).
+var _hit_streak := 0
 
 var _player: Player
 var _pivots: Array[Node3D] = []
@@ -435,7 +442,14 @@ func aegis_time_left() -> float:
   return maxf(_aegis_until - _time, 0.0)
 
 
+## Buff / debuff multiplier on one of the Seeker's stats.
+func _stat_scale(stat: StringName) -> float:
+  return _player.status.stat_scale(stat) if _player and _player.status else 1.0
+
+
 func report_hit(target: Node, info: DamageInfo, amount: float) -> void:
+  if amount > 0.0 and not info.missed and info.accuracy >= 0.0:
+    _hit_streak += 1  # Chrono Cross ramp: each landed hit helps the next
   if info.special and info.weapon and info.weapon.tag and amount > 0.0 and not info.missed:
     _apply_tag_effect(target, info, amount)
   hit_landed.emit(target, info, amount)
@@ -630,6 +644,8 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
     _chain_locked = false
   if get_lt_mode() != Loadout.LTMode.SHIELD:
     _blocking = false
+  if next_step == 1:
+    _hit_streak = 0  # a new combo starts its accuracy ramp over
   chain_step = next_step
   _weapon_streak = next_streak
   _last_hand = streak_id
@@ -997,7 +1013,7 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   var cls := weapon.weapon_class
   if attack.is_projectile and cls == WeaponData.WeaponClass.MELEE:
     cls = WeaponData.WeaponClass.RANGED
-  var stat := stats.attack_stat(cls)
+  var stat := stats.attack_stat(cls) * _stat_scale(STAT_FOR_CLASS[cls])
   info.amount = weapon.base_damage * attack.damage_mult * (1.0 + stat / 100.0) * scale
   if _blocking:
     info.amount *= shield_attack_damage_scale
@@ -1006,7 +1022,16 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
   info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(cls)
   info.status_power = attack.status_power
-  info.is_hard = hard
+  # Sustained ticks count as light hits (no push-back), whatever the button.
+  var sustained := attack.sustained_tick > 0.0
+  info.is_hard = hard and not sustained
+  # Hit chance (Accuracy): spells never miss; weapons roll ATA vs EVA.
+  if weapon.casting:
+    info.accuracy = -1.0
+  else:
+    info.accuracy = Accuracy.effective_ata(stats.accuracy * _stat_scale(&"accuracy"), hard, special,
+      sustained, maxi(chain_step, 1))
+    info.hit_bonus = Accuracy.streak_bonus(_hit_streak)
   if randf() < stats.crit_chance():
     info.is_crit = true
     info.amount *= 1.5

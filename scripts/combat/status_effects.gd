@@ -17,12 +17,14 @@ extends Node
 signal status_started(status: Status)
 signal status_ended(status: Status)
 
-enum Status { BURN, SLOW, FREEZE, SHOCK, POISON, BLIND, DRAIN }
+enum Status { BURN, SLOW, FREEZE, SHOCK, POISON, BLIND, DRAIN, PARALYZE }
 
 const DURATIONS := {
 	Status.BURN: 4.0, Status.SLOW: 3.0, Status.FREEZE: 1.5, Status.SHOCK: 1.0,
-	Status.POISON: 6.0, Status.BLIND: 4.0, Status.DRAIN: 4.0,
+	Status.POISON: 6.0, Status.BLIND: 4.0, Status.DRAIN: 4.0, Status.PARALYZE: 2.5,
 }
+## Stats that buffs / debuffs scale (Part 6 spells): percent changes over time.
+const MODIFIED_STATS: Array[StringName] = [&"strength", &"dexterity", &"soul", &"defense", &"accuracy", &"evasion"]
 ## Damage per second as a fraction of max HP.
 const DOT_FRACTION := {Status.BURN: 0.03, Status.POISON: 0.015, Status.DRAIN: 0.02}
 const DOT_ELEMENT := {Status.BURN: Element.Type.FIRE, Status.POISON: Element.Type.NATURE, Status.DRAIN: Element.Type.DARK}
@@ -36,6 +38,9 @@ const TICK := 0.5
 var buildup: Dictionary = {}  # Element.Type -> float
 var active: Dictionary = {}  # Status -> seconds left
 var _drain_source: Node
+## Stat modifiers from buffs and debuffs: stat -> {"fraction": f, "seconds": s}.
+## One per stat; a stronger or longer cast replaces a weaker one.
+var modifiers: Dictionary = {}
 var _tick := 0.0
 
 
@@ -91,22 +96,82 @@ func clear_all() -> void:
 		status_ended.emit(status)
 	active.clear()
 	buildup.clear()
+	clear_debuffs()
+
+
+## Cure at a level: clears statuses in CURE_ORDER up to `count` of them
+## (least annoying first); with every status covered it also clears debuffs.
+func cure(count: int) -> void:
+	for i in mini(count, CURE_ORDER.size()):
+		var status: int = CURE_ORDER[i]
+		if active.has(status):
+			active.erase(status)
+			status_ended.emit(status)
+		var element := _element_for(status)
+		if element >= 0:
+			buildup.erase(element)
+	if count > CURE_ORDER.size():
+		clear_debuffs()
+
+
+## Statuses in order of annoyance, least first (Cure level 1 clears the first).
+const CURE_ORDER: Array[int] = [Status.SLOW, Status.BURN, Status.POISON, Status.BLIND,
+	Status.DRAIN, Status.SHOCK, Status.PARALYZE, Status.FREEZE]
+
+
+func _element_for(status: int) -> int:
+	match status:
+		Status.BURN:
+			return Element.Type.FIRE
+		Status.SLOW, Status.FREEZE:
+			return Element.Type.ICE
+		Status.SHOCK:
+			return Element.Type.LIGHTNING
+		Status.POISON:
+			return Element.Type.NATURE
+		Status.BLIND:
+			return Element.Type.LIGHT
+		Status.DRAIN:
+			return Element.Type.DARK
+	return -1
 
 
 func is_active(status: int) -> bool:
 	return active.has(status)
 
 
+## Buff (fraction > 0) or debuff (fraction < 0) on a stat for some seconds.
+func apply_modifier(stat: StringName, fraction: float, seconds: float) -> void:
+	var old: Dictionary = modifiers.get(stat, {})
+	if not old.is_empty() and signf(float(old.fraction)) == signf(fraction) \
+			and absf(float(old.fraction)) > absf(fraction):
+		old.seconds = maxf(float(old.seconds), seconds)  # keep the stronger one, refresh time
+		return
+	modifiers[stat] = {"fraction": fraction, "seconds": seconds}
+
+
+## Multiplier for a stat from active buffs / debuffs (1.0 = unchanged).
+func stat_scale(stat: StringName) -> float:
+	var m: Dictionary = modifiers.get(stat, {})
+	return 1.0 + float(m.get("fraction", 0.0))
+
+
+func clear_debuffs() -> void:
+	for stat in modifiers.keys():
+		if float(modifiers[stat].fraction) < 0.0:
+			modifiers.erase(stat)
+
+
 ## Movement speed multiplier from statuses.
 func move_scale() -> float:
-	if is_active(Status.FREEZE) or is_active(Status.SHOCK):
+	if is_active(Status.FREEZE) or is_active(Status.SHOCK) or is_active(Status.PARALYZE):
 		return 0.0
 	return 0.5 if is_active(Status.SLOW) else 1.0
 
 
 ## Frozen or shocked targets can't attack.
 func can_act() -> bool:
-	return not (is_active(Status.FREEZE) or is_active(Status.SHOCK))
+	return not (is_active(Status.FREEZE) or is_active(Status.SHOCK) or is_active(Status.PARALYZE))
 
 
 ## Chance that this target's own attacks land (Blind halves it).
@@ -118,12 +183,19 @@ func describe() -> String:
 	var parts := PackedStringArray()
 	for status in active:
 		parts.append("%s %.1fs" % [Status.keys()[status].capitalize(), active[status]])
+	for stat in modifiers:
+		var m: Dictionary = modifiers[stat]
+		parts.append("%s %+d%% %.0fs" % [String(stat).capitalize(), roundi(float(m.fraction) * 100.0), float(m.seconds)])
 	return ", ".join(parts)
 
 
 func _physics_process(delta: float) -> void:
 	for element in buildup.keys():
 		buildup[element] = maxf(buildup[element] - decay_per_second * delta, 0.0)
+	for stat in modifiers.keys():
+		modifiers[stat].seconds = float(modifiers[stat].seconds) - delta
+		if float(modifiers[stat].seconds) <= 0.0:
+			modifiers.erase(stat)
 	if active.is_empty():
 		return
 	_tick += delta

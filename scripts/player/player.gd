@@ -231,21 +231,21 @@ func is_invulnerable() -> bool:
 	return _invuln_timer > 0.0
 
 
-## Every incoming enemy hit goes through here: dash i-frames, an EVA miss
-## roll, blocking / parrying / reflecting (CombatController.resolve_incoming),
-## then DEF / RES / EVA reduction, Health, and status buildup.
+## Every incoming enemy hit goes through here: dash i-frames, the hit roll
+## (enemy ATA vs your EVA, Accuracy), blocking / parrying / reflecting
+## (CombatController.resolve_incoming), then DEF / RES reduction, Health, and
+## status buildup.
 func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) -> float:
 	if is_invulnerable():
 		combat.combo_feedback.emit("Dodged")
 		return 0.0
 	var s := combat.stats
-	if randf() < Defense.miss_chance(info.kind, s.evasion):
-		DamageNumber.spawn_text(get_parent(), global_position + Vector3.UP * 1.9, "Miss")
+	if not Accuracy.roll(info, s.evasion * status.stat_scale(&"evasion"), self, status):
 		return 0.0
 	var block_scale := combat.resolve_incoming(attacker, projectile)
 	if block_scale <= 0.0:
 		return 0.0
-	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense, s.resolve, s.evasion)
+	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense * status.stat_scale(&"defense"), s.resolve)
 	if combat.aegis_active():
 		info.amount *= CombatController.AEGIS_GUARD
 	var amount := health.take_damage(info)

@@ -12,11 +12,21 @@ func _initialize() -> void:
 	quit()
 
 
+## Part 6 hit chance: EVA (vs Seeker weapons) and ATA (its own attacks).
+const HIT_STATS := {
+	"Grub Hound": [60.0, 50.0], "Mutated Crawler": [90.0, 55.0], "Sentry Drone": [50.0, 60.0],
+	"Umbral Eye": [70.0, 55.0], "Caustic Ooze": [30.0, 40.0], "Lumen Sprite": [140.0, 60.0],
+}
+
+
 func _base(name: String, type: EnemyData.EnemyType, notes: String) -> EnemyData:
 	var e := EnemyData.new()
 	e.display_name = name
 	e.enemy_type = type
 	e.notes = notes
+	if HIT_STATS.has(name):
+		e.evasion = HIT_STATS[name][0]
+		e.accuracy = HIT_STATS[name][1]
 	return e
 
 
@@ -44,7 +54,6 @@ func _crawler() -> EnemyData:
 		"Underground native twisted by the corrupted Caves boss. Fast, quick bite, Poison.")
 	e.max_hp = 90.0
 	e.defense = 8.0
-	e.evasion = 25.0
 	e.move_speed = 6.0
 	e.attack_damage = 12.0
 	e.attack_element = Element.Type.NATURE
@@ -121,7 +130,6 @@ func _ooze() -> EnemyData:
 	e.max_hp = 240.0
 	e.defense = 20.0
 	e.resolve = 20.0
-	e.stagger_fraction = 0.25
 	e.move_speed = 2.0
 	e.attack_damage = 24.0
 	e.attack_element = Element.Type.FIRE
@@ -144,7 +152,6 @@ func _sprite() -> EnemyData:
 	var e := _base("Lumen Sprite", EnemyData.EnemyType.LIGHT,
 		"Fey-alien spawn of Malbona Lumo, hostile to Lumin. Darts about, casts Light bolts that Blind (magic, reflectable).")
 	e.max_hp = 80.0
-	e.evasion = 40.0
 	e.resolve = 25.0
 	e.move_speed = 5.0
 	e.attack_style = EnemyData.AttackStyle.SPELL

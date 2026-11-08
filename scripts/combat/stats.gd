@@ -7,7 +7,8 @@ extends Resource
 @export var soul := 30.0       ## Magic damage
 @export var defense := 20.0    ## Melee defense
 @export var resolve := 20.0    ## Magic defense
-@export var evasion := 20.0    ## Ranged defense + miss chance
+@export var evasion := 20.0    ## EVA: how often enemy attacks miss you (Accuracy)
+@export var accuracy := 40.0   ## ATA: how often your weapon attacks land (Accuracy)
 @export var luck := 10.0       ## Crit chance (0.5% per point)
 
 @export var max_hp := 300.0
