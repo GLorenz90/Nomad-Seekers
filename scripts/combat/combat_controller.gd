@@ -10,9 +10,12 @@ extends Node3D
 ##
 ## Combo rules:
 ## - A chain has 3 steps. Any attack from either hand can fill the next step.
-## - The next step only chains if pressed inside the current attack's window
-##   (window_open..window_close). Pressing too early breaks the combo; too late
-##   and a new chain starts.
+## - The chain window opens when the attack ends (window_open = its duration)
+##   and stays open briefly after (window_close). Pressing while the attack is
+##   still playing breaks the combo; too late and a new chain starts. Timing is
+##   judged when the button goes DOWN, so holding for a Hard attack that starts
+##   in the window still chains. Hard attacks are slower, so chaining them takes
+##   longer (and is riskier), not tighter.
 ## - Each weapon's animation step counts its own consecutive uses: Sword, Pistol,
 ##   Sword plays the sword's step 1 both times. Committing to one weapon gives its
 ##   step 2 and 3 attacks and their bonus damage.
@@ -75,6 +78,8 @@ const DEFAULT_LOADOUTS := [
 ## Melee attacks snap to face an enemy this close (PSO-style auto-turn).
 @export var melee_turn_range := 4.0
 @export var show_hitboxes := true
+## A press this close to the end of an attack still counts as on time.
+@export var early_tolerance := 0.05
 ## Load the player's saved loadouts from user:// on start.
 @export var use_saved_loadouts := true
 
@@ -127,6 +132,8 @@ var _time := 0.0
 var _lp_regen_delay := 0.0
 var _held: Array[float] = [-1.0, -1.0]
 var _hard_fired: Array[bool] = [false, false]
+## Whether each hand's current press landed in the chain window (judged at press).
+var _press_chains: Array[bool] = [false, false]
 var _blocking := false
 var _block_time := 0.0
 var _parry_until := -1.0
@@ -394,6 +401,7 @@ func _read_hand(hand: int, delta: float) -> void:
 		_held[hand] = 0.0
 		_hard_fired[hand] = false
 		preview_hand = hand
+		_press_chains[hand] = _judge_press()
 	elif _held[hand] >= 0.0:
 		if Input.is_action_pressed(action):
 			_held[hand] += delta
@@ -442,6 +450,23 @@ func _update_block(delta: float) -> void:
 
 # --- Combo logic ------------------------------------------------------------
 
+## Called when a hand button goes down: is this press on time for the chain?
+## Pressing while an attack is still playing breaks the combo.
+func _judge_press() -> bool:
+	var chain_open := chain_step > 0 and chain_step < MAX_CHAIN and not _chain_locked
+	if _current:
+		var cur := _current
+		if cur.weapon.no_combo or cur.weapon.casting or cur.sustained:
+			return false
+		if cur.elapsed < cur.attack.window_open - early_tolerance:
+			if chain_open:
+				_chain_locked = true
+				combo_feedback.emit("Too early!")
+			return false
+		return chain_open  # within early_tolerance of the end
+	return chain_open and _time <= _chain_expire
+
+
 func _request_attack(hand: int, hard: bool) -> void:
 	var weapon := current_weapon(hand)
 	if weapon == null:
@@ -450,24 +475,14 @@ func _request_attack(hand: int, hard: bool) -> void:
 	var standalone := weapon.no_combo or weapon.casting or (hard and weapon.sustained)
 	var special := Input.is_action_pressed("shift")
 	var slot := 1 if special else 0
+	var on_time := _press_chains[hand] and not _chain_locked and not standalone
 
 	if _current:
-		var cur := _current
-		if cur.weapon.no_combo or cur.weapon.casting or cur.sustained or _chain_locked:
+		# Only a press in the last early_tolerance seconds can cut the attack short.
+		if not on_time:
 			return
-		if cur.elapsed < cur.attack.window_open:
-			_chain_locked = true
-			combo_feedback.emit("Too early!")
-			return
-		if cur.elapsed > cur.attack.window_close or chain_step >= MAX_CHAIN:
-			return
-		_resolve_pending_hit(cur)
-		_begin(hand, weapon, hard, slot, not standalone, twin, special)
-		return
-
-	var continuing := not standalone and not _chain_locked and chain_step > 0 \
-		and chain_step < MAX_CHAIN and _time <= _chain_expire
-	_begin(hand, weapon, hard, slot, continuing, twin, special)
+		_resolve_pending_hit(_current)
+	_begin(hand, weapon, hard, slot, on_time, twin, special)
 
 
 func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bool,

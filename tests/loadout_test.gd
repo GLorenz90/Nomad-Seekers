@@ -315,12 +315,13 @@ func _reset(at: Vector3) -> void:
 	_started.clear()
 
 
+## The chain window opens when the current attack ends.
 func _until_window() -> void:
-	for i in 120:
-		var cur = _combat._current
-		if cur != null and cur.elapsed >= cur.attack.window_open + 0.03:
-			return
+	for i in 180:
+		if not _combat.is_attacking():
+			break
 		await physics_frame
+	await physics_frame
 
 
 func _idle() -> void:

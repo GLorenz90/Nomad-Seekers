@@ -11,8 +11,8 @@ damage_mult = 1.8
 duration = 1.2333333333333334
 active_start = 0.6666666666666666
 active_end = 0.7666666666666667
-window_open = 0.7
-window_close = 1.2333333333333334
+window_open = 1.2333333333333334
+window_close = 1.7666666666666666
 lunge_distance = 0.8
 hitbox_size = Vector3(1.2, 1.6, 1.8)
 
@@ -24,8 +24,8 @@ swing = 1
 duration = 0.9666666666666667
 active_start = 0.5
 active_end = 0.6
-window_open = 0.5
-window_close = 0.9666666666666667
+window_open = 0.9666666666666667
+window_close = 1.4333333333333333
 lunge_distance = 0.8
 hitbox_size = Vector3(1.2, 1.6, 1.8)
 
@@ -38,7 +38,7 @@ duration = 1.1333333333333333
 active_start = 0.4666666666666667
 active_end = 0.5666666666666667
 window_open = 1.1333333333333333
-window_close = 1.1333333333333333
+window_close = 1.4666666666666666
 lunge_distance = 1.4
 reach = 1.6
 hitbox_size = Vector3(1.2, 1.4, 2.6)
@@ -49,8 +49,8 @@ display_name = "Slash"
 duration = 0.9666666666666667
 active_start = 0.36666666666666664
 active_end = 0.4666666666666667
-window_open = 0.43333333333333335
-window_close = 0.9666666666666667
+window_open = 0.9666666666666667
+window_close = 1.5
 hitbox_size = Vector3(1.2, 1.6, 1.8)
 
 [sub_resource type="Resource" id="Resource_ph70c"]
@@ -61,8 +61,8 @@ swing = 1
 duration = 0.8
 active_start = 0.3333333333333333
 active_end = 0.43333333333333335
-window_open = 0.3333333333333333
-window_close = 0.8
+window_open = 0.8
+window_close = 1.2666666666666666
 hitbox_size = Vector3(1.2, 1.6, 1.8)
 
 [sub_resource type="Resource" id="Resource_8ki01"]
@@ -74,7 +74,7 @@ duration = 1.0333333333333334
 active_start = 0.26666666666666666
 active_end = 0.36666666666666664
 window_open = 1.0333333333333334
-window_close = 1.0333333333333334
+window_close = 1.3666666666666667
 lunge_distance = 0.8
 hitbox_size = Vector3(1.2, 1.6, 1.8)
 

@@ -69,8 +69,23 @@ func _run() -> void:
 		await _tap("hand_y")
 	await _idle()
 	var pistol: WeaponData = _combat.current_weapon(CombatController.Hand.RIGHT)
-	_check("mashing the pistol can't beat PSO's 14-frame window (window opens %.2f s)" % pistol.normal_attacks[0].window_open,
-		is_equal_approx(pistol.normal_attacks[0].window_open, 14.0 / 30.0) and _started.size() <= 2)
+	_check("mashing the pistol during a shot doesn't chain (window opens at the end, %.2f s)" % pistol.normal_attacks[0].window_open,
+		is_equal_approx(pistol.normal_attacks[0].window_open, pistol.normal_attacks[0].duration) and _started.size() <= 2)
+
+	# --- Three Hard attacks chain: slower, not tighter ---
+	await _reset(Vector3(0, 0.1, -5.5))
+	var hard_chain := 0
+	for i in 3:
+		if i > 0:
+			await _until_window()
+		Input.action_press("hand_x")
+		await _frames(20)  # hold past hold_threshold
+		Input.action_release("hand_x")
+		await _frames(2)
+		hard_chain = maxi(hard_chain, _combat.chain_step)
+	await _idle()
+	_check("three Hard attacks chain when each starts after the last ends (%s)" % [_started],
+		hard_chain == 3 and _started == ["Heavy Slash", "Heavy Return", "Piercing Thrust"])
 
 	# --- Too early breaks the combo ---
 	await _reset(Vector3(0, 0.1, -5.5))
@@ -81,10 +96,11 @@ func _run() -> void:
 	await _tap("hand_x")  # would have chained
 	await _frames(2)
 	_check("early press shows 'Too early!'", "Too early!" in _feedback)
-	_check("early press blocks the chain (chain %d, attacks %s)" % [_combat.chain_step, _started],
-		_started.size() == 1)
+	_check("after a broken combo, the next attack starts over at step 1 (%s)" % [_started],
+		_started == ["Slash", "Slash"] and _combat.chain_step == 1)
 	await _idle()
-	_check("chain resets after a broken combo", _combat.chain_step == 0)
+	await _frames(30)  # let the post-attack chain window run out
+	_check("the chain ends once its window passes", _combat.chain_step == 0)
 
 	# --- Late press starts a fresh chain ---
 	await _reset(Vector3(0, 0.1, -5.5))
@@ -267,12 +283,13 @@ func _reset(at: Vector3, heal := true) -> void:
 	_started.clear()
 
 
+## The chain window opens when the current attack ends.
 func _until_window() -> void:
-	for i in 120:
-		var cur = _combat._current
-		if cur != null and cur.elapsed >= cur.attack.window_open + 0.03:
-			return
+	for i in 180:
+		if not _combat.is_attacking():
+			break
 		await physics_frame
+	await physics_frame
 
 
 func _idle() -> void:
