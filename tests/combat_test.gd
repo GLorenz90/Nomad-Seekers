@@ -36,7 +36,9 @@ func _run() -> void:
 	_combat.stats.evasion = 0.0
 	_combat.x_is_left = true  # these checks were written with X = left hand  # no random crits in tests
 	# Never depend on (or overwrite) the player's saved loadouts.
-	_combat.apply_loadout_set(CombatController.make_default_loadouts())
+	# A fresh save (Striker, default loadouts) that is never written to disk.
+	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	_player.autosave = false
 	_dummy = _main.get_node("Dummies/DummyA")
 	_combat.hit_landed.connect(func(_t, _i, amount): _hits.append(amount))
 	_combat.combo_feedback.connect(func(text): _feedback.append(text))

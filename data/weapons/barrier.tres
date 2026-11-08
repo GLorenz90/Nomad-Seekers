@@ -30,6 +30,7 @@ is_shield = true
 reflects = true
 block_strength = 0.75
 base_damage = 6.0
+jobs = PackedStringArray("I")
 normal_attacks = Array[ExtResource("1_fu8nf")]([SubResource("Resource_hw6as")])
 hard_attacks = Array[ExtResource("1_fu8nf")]([SubResource("Resource_hw6as")])
 mesh_size = Vector3(0.75, 0.95, 0.1)

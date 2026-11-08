@@ -1,0 +1,92 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_vq48g"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_cjx62"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_q1six"]
+
+[sub_resource type="Resource" id="Resource_1akp3"]
+script = ExtResource("1_vq48g")
+display_name = "Heal (Hard)"
+damage_mult = 0.0
+lp_cost = 22.0
+swing = 5
+duration = 1.9500000000000002
+active_start = 1.04
+active_end = 1.1700000000000002
+window_open = 1.9500000000000002
+window_close = 1.9500000000000002
+lunge_distance = 0.0
+support = 1
+support_amount = 0.7200000000000001
+
+[sub_resource type="Resource" id="Resource_7qqxn"]
+script = ExtResource("1_vq48g")
+display_name = "Heal"
+damage_mult = 0.0
+lp_cost = 10.0
+swing = 5
+move_speed_scale = 0.5
+duration = 1.5166666666666668
+active_start = 0.65
+active_end = 0.78
+window_open = 1.5166666666666668
+window_close = 1.5166666666666668
+lunge_distance = 0.0
+support = 1
+support_amount = 0.4
+
+[sub_resource type="Resource" id="Resource_ap702"]
+script = ExtResource("3_q1six")
+display_name = "Heal"
+normal = SubResource("Resource_7qqxn")
+hard = SubResource("Resource_1akp3")
+
+[sub_resource type="Resource" id="Resource_vg7rs"]
+script = ExtResource("1_vq48g")
+display_name = "Cure (Hard)"
+damage_mult = 0.0
+lp_cost = 14.0
+swing = 5
+duration = 1.9500000000000002
+active_start = 1.04
+active_end = 1.1700000000000002
+window_open = 1.9500000000000002
+window_close = 1.9500000000000002
+lunge_distance = 0.0
+support = 2
+support_amount = 0.16000000000000003
+
+[sub_resource type="Resource" id="Resource_abhla"]
+script = ExtResource("1_vq48g")
+display_name = "Cure"
+damage_mult = 0.0
+lp_cost = 8.0
+swing = 5
+move_speed_scale = 0.5
+duration = 1.5166666666666668
+active_start = 0.65
+active_end = 0.78
+window_open = 1.5166666666666668
+window_close = 1.5166666666666668
+lunge_distance = 0.0
+support = 2
+
+[sub_resource type="Resource" id="Resource_kuvbs"]
+script = ExtResource("3_q1six")
+display_name = "Cure"
+normal = SubResource("Resource_abhla")
+hard = SubResource("Resource_vg7rs")
+
+[resource]
+script = ExtResource("2_cjx62")
+display_name = "Totem"
+weapon_type = &"totem"
+weapon_class = 2
+weight = 1
+no_combo = true
+casting = true
+base_damage = 18.0
+jobs = PackedStringArray("I")
+spells = Array[ExtResource("3_q1six")]([SubResource("Resource_ap702"), SubResource("Resource_kuvbs")])
+mesh_size = Vector3(0.18, 0.5, 0.18)
+mesh_color = Color(0.55, 0.35, 0.25, 1)

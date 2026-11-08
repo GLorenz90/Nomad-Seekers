@@ -2,7 +2,7 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 4, enemies and rooms**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 5, weapons and loot**.
 
 Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` has two wave rooms full of real enemies (open it and press F6).
 
@@ -66,6 +66,22 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Ward and Barrier** (magic shields): block 50% / 75%. Their hand button (Reflect) and a fresh LT press open a reflect window: an enemy shot or spell that hits you then flies back at the shooter, faster. They can't parry melee, only block it. Add them to a loadout in the menu.
 - **All hits go through `HitResolver`**, so blocks, parries, reflects, misses, defense and status work the same for every weapon and enemy.
 
+## Part 5: weapons and loot
+- **The full weapon list** (North Star §5.3), 39 weapons in `data/weapons/`. Timings come from PSO frame data (Ephinea, 30 fps) where PSO has the weapon or a close relative; the rest scale the nearest table (noted in `tools/build_starter_weapons.gd`).
+  - **Melee:** Sword, Great Sword, Bladestaff, Dagger, Spear, Halberd, Mace, Maul, Flail, Axe, Great Axe, Glove, Dervish Blades.
+  - **Ranged:** Pistol, Machine Pistol (tap = 3-round burst, hold = automatic), Hand Shotgun and Shotgun (pellet spreads), Rifle (piercing, long chain window), Assault Rifle (hold = automatic), Bazooka (rocket, big blast), Grenade (thrown in an arc; 3 in a row ends with a double throw), Grenade Launcher (lobbed, status-heavy), Thrown Daggers (3 in a row ends with a fan), Boomerang (homes in on up to 5 enemies in turn), Gigarang (hits on the way out and back), Bow, Crossbow, Arbalest.
+  - **Magic:** Wand, Cane (stronger, slower damage spells), Staff (two-handed, four spells: X, Y, RT + X, RT + Y), Talisman and Totem (Heal and Cure), Cards (SOL damage, thrown).
+  - **Shields:** Shield, Heavy Shield, Ward, Barrier.
+- **Jobs.** Each weapon lists the jobs that can use it (S Striker, R Ranger, I Invoker). Loadouts holding a weapon your job can't use say "job locked" and LB/RB skips them. Change job in the menu's Character tab.
+- **Special tags.** Found weapons can roll a tag line in tiers (PSO's specials: Heat → Fire → Flame → Burning, Dim → … → Hell, Draw → … → Gush, and so on). The tag names the weapon ("Flame Sword"), gives elemental lines their element, and unlocks the weapon's **RT special**: hold RT and press that hand. The special is a stronger first attack that costs LP and applies the tag: elemental status buildup, instant kill (never bosses), heal from damage, LP steal, EXP steal, HP cut, or the Charge line's x3 hit (paid in Oro, LP or HP).
+- **Monster-type bonuses** (PSO's "% vs Native"): +5–30% damage vs one of the six monster types.
+- **Drops.** Enemies give EXP and roll a drop where they fall: Oro, a consumable, or a weapon. Weapons come from your **emblem's pool**: each of the 10 emblems (from name + race + gender, like PSO section IDs) favors two weapon families and carries its own **rares** (Emberfang, Glacier Maw, Stormcaller, Gravesong, Lifeleech Coil, Lumen Edge, Kingmaker). Pickups drift to you when you're close.
+- **Heal and Cure** (Talisman, Totem, Staff): Heal restores HP, Cure clears every status. Both reach other Seekers within 10 m.
+- **Consumables:** HP Gel, LP Cell, Cure Salt. D-pad left / up / right or 1 / 2 / 3.
+- **Lumidium.** Crystal deposits in the arena break after 3 hits into Lumidium of their color. Carried Lumidium is lost when you die; stand on a **teleporter** pad to bank it.
+- **Menu tabs** (LB/RB in the menu): Loadouts (the picker now lists found weapons first, greyed out if your job can't use them), Inventory, Character.
+- **Save file:** `user://save.tres` holds the character, loadouts and inventory. It's written when the menu closes and at teleporters. Part 3's `loadouts.tres` is imported once.
+
 ## Controls
 | Action | Gamepad | Keyboard / mouse |
 |---|---|---|
@@ -76,7 +92,8 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 | Lock on / recenter | R3 | Q / middle mouse |
 | Switch target | Flick right stick | Sweep mouse |
 | Hand attacks (tap / hold) | X / Y | Left / right click |
-| Second spell (hold while casting) | RT | E |
+| Second spell (hold while casting) / special | RT | E |
+| Use HP Gel / LP Cell / Cure Salt | D-pad left / up / right | 1 / 2 / 3 |
 | Cycle loadouts | LB / RB | Z / C |
 | Block / powerstance | LT | F |
 | Loadout menu | Start | Tab |
@@ -98,8 +115,9 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 ## Known limits (deliberate for now)
 - No animation: capsules, with weapons swung by simple tweens. Melee hitboxes show as red boxes (`show_hitboxes`).
 - Normal attacks fire when the button is released, so tap and hold can share one button.
-- Weapon specials (RT on a tagged weapon) come with Part 5.
-- Enemies don't drop anything yet (loot is Part 5), and there's no Cure spell for statuses yet; they wear off.
+- Only the arena has Lumidium nodes and teleporters. Teleporters only bank Lumidium; travel arrives with the hub.
+- Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
+- EXP is counted but there are no levels yet.
 - The game pauses while the loadout menu is open. Co-op will need a non-pausing version.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
 - No step-up for small ledges yet. Input is bound to all devices until couch co-op.
@@ -113,6 +131,7 @@ godot --headless --path . --script res://tests/combat_test.gd
 godot --headless --path . --script res://tests/loadout_test.gd
 godot --headless --path . --script res://tests/targeting_test.gd
 godot --headless --path . --script res://tests/enemy_test.gd
+godot --headless --path . --script res://tests/loot_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
@@ -124,6 +143,8 @@ godot --headless --path . --script res://tests/enemy_test.gd
 
 - `enemy_test.gd` (in the arena): all six monster types, DEF / RES / EVA math and miss rate, every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard-hit stagger, a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open).
 
-The tests always use the default loadouts and never overwrite your saved ones.
+- `loot_test.gd` (in the arena): the full weapon list and every emblem's favored families, job locks, the 7 rares covering all 10 emblems, drop rates and emblem weighting, tag tiers, tag names and RT specials, the +30% vs Beast bonus, Gush / Mind / King's / Hell effects (and Hell never killing a boss), the Charge special paying Oro, Shotgun pellets, a Grenade arc and its blast (and its prediction), the Boomerang lock chain, the Gigarang hitting out and back, the Thrown Daggers finisher, Machine Pistol automatic fire, the Staff's four spells, Heal and Cure, EXP and drops, pickups and an HP Gel, a Lumidium node breaking, losing carried Lumidium on death, a teleporter deposit, and a save round-trip.
+
+The tests always use a fresh save and never write yours.
 
 `tools/build_starter_weapons.gd`, `tools/build_enemies.gd` and `tools/build_arena.gd` regenerate the weapons, enemies and arena with their default values (this overwrites any edits).

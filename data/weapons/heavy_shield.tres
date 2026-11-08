@@ -28,6 +28,7 @@ no_combo = true
 is_shield = true
 block_strength = 0.85
 base_damage = 12.0
+jobs = PackedStringArray("S")
 normal_attacks = Array[ExtResource("1_30ij8")]([SubResource("Resource_it2k4")])
 hard_attacks = Array[ExtResource("1_30ij8")]([SubResource("Resource_it2k4")])
 mesh_size = Vector3(0.8, 1, 0.12)

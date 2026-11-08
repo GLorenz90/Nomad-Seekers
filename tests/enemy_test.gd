@@ -23,7 +23,9 @@ func _initialize() -> void:
 func _run() -> void:
 	_player = _main.get_node("Player")
 	_combat = _player.combat
-	_combat.apply_loadout_set(CombatController.make_default_loadouts())
+	# A fresh save (Striker, default loadouts) that is never written to disk.
+	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	_player.autosave = false
 	_combat.stats.luck = 0.0
 	# Keep the rooms dormant while other checks use the space; Room A is
 	# switched back on for the wave test at the end.

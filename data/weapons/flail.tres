@@ -1,0 +1,98 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_0pcpq"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_kqoko"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_4tsvm"]
+
+[sub_resource type="Resource" id="Resource_teac0"]
+script = ExtResource("1_0pcpq")
+display_name = "Heavy Strike"
+damage_mult = 1.8
+duration = 1.3566666666666667
+active_start = 0.7033333333333334
+active_end = 0.8033333333333333
+window_open = 0.77
+window_close = 1.3566666666666667
+lunge_distance = 0.4
+reach = 1.3
+hitbox_size = Vector3(2.6, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_hychp"]
+script = ExtResource("1_0pcpq")
+display_name = "Heavy Strike"
+damage_mult = 1.95
+swing = 1
+duration = 1.1733333333333333
+active_start = 0.5933333333333334
+active_end = 0.6933333333333334
+window_open = 0.66
+window_close = 1.1733333333333333
+lunge_distance = 0.4
+reach = 1.3
+hitbox_size = Vector3(2.6, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_8ffsl"]
+script = ExtResource("1_0pcpq")
+display_name = "Heavy Finisher"
+damage_mult = 2.3
+swing = 2
+duration = 1.4666666666666666
+active_start = 0.5133333333333333
+active_end = 0.6133333333333333
+window_open = 1.4666666666666666
+window_close = 1.4666666666666666
+lunge_distance = 0.4
+reach = 1.3
+hitbox_size = Vector3(2.6, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_xa5nm"]
+script = ExtResource("1_0pcpq")
+display_name = "Strike"
+duration = 1.0633333333333335
+active_start = 0.41000000000000003
+active_end = 0.51
+window_open = 0.4766666666666667
+window_close = 1.0633333333333335
+lunge_distance = 0.4
+reach = 1.3
+hitbox_size = Vector3(2.6, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_bg5mc"]
+script = ExtResource("1_0pcpq")
+display_name = "Strike"
+damage_mult = 1.1
+swing = 1
+duration = 0.9900000000000001
+active_start = 0.41000000000000003
+active_end = 0.51
+window_open = 0.4766666666666667
+window_close = 0.9900000000000001
+lunge_distance = 0.4
+reach = 1.3
+hitbox_size = Vector3(2.6, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_uwpgh"]
+script = ExtResource("1_0pcpq")
+display_name = "Finisher"
+damage_mult = 1.3
+swing = 2
+duration = 1.4300000000000002
+active_start = 0.5005000000000001
+active_end = 0.6005
+window_open = 1.4300000000000002
+window_close = 1.4300000000000002
+lunge_distance = 0.4
+reach = 1.3
+hitbox_size = Vector3(2.6, 1.6, 2)
+
+[resource]
+script = ExtResource("2_kqoko")
+display_name = "Flail"
+weapon_type = &"flail"
+weight = 1
+base_damage = 30.0
+jobs = PackedStringArray("S")
+normal_attacks = Array[ExtResource("1_0pcpq")]([SubResource("Resource_xa5nm"), SubResource("Resource_bg5mc"), SubResource("Resource_uwpgh")])
+hard_attacks = Array[ExtResource("1_0pcpq")]([SubResource("Resource_teac0"), SubResource("Resource_hychp"), SubResource("Resource_8ffsl")])
+mesh_size = Vector3(0.25, 0.25, 1.2)
+mesh_color = Color(0.45, 0.45, 0.5, 1)

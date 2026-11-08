@@ -1,307 +1,343 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_xsx6r"]
-[ext_resource type="Shader" path="res://assets/shaders/blockout_grid.gdshader" id="2_ixwup"]
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_a43o1"]
-[ext_resource type="PackedScene" path="res://scenes/camera/camera_rig.tscn" id="4_ow1aj"]
-[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_6joey"]
-[ext_resource type="Script" path="res://scripts/rooms/wave_room.gd" id="6_7wjmx"]
-[ext_resource type="Script" path="res://scripts/rooms/wave_data.gd" id="7_lw7ys"]
-[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="8_htucp"]
-[ext_resource type="Resource" path="res://data/enemies/grub_hound.tres" id="9_4cf4i"]
-[ext_resource type="Resource" path="res://data/enemies/mutated_crawler.tres" id="10_ti64i"]
-[ext_resource type="Resource" path="res://data/enemies/sentry_drone.tres" id="11_qclql"]
-[ext_resource type="Resource" path="res://data/enemies/caustic_ooze.tres" id="12_sya1t"]
-[ext_resource type="Resource" path="res://data/enemies/lumen_sprite.tres" id="13_y6qpl"]
-[ext_resource type="Resource" path="res://data/enemies/umbral_eye.tres" id="14_7yr5k"]
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_a43o1"]
+[ext_resource type="Shader" path="res://assets/shaders/blockout_grid.gdshader" id="2_ow1aj"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_6joey"]
+[ext_resource type="PackedScene" path="res://scenes/camera/camera_rig.tscn" id="4_7wjmx"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_lw7ys"]
+[ext_resource type="Script" path="res://scripts/rooms/wave_room.gd" id="6_htucp"]
+[ext_resource type="Script" path="res://scripts/rooms/wave_data.gd" id="7_4cf4i"]
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="8_ti64i"]
+[ext_resource type="Resource" path="res://data/enemies/grub_hound.tres" id="9_qclql"]
+[ext_resource type="Resource" path="res://data/enemies/mutated_crawler.tres" id="10_sya1t"]
+[ext_resource type="Resource" path="res://data/enemies/sentry_drone.tres" id="11_y6qpl"]
+[ext_resource type="Resource" path="res://data/enemies/caustic_ooze.tres" id="12_7yr5k"]
+[ext_resource type="Resource" path="res://data/enemies/lumen_sprite.tres" id="13_6e0wu"]
+[ext_resource type="Resource" path="res://data/enemies/umbral_eye.tres" id="14_r2kh7"]
+[ext_resource type="Script" path="res://scripts/world/lumidium_node.gd" id="15_wra51"]
+[ext_resource type="Script" path="res://scripts/world/teleporter.gd" id="16_ua730"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6e0wu"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6dm5u"]
 sky_top_color = Color(0.25, 0.3, 0.45, 1)
 sky_horizon_color = Color(0.55, 0.5, 0.5, 1)
 ground_horizon_color = Color(0.55, 0.5, 0.5, 1)
 
-[sub_resource type="Sky" id="Sky_r2kh7"]
-sky_material = SubResource("ProceduralSkyMaterial_6e0wu")
+[sub_resource type="Sky" id="Sky_sbyfl"]
+sky_material = SubResource("ProceduralSkyMaterial_6dm5u")
 
-[sub_resource type="Environment" id="Environment_wra51"]
+[sub_resource type="Environment" id="Environment_bt1tq"]
 background_mode = 2
-sky = SubResource("Sky_r2kh7")
+sky = SubResource("Sky_sbyfl")
 ambient_light_source = 3
 tonemap_mode = 2
 ssao_enabled = true
 
-[sub_resource type="NavigationMesh" id="NavigationMesh_ua730"]
+[sub_resource type="NavigationMesh" id="NavigationMesh_yje0t"]
 geometry_parsed_geometry_type = 1
 geometry_collision_mask = 1
 agent_height = 2.0
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_6dm5u"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nqmqx"]
 render_priority = 0
-shader = ExtResource("2_ixwup")
+shader = ExtResource("2_ow1aj")
 shader_parameter/base_color = Color(0.4, 0.4, 0.44, 1)
 shader_parameter/line_color = Color(0.3, 0.3, 0.34, 1)
 shader_parameter/cell_size = null
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_sbyfl"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_swrx8"]
 render_priority = 0
-shader = ExtResource("2_ixwup")
+shader = ExtResource("2_ow1aj")
 shader_parameter/base_color = Color(0.33, 0.36, 0.48, 1)
 shader_parameter/line_color = Color(0.24, 0.26, 0.36, 1)
 shader_parameter/cell_size = null
 
-[sub_resource type="Resource" id="Resource_bt1tq"]
-script = ExtResource("7_lw7ys")
-enemies = Array[ExtResource("8_htucp")]([ExtResource("9_4cf4i"), ExtResource("9_4cf4i"), ExtResource("9_4cf4i")])
-
-[sub_resource type="Resource" id="Resource_yje0t"]
-script = ExtResource("7_lw7ys")
-enemies = Array[ExtResource("8_htucp")]([ExtResource("10_ti64i"), ExtResource("10_ti64i"), ExtResource("11_qclql")])
-
-[sub_resource type="Resource" id="Resource_nqmqx"]
-script = ExtResource("7_lw7ys")
-enemies = Array[ExtResource("8_htucp")]([ExtResource("12_sya1t"), ExtResource("13_y6qpl"), ExtResource("13_y6qpl")])
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_swrx8"]
-transparency = 1
-albedo_color = Color(0.9, 0.35, 0.2, 0.75)
-emission_enabled = true
-emission = Color(0.9, 0.3, 0.15, 1)
-
 [sub_resource type="Resource" id="Resource_8jgwj"]
-script = ExtResource("7_lw7ys")
-enemies = Array[ExtResource("8_htucp")]([ExtResource("14_7yr5k"), ExtResource("14_7yr5k"), ExtResource("9_4cf4i"), ExtResource("9_4cf4i")])
+script = ExtResource("7_4cf4i")
+enemies = Array[ExtResource("8_ti64i")]([ExtResource("9_qclql"), ExtResource("9_qclql"), ExtResource("9_qclql")])
 
 [sub_resource type="Resource" id="Resource_m44an"]
-script = ExtResource("7_lw7ys")
-enemies = Array[ExtResource("8_htucp")]([ExtResource("9_4cf4i"), ExtResource("10_ti64i"), ExtResource("11_qclql"), ExtResource("14_7yr5k"), ExtResource("12_sya1t"), ExtResource("13_y6qpl")])
+script = ExtResource("7_4cf4i")
+enemies = Array[ExtResource("8_ti64i")]([ExtResource("10_sya1t"), ExtResource("10_sya1t"), ExtResource("11_y6qpl")])
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_u80kj"]
+[sub_resource type="Resource" id="Resource_u80kj"]
+script = ExtResource("7_4cf4i")
+enemies = Array[ExtResource("8_ti64i")]([ExtResource("12_7yr5k"), ExtResource("13_6e0wu"), ExtResource("13_6e0wu")])
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q2sf5"]
 transparency = 1
 albedo_color = Color(0.9, 0.35, 0.2, 0.75)
 emission_enabled = true
 emission = Color(0.9, 0.3, 0.15, 1)
 
-[node name="Arena" type="Node3D" unique_id=301298187]
-script = ExtResource("1_xsx6r")
+[sub_resource type="Resource" id="Resource_wdrsa"]
+script = ExtResource("7_4cf4i")
+enemies = Array[ExtResource("8_ti64i")]([ExtResource("14_r2kh7"), ExtResource("14_r2kh7"), ExtResource("9_qclql"), ExtResource("9_qclql")])
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=628904091]
-environment = SubResource("Environment_wra51")
+[sub_resource type="Resource" id="Resource_7jf4w"]
+script = ExtResource("7_4cf4i")
+enemies = Array[ExtResource("8_ti64i")]([ExtResource("9_qclql"), ExtResource("10_sya1t"), ExtResource("11_y6qpl"), ExtResource("14_r2kh7"), ExtResource("12_7yr5k"), ExtResource("13_6e0wu")])
 
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=171489052]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yln86"]
+transparency = 1
+albedo_color = Color(0.9, 0.35, 0.2, 0.75)
+emission_enabled = true
+emission = Color(0.9, 0.3, 0.15, 1)
+
+[node name="Arena" type="Node3D" unique_id=539720474]
+script = ExtResource("1_a43o1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2131770787]
+environment = SubResource("Environment_bt1tq")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=2040878828]
 transform = Transform3D(0.81915206, -0.46984634, 0.32898995, 0, 0.57357645, 0.81915206, -0.57357645, -0.6710101, 0.46984634, 0, 0, 0)
 shadow_enabled = true
 
-[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=392412268]
-navigation_mesh = SubResource("NavigationMesh_ua730")
+[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=2138963509]
+navigation_mesh = SubResource("NavigationMesh_yje0t")
 
-[node name="Level" type="Node3D" parent="Navigation" unique_id=856102860]
+[node name="Level" type="Node3D" parent="Navigation" unique_id=130642026]
 
-[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=440621566]
+[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=352969052]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -9)
 use_collision = true
 size = Vector3(30, 1, 72)
-material = SubResource("ShaderMaterial_6dm5u")
+material = SubResource("ShaderMaterial_nqmqx")
 
-[node name="StartWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=1055172140]
+[node name="StartWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=453042735]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, 18)
 use_collision = true
 size = Vector3(1, 4, 13)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="StartWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=1716788180]
+[node name="StartWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=372026837]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2, 18)
 use_collision = true
 size = Vector3(1, 4, 13)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="StartBack" type="CSGBox3D" parent="Navigation/Level" unique_id=1358512086]
+[node name="StartBack" type="CSGBox3D" parent="Navigation/Level" unique_id=831027330]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 24.5)
 use_collision = true
 size = Vector3(7, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=718286472]
+[node name="RoomAWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=1247388801]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.5, 2, 0)
 use_collision = true
 size = Vector3(1, 4, 23)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=1998238059]
+[node name="RoomAWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=159281483]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 2, 0)
 use_collision = true
 size = Vector3(1, 4, 23)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=1520208449]
+[node name="RoomAWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=1241158283]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 2, 11)
 use_collision = true
 size = Vector3(10, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=849934882]
+[node name="RoomAWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=1326197326]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, 11)
 use_collision = true
 size = Vector3(10, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallNL" type="CSGBox3D" parent="Navigation/Level" unique_id=1697681056]
+[node name="RoomAWallNL" type="CSGBox3D" parent="Navigation/Level" unique_id=1304351726]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 2, -11)
 use_collision = true
 size = Vector3(10, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAWallNR" type="CSGBox3D" parent="Navigation/Level" unique_id=517598623]
+[node name="RoomAWallNR" type="CSGBox3D" parent="Navigation/Level" unique_id=1818055557]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, -11)
 use_collision = true
 size = Vector3(10, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=1963130188]
+[node name="RoomAPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=849420118]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, 2)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomAPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=1230596688]
+[node name="RoomAPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=541729906]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, -2)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=271132150]
+[node name="RoomBWallW" type="CSGBox3D" parent="Navigation/Level" unique_id=11701039]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.5, 2, -30)
 use_collision = true
 size = Vector3(1, 4, 23)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=1679801188]
+[node name="RoomBWallE" type="CSGBox3D" parent="Navigation/Level" unique_id=566399512]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 2, -30)
 use_collision = true
 size = Vector3(1, 4, 23)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=911373206]
+[node name="RoomBWallSL" type="CSGBox3D" parent="Navigation/Level" unique_id=1110229211]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 2, -19)
 use_collision = true
 size = Vector3(10, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=776630110]
+[node name="RoomBWallSR" type="CSGBox3D" parent="Navigation/Level" unique_id=760787442]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, -19)
 use_collision = true
 size = Vector3(10, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBWallN" type="CSGBox3D" parent="Navigation/Level" unique_id=115362426]
+[node name="RoomBWallN" type="CSGBox3D" parent="Navigation/Level" unique_id=1392979467]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -41)
 use_collision = true
 size = Vector3(24, 4, 1)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=154334637]
+[node name="RoomBPillarL" type="CSGBox3D" parent="Navigation/Level" unique_id=253058234]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, -28)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="RoomBPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=2105660992]
+[node name="RoomBPillarR" type="CSGBox3D" parent="Navigation/Level" unique_id=1779704678]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, -32)
 use_collision = true
 size = Vector3(1.5, 4, 1.5)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="CorridorW" type="CSGBox3D" parent="Navigation/Level" unique_id=686720956]
+[node name="CorridorW" type="CSGBox3D" parent="Navigation/Level" unique_id=1631085893]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2, -15)
 use_collision = true
 size = Vector3(1, 4, 8)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="CorridorE" type="CSGBox3D" parent="Navigation/Level" unique_id=1087319528]
+[node name="CorridorE" type="CSGBox3D" parent="Navigation/Level" unique_id=2038431365]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2, -15)
 use_collision = true
 size = Vector3(1, 4, 8)
-material = SubResource("ShaderMaterial_sbyfl")
+material = SubResource("ShaderMaterial_swrx8")
 
-[node name="Player" parent="." unique_id=645247015 instance=ExtResource("3_a43o1")]
+[node name="Player" parent="." unique_id=2025384990 instance=ExtResource("3_6joey")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 20)
 
-[node name="CameraRig" parent="." unique_id=24506740 instance=ExtResource("4_ow1aj")]
+[node name="CameraRig" parent="." unique_id=1965408822 instance=ExtResource("4_7wjmx")]
 
-[node name="HUD" parent="." unique_id=1683527016 instance=ExtResource("5_6joey")]
+[node name="HUD" parent="." unique_id=1149573083 instance=ExtResource("5_lw7ys")]
 
-[node name="Rooms" type="Node3D" parent="." unique_id=1364659354]
+[node name="Rooms" type="Node3D" parent="." unique_id=30048584]
 
-[node name="RoomA" type="Node3D" parent="Rooms" unique_id=792659705]
-script = ExtResource("6_7wjmx")
+[node name="RoomA" type="Node3D" parent="Rooms" unique_id=2114703039]
+script = ExtResource("6_htucp")
 room_name = "Room A"
-waves = Array[ExtResource("7_lw7ys")]([SubResource("Resource_bt1tq"), SubResource("Resource_yje0t"), SubResource("Resource_nqmqx")])
+waves = Array[ExtResource("7_4cf4i")]([SubResource("Resource_8jgwj"), SubResource("Resource_m44an"), SubResource("Resource_u80kj")])
 trigger_size = Vector3(20, 4, 19)
 
-[node name="Doors" type="Node3D" parent="Rooms/RoomA" unique_id=1547212228]
+[node name="Doors" type="Node3D" parent="Rooms/RoomA" unique_id=1298624149]
 
-[node name="Door0" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=1267865012]
+[node name="Door0" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=771139298]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 11)
 use_collision = true
 size = Vector3(4.2, 4, 0.6)
-material = SubResource("StandardMaterial3D_swrx8")
+material = SubResource("StandardMaterial3D_q2sf5")
 
-[node name="Door1" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=1605879626]
+[node name="Door1" type="CSGBox3D" parent="Rooms/RoomA/Doors" unique_id=664757215]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -11)
 use_collision = true
 size = Vector3(4.2, 4, 0.6)
-material = SubResource("StandardMaterial3D_swrx8")
+material = SubResource("StandardMaterial3D_q2sf5")
 
-[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomA" unique_id=1992825589]
+[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomA" unique_id=965493731]
 
-[node name="Spawn0" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=918413198]
+[node name="Spawn0" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1968531524]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, -6)
 
-[node name="Spawn1" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1653304285]
+[node name="Spawn1" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=2063409744]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -6)
 
-[node name="Spawn2" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1783618924]
+[node name="Spawn2" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=935058201]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
 
-[node name="Spawn3" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=674973830]
+[node name="Spawn3" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=729179287]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 1)
 
-[node name="Spawn4" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=115435779]
+[node name="Spawn4" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=1947857280]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 1)
 
-[node name="Spawn5" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=2001477109]
+[node name="Spawn5" type="Marker3D" parent="Rooms/RoomA/SpawnPoints" unique_id=2092690634]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3)
 
-[node name="RoomB" type="Node3D" parent="Rooms" unique_id=949598567]
+[node name="RoomB" type="Node3D" parent="Rooms" unique_id=1795441316]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -30)
-script = ExtResource("6_7wjmx")
+script = ExtResource("6_htucp")
 room_name = "Room B"
-waves = Array[ExtResource("7_lw7ys")]([SubResource("Resource_8jgwj"), SubResource("Resource_m44an")])
+waves = Array[ExtResource("7_4cf4i")]([SubResource("Resource_wdrsa"), SubResource("Resource_7jf4w")])
 trigger_size = Vector3(20, 4, 19)
 
-[node name="Doors" type="Node3D" parent="Rooms/RoomB" unique_id=1382745461]
+[node name="Doors" type="Node3D" parent="Rooms/RoomB" unique_id=1765655054]
 
-[node name="Door0" type="CSGBox3D" parent="Rooms/RoomB/Doors" unique_id=1277838812]
+[node name="Door0" type="CSGBox3D" parent="Rooms/RoomB/Doors" unique_id=818170326]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 11)
 use_collision = true
 size = Vector3(4.2, 4, 0.6)
-material = SubResource("StandardMaterial3D_u80kj")
+material = SubResource("StandardMaterial3D_yln86")
 
-[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomB" unique_id=1430748116]
+[node name="SpawnPoints" type="Node3D" parent="Rooms/RoomB" unique_id=1587436439]
 
-[node name="Spawn0" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=446669251]
+[node name="Spawn0" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=2073971208]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, -6)
 
-[node name="Spawn1" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=899695385]
+[node name="Spawn1" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=917686292]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -6)
 
-[node name="Spawn2" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=2065932472]
+[node name="Spawn2" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1572833440]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
 
-[node name="Spawn3" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1954453304]
+[node name="Spawn3" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1088066071]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 1)
 
-[node name="Spawn4" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=2108323428]
+[node name="Spawn4" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=904230553]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 1)
 
-[node name="Spawn5" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=1377979079]
+[node name="Spawn5" type="Marker3D" parent="Rooms/RoomB/SpawnPoints" unique_id=2122037675]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3)
+
+[node name="Gathering" type="Node3D" parent="." unique_id=1009291026]
+
+[node name="NodeStart" type="StaticBody3D" parent="Gathering" unique_id=1501079038]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0, 13)
+script = ExtResource("15_wra51")
+
+[node name="NodeA1" type="StaticBody3D" parent="Gathering" unique_id=1253557743]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 8.5)
+script = ExtResource("15_wra51")
+color = &"ice"
+
+[node name="NodeA2" type="StaticBody3D" parent="Gathering" unique_id=1129447623]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0, -8.5)
+script = ExtResource("15_wra51")
+color = &"lightning"
+
+[node name="NodeB1" type="StaticBody3D" parent="Gathering" unique_id=1773946229]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, -38.5)
+script = ExtResource("15_wra51")
+color = &"dark"
+
+[node name="NodeB2" type="StaticBody3D" parent="Gathering" unique_id=1299423357]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0, -21.5)
+script = ExtResource("15_wra51")
+color = &"raw"
+
+[node name="TeleporterStart" type="Area3D" parent="Gathering" unique_id=1934963859]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 16.5)
+script = ExtResource("16_ua730")
+
+[node name="TeleporterB" type="Area3D" parent="Gathering" unique_id=583761577]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -24)
+script = ExtResource("16_ua730")

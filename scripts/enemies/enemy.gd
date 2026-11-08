@@ -66,6 +66,9 @@ func receive_hit(info: DamageInfo, attacker: Node3D, _projectile: Node = null) -
 		DamageNumber.spawn_text(get_parent(), get_lock_point() + Vector3.UP * 0.5, "Miss")
 		return 0.0
 	info.amount *= Defense.scale_for(info.kind, data.defense, data.resolve, data.evasion)
+	# PSO-style monster-type bonus on the weapon (e.g. +20% vs Beast).
+	if info.weapon and info.weapon.type_bonus.has(data.enemy_type):
+		info.amount *= 1.0 + float(info.weapon.type_bonus[data.enemy_type])
 	var amount := health.take_damage(info)
 	status.add_buildup(info, attacker)
 	_aggro = true
@@ -248,6 +251,8 @@ func _on_died() -> void:
 	collision_mask = WORLD_MASK
 	_label.visible = false
 	defeated.emit(self)
+	# EXP for the Seeker and a loot roll (Main is in the loot_spawner group).
+	get_tree().call_group("loot_spawner", "on_enemy_defeated", self)
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3(1.2, 0.05, 1.2), 0.4).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)

@@ -12,6 +12,8 @@ Chain: press again inside the timing window (too early breaks the combo)
 Second spell: hold RT / E while casting    Loadouts: LB/RB / Z,C
 Same-type pair (e.g. Sword + Frost Sword): every attack uses both hands
 Block: LT / F    Special: hold RT / E + hand    Loadout menu: Start / Tab
+Items: D-pad left/up/right / 1,2,3 (HP Gel, LP Cell, Cure Salt)
+Lumidium: hit a crystal 3 times; stand on a teleporter to deposit it
 Click to capture the mouse, Esc to release. F3 hides this panel."""
 
 var player: Player
@@ -27,6 +29,8 @@ var _banner: Label
 var _banner_tween: Tween
 var _feedback: Label
 var _feedback_tween: Tween
+var _wallet: Label
+var _feed: VBoxContainer
 
 @onready var _panel: Control = $Panel
 @onready var _debug: Label = $Panel/Debug
@@ -70,6 +74,14 @@ func _process(_delta: float) -> void:
 		_hands.text = "%d  X: %s    Y: %s" % [combat.loadout_index + 1, _weapon_label(x_hand), _weapon_label(y_hand)]
 	_lt.text = combat.get_lt_text()
 	_status.text = player.status.describe()
+	if player.save:
+		var c := player.save.character
+		var inv := player.save.inventory
+		_wallet.text = "%s  %s  (%s emblem)\nEXP %d\nOro %d\nLumidium carried %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d" % [
+			c.seeker_name, c.job_name(), c.emblem_name(), c.experience, inv.oro,
+			player.carried_lumidium_total(), inv.lumidium_total(),
+			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt")]
+		_wallet.modulate = c.emblem_color().lightened(0.5)
 	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE
 	if _panel.visible:
 		_debug.text = "%s\n%s\n%s\nFPS: %d" % [
@@ -82,7 +94,7 @@ func _weapon_label(hand: int) -> String:
 	if w == null:
 		return "-"
 	if w.casting:
-		var slot := 1 if Input.is_action_pressed("shift") else 0
+		var slot := player.combat.spell_slot(w, hand, Input.is_action_pressed("shift"))
 		return "%s (%s)" % [w.display_name, w.get_spell_name(slot)]
 	return w.display_name
 
@@ -96,6 +108,20 @@ func show_banner(text: String) -> void:
 	_banner_tween = create_tween()
 	_banner_tween.tween_interval(1.4)
 	_banner_tween.tween_property(_banner, "modulate:a", 0.0, 0.6)
+
+
+## Small stacked pickup messages (loot, EXP, Lumidium), bottom right.
+func show_pickup(text: String) -> void:
+	var label := _label(_feed, 18)
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.modulate = Color(1.0, 0.95, 0.7)
+	while _feed.get_child_count() > 6:
+		_feed.get_child(0).free()
+	var tween := label.create_tween()
+	tween.tween_interval(2.5)
+	tween.tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(label.queue_free)
 
 
 func _show_feedback(text: String) -> void:
@@ -135,6 +161,27 @@ func _build_status() -> void:
 	_feedback.offset_right = 200.0
 	_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_feedback.modulate.a = 0.0
+
+	_wallet = _label(self, 17)
+	_wallet.anchor_left = 1.0
+	_wallet.anchor_right = 1.0
+	_wallet.offset_left = -440.0
+	_wallet.offset_right = -24.0
+	_wallet.offset_top = 20.0
+	_wallet.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	_feed = VBoxContainer.new()
+	_feed.anchor_left = 1.0
+	_feed.anchor_right = 1.0
+	_feed.anchor_top = 1.0
+	_feed.anchor_bottom = 1.0
+	_feed.offset_left = -460.0
+	_feed.offset_right = -24.0
+	_feed.offset_top = -260.0
+	_feed.offset_bottom = -24.0
+	_feed.alignment = BoxContainer.ALIGNMENT_END
+	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_feed)
 
 	_banner = _label(self, 44)
 	_banner.anchor_left = 0.5

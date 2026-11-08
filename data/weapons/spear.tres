@@ -1,0 +1,93 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_5biaq"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_23sov"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_wipgh"]
+
+[sub_resource type="Resource" id="Resource_mkper"]
+script = ExtResource("1_5biaq")
+display_name = "Heavy Strike"
+damage_mult = 1.8
+swing = 3
+duration = 1.38
+active_start = 0.6533333333333334
+active_end = 0.7533333333333334
+window_open = 0.7200000000000001
+window_close = 1.38
+reach = 1.9
+hitbox_size = Vector3(0.9, 1.4, 2.8)
+
+[sub_resource type="Resource" id="Resource_amhf3"]
+script = ExtResource("1_5biaq")
+display_name = "Heavy Strike"
+damage_mult = 1.95
+swing = 3
+duration = 1.05
+active_start = 0.5033333333333334
+active_end = 0.6033333333333334
+window_open = 0.5700000000000001
+window_close = 1.05
+reach = 1.9
+hitbox_size = Vector3(0.9, 1.4, 2.8)
+
+[sub_resource type="Resource" id="Resource_vdoww"]
+script = ExtResource("1_5biaq")
+display_name = "Heavy Finisher"
+damage_mult = 2.3
+swing = 3
+duration = 1.05
+active_start = 0.36749999999999994
+active_end = 0.46749999999999997
+window_open = 1.05
+window_close = 1.05
+reach = 1.9
+hitbox_size = Vector3(0.9, 1.4, 2.8)
+
+[sub_resource type="Resource" id="Resource_4kn2f"]
+script = ExtResource("1_5biaq")
+display_name = "Strike"
+swing = 3
+duration = 1.1700000000000002
+active_start = 0.44333333333333336
+active_end = 0.5433333333333333
+window_open = 0.51
+window_close = 1.1700000000000002
+reach = 1.9
+hitbox_size = Vector3(0.9, 1.4, 2.8)
+
+[sub_resource type="Resource" id="Resource_5r0xx"]
+script = ExtResource("1_5biaq")
+display_name = "Strike"
+damage_mult = 1.1
+swing = 3
+duration = 0.9
+active_start = 0.35333333333333333
+active_end = 0.4533333333333333
+window_open = 0.42
+window_close = 0.9
+reach = 1.9
+hitbox_size = Vector3(0.9, 1.4, 2.8)
+
+[sub_resource type="Resource" id="Resource_gv2q6"]
+script = ExtResource("1_5biaq")
+display_name = "Finisher"
+damage_mult = 1.3
+swing = 3
+duration = 0.99
+active_start = 0.3465
+active_end = 0.4465
+window_open = 0.99
+window_close = 0.99
+reach = 1.9
+hitbox_size = Vector3(0.9, 1.4, 2.8)
+
+[resource]
+script = ExtResource("2_23sov")
+display_name = "Spear"
+weapon_type = &"spear"
+base_damage = 20.0
+jobs = PackedStringArray("S")
+normal_attacks = Array[ExtResource("1_5biaq")]([SubResource("Resource_4kn2f"), SubResource("Resource_5r0xx"), SubResource("Resource_gv2q6")])
+hard_attacks = Array[ExtResource("1_5biaq")]([SubResource("Resource_mkper"), SubResource("Resource_amhf3"), SubResource("Resource_vdoww")])
+mesh_size = Vector3(0.06, 0.06, 2)
+mesh_color = Color(0.55, 0.4, 0.28, 1)

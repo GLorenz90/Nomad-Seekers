@@ -93,6 +93,7 @@ weight = 1
 two_handed = true
 block_strength = 0.35
 base_damage = 34.0
+jobs = PackedStringArray("S")
 normal_attacks = Array[ExtResource("1_jarrm")]([SubResource("Resource_ba23j"), SubResource("Resource_jb7i2"), SubResource("Resource_g0hsf")])
 hard_attacks = Array[ExtResource("1_jarrm")]([SubResource("Resource_f8rqg"), SubResource("Resource_datyg"), SubResource("Resource_jk43l")])
 mesh_size = Vector3(0.14, 0.1, 1.6)

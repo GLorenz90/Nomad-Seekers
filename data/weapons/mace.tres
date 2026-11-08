@@ -1,0 +1,85 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_haw0s"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_77rdy"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_82e43"]
+
+[sub_resource type="Resource" id="Resource_0011l"]
+script = ExtResource("1_haw0s")
+display_name = "Heavy Strike"
+damage_mult = 1.8
+duration = 1.2333333333333334
+active_start = 0.6333333333333333
+active_end = 0.7333333333333333
+window_open = 0.7
+window_close = 1.2333333333333334
+hitbox_size = Vector3(1.3, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_b4yph"]
+script = ExtResource("1_haw0s")
+display_name = "Heavy Strike"
+damage_mult = 1.95
+swing = 1
+duration = 1.0666666666666667
+active_start = 0.5333333333333333
+active_end = 0.6333333333333333
+window_open = 0.6
+window_close = 1.0666666666666667
+hitbox_size = Vector3(1.3, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_o3kcl"]
+script = ExtResource("1_haw0s")
+display_name = "Heavy Finisher"
+damage_mult = 2.3
+swing = 2
+duration = 1.3333333333333333
+active_start = 0.4666666666666667
+active_end = 0.5666666666666667
+window_open = 1.3333333333333333
+window_close = 1.3333333333333333
+hitbox_size = Vector3(1.3, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_06i2f"]
+script = ExtResource("1_haw0s")
+display_name = "Strike"
+duration = 0.9666666666666667
+active_start = 0.36666666666666664
+active_end = 0.4666666666666667
+window_open = 0.43333333333333335
+window_close = 0.9666666666666667
+hitbox_size = Vector3(1.3, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_3qp0m"]
+script = ExtResource("1_haw0s")
+display_name = "Strike"
+damage_mult = 1.1
+swing = 1
+duration = 0.9
+active_start = 0.36666666666666664
+active_end = 0.4666666666666667
+window_open = 0.43333333333333335
+window_close = 0.9
+hitbox_size = Vector3(1.3, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_gafhm"]
+script = ExtResource("1_haw0s")
+display_name = "Finisher"
+damage_mult = 1.3
+swing = 2
+duration = 1.3
+active_start = 0.45499999999999996
+active_end = 0.5549999999999999
+window_open = 1.3
+window_close = 1.3
+hitbox_size = Vector3(1.3, 1.6, 1.8)
+
+[resource]
+script = ExtResource("2_77rdy")
+display_name = "Mace"
+weapon_type = &"mace"
+base_damage = 20.0
+jobs = PackedStringArray("S", "I")
+normal_attacks = Array[ExtResource("1_haw0s")]([SubResource("Resource_06i2f"), SubResource("Resource_3qp0m"), SubResource("Resource_gafhm")])
+hard_attacks = Array[ExtResource("1_haw0s")]([SubResource("Resource_0011l"), SubResource("Resource_b4yph"), SubResource("Resource_o3kcl")])
+mesh_size = Vector3(0.14, 0.14, 0.8)
+mesh_color = Color(0.6, 0.55, 0.5, 1)

@@ -75,6 +75,7 @@ display_name = "Axe"
 weapon_type = &"axe"
 weight = 1
 base_damage = 28.0
+jobs = PackedStringArray("S")
 normal_attacks = Array[ExtResource("1_cxo3c")]([SubResource("Resource_araax"), SubResource("Resource_iuy05"), SubResource("Resource_n0apy")])
 hard_attacks = Array[ExtResource("1_cxo3c")]([SubResource("Resource_8uo3e"), SubResource("Resource_pnrmo"), SubResource("Resource_ktmgr")])
 mesh_size = Vector3(0.1, 0.35, 0.8)

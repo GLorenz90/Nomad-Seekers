@@ -1,0 +1,91 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_0yt8i"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_rvmva"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_536uy"]
+
+[sub_resource type="Resource" id="Resource_bjd5q"]
+script = ExtResource("1_0yt8i")
+display_name = "Heal (Hard)"
+damage_mult = 0.0
+lp_cost = 22.0
+swing = 5
+duration = 1.5
+active_start = 0.8
+active_end = 0.9
+window_open = 1.5
+window_close = 1.5
+lunge_distance = 0.0
+support = 1
+support_amount = 0.5625
+
+[sub_resource type="Resource" id="Resource_x8ydo"]
+script = ExtResource("1_0yt8i")
+display_name = "Heal"
+damage_mult = 0.0
+lp_cost = 10.0
+swing = 5
+move_speed_scale = 0.5
+duration = 1.1666666666666667
+active_start = 0.5
+active_end = 0.6
+window_open = 1.1666666666666667
+window_close = 1.1666666666666667
+lunge_distance = 0.0
+support = 1
+support_amount = 0.3125
+
+[sub_resource type="Resource" id="Resource_ecll7"]
+script = ExtResource("3_536uy")
+display_name = "Heal"
+normal = SubResource("Resource_x8ydo")
+hard = SubResource("Resource_bjd5q")
+
+[sub_resource type="Resource" id="Resource_kdaf0"]
+script = ExtResource("1_0yt8i")
+display_name = "Cure (Hard)"
+damage_mult = 0.0
+lp_cost = 14.0
+swing = 5
+duration = 1.5
+active_start = 0.8
+active_end = 0.9
+window_open = 1.5
+window_close = 1.5
+lunge_distance = 0.0
+support = 2
+support_amount = 0.125
+
+[sub_resource type="Resource" id="Resource_jhmbv"]
+script = ExtResource("1_0yt8i")
+display_name = "Cure"
+damage_mult = 0.0
+lp_cost = 8.0
+swing = 5
+move_speed_scale = 0.5
+duration = 1.1666666666666667
+active_start = 0.5
+active_end = 0.6
+window_open = 1.1666666666666667
+window_close = 1.1666666666666667
+lunge_distance = 0.0
+support = 2
+
+[sub_resource type="Resource" id="Resource_cau7m"]
+script = ExtResource("3_536uy")
+display_name = "Cure"
+normal = SubResource("Resource_jhmbv")
+hard = SubResource("Resource_kdaf0")
+
+[resource]
+script = ExtResource("2_rvmva")
+display_name = "Talisman"
+weapon_type = &"talisman"
+weapon_class = 2
+no_combo = true
+casting = true
+base_damage = 18.0
+jobs = PackedStringArray("I")
+spells = Array[ExtResource("3_536uy")]([SubResource("Resource_ecll7"), SubResource("Resource_cau7m")])
+mesh_size = Vector3(0.3, 0.4, 0.04)
+mesh_color = Color(0.95, 0.9, 0.7, 1)
