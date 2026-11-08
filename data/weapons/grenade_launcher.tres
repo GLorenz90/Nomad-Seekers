@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_lngua"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_e8gf2"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_aeq4l"]
+
+[sub_resource type="Resource" id="Resource_vse6v"]
+script = ExtResource("1_lngua")
+display_name = "Heavy Lob"
+damage_mult = 1.6
+lp_cost = 3.0
+status_power = 3.0
+swing = 4
+duration = 1.3333333333333333
+active_start = 0.4
+active_end = 0.5
+window_open = 1.3333333333333333
+window_close = 1.3333333333333333
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 16.0
+projectile_radius = 0.2
+projectile_range = 26.0
+projectile_gravity = 12.0
+explosion_radius = 2.0
+
+[sub_resource type="Resource" id="Resource_5cesn"]
+script = ExtResource("1_lngua")
+display_name = "Lob"
+lp_cost = 3.0
+status_power = 3.0
+swing = 4
+duration = 1.3333333333333333
+active_start = 0.4
+active_end = 0.5
+window_open = 1.3333333333333333
+window_close = 1.3333333333333333
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 16.0
+projectile_radius = 0.2
+projectile_range = 26.0
+projectile_gravity = 12.0
+explosion_radius = 2.0
+
+[resource]
+script = ExtResource("2_e8gf2")
+display_name = "Grenade Launcher"
+weapon_type = &"grenade_launcher"
+weapon_class = 1
+weight = 1
+two_handed = true
+no_combo = true
+base_damage = 22.0
+jobs = PackedStringArray("R")
+normal_attacks = Array[ExtResource("1_lngua")]([SubResource("Resource_5cesn")])
+hard_attacks = Array[ExtResource("1_lngua")]([SubResource("Resource_vse6v")])
+mesh_size = Vector3(0.2, 0.22, 1)
+mesh_color = Color(0.3, 0.35, 0.3, 1)

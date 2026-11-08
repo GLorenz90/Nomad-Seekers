@@ -5,6 +5,7 @@ extends Node
 signal damaged(info: DamageInfo, amount: float)
 signal died
 signal restored
+signal healed(amount: float)
 
 @export var max_hp := 200.0
 
@@ -30,6 +31,16 @@ func take_damage(info: DamageInfo) -> float:
 	if is_dead():
 		died.emit()
 	return amount
+
+
+## Restores up to amount HP. Returns how much was restored.
+func heal(amount: float) -> float:
+	if is_dead() or amount <= 0.0:
+		return 0.0
+	var before := hp
+	hp = minf(hp + amount, max_hp)
+	healed.emit(hp - before)
+	return hp - before
 
 
 func restore_full() -> void:

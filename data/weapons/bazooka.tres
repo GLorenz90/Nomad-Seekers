@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_uo1tb"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_y37m3"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_30nfv"]
+
+[sub_resource type="Resource" id="Resource_ee2j2"]
+script = ExtResource("1_uo1tb")
+display_name = "Heavy Rocket"
+damage_mult = 1.6
+lp_cost = 6.0
+swing = 4
+duration = 2.0
+active_start = 0.6
+active_end = 0.7
+window_open = 2.0
+window_close = 2.0
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 20.0
+projectile_radius = 0.25
+projectile_range = 40.0
+explosion_radius = 3.5
+
+[sub_resource type="Resource" id="Resource_jlkku"]
+script = ExtResource("1_uo1tb")
+display_name = "Rocket"
+lp_cost = 6.0
+swing = 4
+duration = 2.0
+active_start = 0.6
+active_end = 0.7
+window_open = 2.0
+window_close = 2.0
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 20.0
+projectile_radius = 0.25
+projectile_range = 40.0
+explosion_radius = 3.5
+
+[resource]
+script = ExtResource("2_y37m3")
+display_name = "Bazooka"
+weapon_type = &"bazooka"
+weapon_class = 1
+weight = 1
+two_handed = true
+no_combo = true
+base_damage = 45.0
+jobs = PackedStringArray("R")
+normal_attacks = Array[ExtResource("1_uo1tb")]([SubResource("Resource_jlkku")])
+hard_attacks = Array[ExtResource("1_uo1tb")]([SubResource("Resource_ee2j2")])
+mesh_size = Vector3(0.25, 0.25, 1.3)
+mesh_color = Color(0.35, 0.4, 0.3, 1)

@@ -82,6 +82,35 @@ func _initialize() -> void:
 		["umbral_eye", "umbral_eye", "grub_hound", "grub_hound"],
 		["grub_hound", "mutated_crawler", "sentry_drone", "umbral_eye", "caustic_ooze", "lumen_sprite"]])
 
+	# Part 5: Lumidium deposits and teleporters (deposit pads).
+	var gather := Node3D.new()
+	gather.name = "Gathering"
+	_add(_root, gather)
+	for spec in [["NodeStart", &"fire", Vector3(-1.8, 0, 13)], ["NodeA1", &"ice", Vector3(-8.5, 0, 8.5)],
+			["NodeA2", &"lightning", Vector3(8.5, 0, -8.5)], ["NodeB1", &"dark", Vector3(-8.5, 0, -38.5)],
+			["NodeB2", &"raw", Vector3(8.5, 0, -21.5)]]:
+		var node := StaticBody3D.new()
+		node.name = spec[0]
+		node.set_script(load("res://scripts/world/lumidium_node.gd"))
+		node.set("color", spec[1])
+		node.position = spec[2]
+		_add(gather, node)
+	for spec in [["TeleporterStart", Vector3(0, 0, 16.5)], ["TeleporterB", Vector3(-8, 0, -24)]]:
+		var pad := Area3D.new()
+		pad.name = spec[0]
+		pad.set_script(load("res://scripts/world/teleporter.gd"))
+		pad.position = spec[1]
+		_add(gather, pad)
+	# The end of the arena: back to the gym once every room is cleared.
+	var exit := Area3D.new()
+	exit.name = "TeleporterExit"
+	exit.set_script(load("res://scripts/world/teleporter.gd"))
+	exit.set("destination", "res://scenes/main.tscn")
+	exit.set("destination_name", "Back to the gym")
+	exit.set("requires_rooms_cleared", true)
+	exit.position = Vector3(0, 0, -37)
+	_add(gather, exit)
+
 	var packed := PackedScene.new()
 	var err := packed.pack(_root)
 	if err == OK:

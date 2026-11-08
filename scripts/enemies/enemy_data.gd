@@ -13,6 +13,10 @@ enum Shape { CAPSULE, BOX, SPHERE }
 
 @export_group("Stats")
 @export var max_hp := 120.0
+## Bosses can't be instantly killed or have their HP cut by tag specials.
+@export var boss := false
+## EXP for defeating it (0 = max_hp / 5).
+@export var experience := 0
 @export var defense := 10.0   ## vs melee
 @export var resolve := 10.0   ## vs magic
 @export var evasion := 10.0   ## vs ranged + miss chance
@@ -50,3 +54,7 @@ enum Shape { CAPSULE, BOX, SPHERE }
 @export var shape: Shape = Shape.CAPSULE
 @export var color := Color(0.7, 0.3, 0.25)
 @export var size := Vector3(0.9, 1.8, 0.9)
+
+
+func exp_value() -> int:
+	return experience if experience > 0 else roundi(max_hp / 5.0)

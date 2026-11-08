@@ -1,0 +1,198 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_2wg5n"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_aksc5"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_iymq0"]
+
+[sub_resource type="Resource" id="Resource_f1fju"]
+script = ExtResource("1_2wg5n")
+display_name = "Heavy Strike"
+damage_mult = 1.8
+duration = 1.3833333333333333
+active_start = 0.6833333333333333
+active_end = 0.7833333333333333
+window_open = 0.75
+window_close = 1.3833333333333333
+reach = 1.25
+hitbox_size = Vector3(2, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_7avgp"]
+script = ExtResource("1_2wg5n")
+display_name = "Heavy Strike"
+damage_mult = 1.95
+swing = 1
+duration = 1.0666666666666667
+active_start = 0.5
+active_end = 0.6
+window_open = 0.5666666666666667
+window_close = 1.0666666666666667
+reach = 1.25
+hitbox_size = Vector3(2, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_58re7"]
+script = ExtResource("1_2wg5n")
+display_name = "Heavy Finisher"
+damage_mult = 2.3
+swing = 2
+duration = 1.2833333333333334
+active_start = 0.44916666666666666
+active_end = 0.5491666666666667
+window_open = 1.2833333333333334
+window_close = 1.2833333333333334
+reach = 1.25
+hitbox_size = Vector3(2, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_mby7y"]
+script = ExtResource("1_2wg5n")
+display_name = "Charged Shot"
+damage_mult = 1.2592592592592593
+lp_cost = 3.0
+swing = 4
+duration = 1.1833333333333333
+active_start = 0.6833333333333333
+active_end = 0.6833333333333333
+window_open = 0.75
+window_close = 1.1833333333333333
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 50.0
+projectile_radius = 0.16
+projectile_range = 38.0
+
+[sub_resource type="Resource" id="Resource_4glo4"]
+script = ExtResource("1_2wg5n")
+display_name = "Charged Shot"
+damage_mult = 1.3222222222222224
+lp_cost = 3.0
+swing = 4
+duration = 1.0
+active_start = 0.48333333333333334
+active_end = 0.48333333333333334
+window_open = 0.55
+window_close = 1.0
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 50.0
+projectile_radius = 0.16
+projectile_range = 38.0
+
+[sub_resource type="Resource" id="Resource_6vt4f"]
+script = ExtResource("1_2wg5n")
+display_name = "Charged Shot"
+damage_mult = 1.511111111111111
+lp_cost = 3.0
+swing = 4
+duration = 0.85
+active_start = 0.2975
+active_end = 0.2975
+window_open = 0.85
+window_close = 0.85
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 50.0
+projectile_radius = 0.16
+projectile_range = 38.0
+
+[sub_resource type="Resource" id="Resource_i1q1w"]
+script = ExtResource("1_2wg5n")
+display_name = "Shot"
+damage_mult = 0.6296296296296297
+lp_cost = 1.0
+swing = 4
+move_speed_scale = 0.35
+duration = 0.9333333333333333
+active_start = 0.4166666666666667
+active_end = 0.4166666666666667
+window_open = 0.48333333333333334
+window_close = 0.9333333333333333
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 50.0
+projectile_range = 38.0
+
+[sub_resource type="Resource" id="Resource_kpdno"]
+script = ExtResource("1_2wg5n")
+display_name = "Shot"
+damage_mult = 0.6611111111111112
+lp_cost = 1.0
+swing = 4
+move_speed_scale = 0.35
+duration = 0.8333333333333334
+active_start = 0.31666666666666665
+active_end = 0.31666666666666665
+window_open = 0.38333333333333336
+window_close = 0.8333333333333334
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 50.0
+projectile_range = 38.0
+
+[sub_resource type="Resource" id="Resource_rmbwg"]
+script = ExtResource("1_2wg5n")
+display_name = "Shot"
+damage_mult = 0.7240740740740741
+lp_cost = 1.0
+swing = 4
+move_speed_scale = 0.35
+duration = 0.65
+active_start = 0.22749999999999998
+active_end = 0.22749999999999998
+window_open = 0.65
+window_close = 0.65
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 50.0
+projectile_range = 38.0
+
+[sub_resource type="Resource" id="Resource_1wrsi"]
+script = ExtResource("1_2wg5n")
+display_name = "Strike"
+duration = 1.1333333333333333
+active_start = 0.43333333333333335
+active_end = 0.5333333333333333
+window_open = 0.5
+window_close = 1.1333333333333333
+reach = 1.25
+hitbox_size = Vector3(2, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_j4lmp"]
+script = ExtResource("1_2wg5n")
+display_name = "Strike"
+damage_mult = 1.1
+swing = 1
+duration = 0.9166666666666666
+active_start = 0.35
+active_end = 0.45
+window_open = 0.4166666666666667
+window_close = 0.9166666666666666
+reach = 1.25
+hitbox_size = Vector3(2, 1.6, 2)
+
+[sub_resource type="Resource" id="Resource_f72ie"]
+script = ExtResource("1_2wg5n")
+display_name = "Finisher"
+damage_mult = 1.3
+swing = 2
+duration = 1.2333333333333334
+active_start = 0.43166666666666664
+active_end = 0.5316666666666666
+window_open = 1.2333333333333334
+window_close = 1.2333333333333334
+reach = 1.25
+hitbox_size = Vector3(2, 1.6, 2)
+
+[resource]
+script = ExtResource("2_aksc5")
+display_name = "Gunblade"
+weapon_type = &"gunblade"
+weight = 1
+two_handed = true
+block_strength = 0.35
+base_damage = 27.0
+jobs = PackedStringArray("S", "R")
+normal_attacks = Array[ExtResource("1_2wg5n")]([SubResource("Resource_1wrsi"), SubResource("Resource_j4lmp"), SubResource("Resource_f72ie")])
+hard_attacks = Array[ExtResource("1_2wg5n")]([SubResource("Resource_f1fju"), SubResource("Resource_7avgp"), SubResource("Resource_58re7")])
+locked_normal_attacks = Array[ExtResource("1_2wg5n")]([SubResource("Resource_i1q1w"), SubResource("Resource_kpdno"), SubResource("Resource_rmbwg")])
+locked_hard_attacks = Array[ExtResource("1_2wg5n")]([SubResource("Resource_mby7y"), SubResource("Resource_4glo4"), SubResource("Resource_6vt4f")])
+mesh_size = Vector3(0.1, 0.14, 1.3)
+mesh_color = Color(0.55, 0.6, 0.7, 1)

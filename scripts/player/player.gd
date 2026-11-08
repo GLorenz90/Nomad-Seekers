@@ -18,8 +18,13 @@ signal jumped
 signal landed
 signal dash_started(direction: Vector3)
 signal dash_ended
+signal exp_gained(amount: int)
+signal item_collected(text: String)
 
 enum State { GROUND, AIR, DASH }
+
+## Quick-use slots: item_1 HP Gel, item_2 LP Cell, item_3 Cure Salt.
+const QUICK_ITEMS: Array[StringName] = [&"hp_gel", &"lp_cell", &"cure_salt"]
 
 @export_group("Ground")
 @export var move_speed := 7.0
@@ -52,6 +57,14 @@ enum State { GROUND, AIR, DASH }
 
 var camera_rig: CameraRig
 var state: State = State.AIR
+## Everything the Seeker keeps (character, loadouts, inventory). See use_save().
+var save: SaveData
+## Lumidium picked up but not yet deposited at a teleporter. Lost on death.
+var carried_lumidium: Dictionary = {}
+## Writes user://save.tres on deposits and menu closes. Tests turn this off.
+var autosave := true
+## The paired SyncAIDa following the Seeker (Part 6).
+var syncaida: SyncAIDaCompanion
 
 var _jump_velocity := 0.0
 var _gravity_up := 0.0
@@ -76,6 +89,106 @@ func _ready() -> void:
 	add_to_group("player")
 	health.max_hp = combat.stats.max_hp
 	health.hp = health.max_hp
+	syncaida = SyncAIDaCompanion.new()
+	syncaida.name = "SyncAIDa"
+	add_child(syncaida)
+	syncaida.setup(self)
+	var defaults := CombatController.make_default_loadouts()
+	if combat.use_saved_loadouts:
+		use_save(SaveData.load_or_new(defaults))
+	else:
+		use_save(SaveData.fresh(defaults))
+		autosave = false
+
+
+## Switches to a save: its loadouts, job and inventory.
+func use_save(data: SaveData) -> void:
+	save = data
+	combat.inventory = save.inventory
+	combat.job_code = save.character.job_code()
+	combat.apply_loadout_set(save.loadouts)
+	if syncaida:
+		syncaida.pair(save.paired_syncaida())
+
+
+## Takes one of the four starter SyncAIDa (SyncAIDaData.STARTERS) and pairs it.
+func choose_starter(index: int) -> void:
+	if save == null:
+		return
+	save.choose_starter(index)
+	syncaida.pair(save.paired_syncaida())
+	save_game()
+
+
+## Pairs a different owned SyncAIDa.
+func pair_syncaida(index: int) -> void:
+	if save == null or index < 0 or index >= save.syncaida.size():
+		return
+	save.paired = index
+	syncaida.pair(save.paired_syncaida())
+
+
+func grant_invulnerability(seconds: float) -> void:
+	_invuln_timer = maxf(_invuln_timer, seconds)
+
+
+func save_game() -> void:
+	if autosave and save:
+		save.loadouts = combat.loadout_set
+		save.save()
+
+
+func gain_exp(amount: int) -> void:
+	if save == null or amount <= 0:
+		return
+	save.character.experience += amount
+	exp_gained.emit(amount)
+
+
+func add_lumidium(color: StringName, amount: int = 1) -> void:
+	carried_lumidium[color] = int(carried_lumidium.get(color, 0)) + amount
+	item_collected.emit("+%d %s Lumidium" % [amount, String(color).capitalize()])
+
+
+func carried_lumidium_total() -> int:
+	var total := 0
+	for color in carried_lumidium:
+		total += int(carried_lumidium[color])
+	return total
+
+
+## Teleporter: bank everything carried. Returns how much was deposited.
+func deposit_lumidium() -> int:
+	var total := save.inventory.bank_lumidium(carried_lumidium)
+	carried_lumidium.clear()
+	if total > 0:
+		save_game()
+	return total
+
+
+## Death: carried Lumidium is lost (North Star §7.1).
+func lose_carried() -> int:
+	var lost := carried_lumidium_total()
+	carried_lumidium.clear()
+	return lost
+
+
+## Quick-use consumables (D-pad / 1-3).
+func use_consumable(id: StringName) -> bool:
+	if save == null or health.is_dead():
+		return false
+	if not save.inventory.use_consumable(id):
+		combat.combo_feedback.emit("No %s left" % Inventory.CONSUMABLES.get(id, id))
+		return false
+	match id:
+		&"hp_gel":
+			health.heal(health.max_hp * 0.3)
+		&"lp_cell":
+			combat.lp = minf(combat.lp + combat.stats.max_lp * 0.5, combat.stats.max_lp)
+		&"cure_salt":
+			status.clear_all()
+	combat.combo_feedback.emit("Used %s" % Inventory.CONSUMABLES.get(id, id))
+	return true
 
 
 func _physics_process(delta: float) -> void:
@@ -84,6 +197,9 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_just_pressed("jump"):
 		_jump_buffer = jump_buffer_time
+	for i in QUICK_ITEMS.size():
+		if Input.is_action_just_pressed(&"item_%d" % (i + 1)):
+			use_consumable(QUICK_ITEMS[i])
 
 	var move_dir := _get_move_direction()
 
@@ -130,6 +246,8 @@ func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) ->
 	if block_scale <= 0.0:
 		return 0.0
 	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense, s.resolve, s.evasion)
+	if combat.aegis_active():
+		info.amount *= CombatController.AEGIS_GUARD
 	var amount := health.take_damage(info)
 	status.add_buildup(info, attacker)
 	DamageNumber.spawn(get_parent(), global_position + Vector3.UP * 1.9, amount, info.damage_type, false)

@@ -83,6 +83,7 @@ script = ExtResource("2_yei8u")
 display_name = "Sword"
 weapon_type = &"sword"
 base_damage = 20.0
+jobs = PackedStringArray("S", "R", "I")
 normal_attacks = Array[ExtResource("1_6w4ud")]([SubResource("Resource_rj845"), SubResource("Resource_ph70c"), SubResource("Resource_8ki01")])
 hard_attacks = Array[ExtResource("1_6w4ud")]([SubResource("Resource_32rsw"), SubResource("Resource_icrv7"), SubResource("Resource_4i60u")])
 mesh_color = Color(0.82, 0.85, 0.9, 1)

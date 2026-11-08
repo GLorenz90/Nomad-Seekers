@@ -45,6 +45,7 @@ var _material: StandardMaterial3D
 var _flash_tween: Tween
 var _attack_cooldown := 1.0
 var _windup_left := -1.0
+var _hit_area: HitAreaView
 var _knockback := Vector3.ZERO
 
 @onready var _label: Label3D = $Label3D
@@ -121,6 +122,8 @@ func _current_goal() -> Variant:
 
 func on_parried() -> void:
 	_windup_left = -1.0
+	if _hit_area:
+		_hit_area.stop()
 	_stagger = parry_stagger
 	_attack_cooldown = maxf(_attack_cooldown, parry_stagger + 0.5)
 	_glow(Color(0.3, 0.6, 1.0), parry_stagger)
@@ -140,7 +143,9 @@ func _update_attack(delta: float) -> void:
 		return
 	if _windup_left >= 0.0:
 		_windup_left -= delta
+		_swing_area().telegraph(1.0 - _windup_left / maxf(windup, 0.01))
 		if _windup_left < 0.0:
+			_swing_area().strike()
 			_swing_hit(seeker)
 		return
 	_attack_cooldown -= delta
@@ -178,6 +183,14 @@ func _shoot(seeker: Player) -> void:
 	var aim := (seeker.global_position + Vector3.UP * 1.1 - from).normalized()
 	Projectile.spawn(get_parent(), from, aim, bolt, _make_hit(DamageInfo.Kind.RANGED), Color(1.0, 0.3, 0.6), self, null,
 		Projectile.PLAYER_MASK)
+
+
+## Debug view of the swing's hit area (built on first use).
+func _swing_area() -> HitAreaView:
+	if _hit_area == null:
+		_hit_area = HitAreaView.create(swing_reach, 120.0)
+		add_child(_hit_area)
+	return _hit_area
 
 
 func _swing_hit(seeker: Player) -> void:

@@ -6,12 +6,17 @@ extends Node3D
 ## The navmesh is baked at startup from the Level's collision (a child of the
 ## Navigation region), so blockout edits never leave it stale. The same navmesh
 ## will later drive the player's area map.
+##
+## Loot (Part 5): Main is the loot_spawner. Defeated enemies call
+## on_enemy_defeated(); the Seeker gets the EXP and a drop roll from their
+## emblem's pool, spawned as an ItemPickup where the enemy fell.
 
 signal navmesh_ready
 
 const KILL_HEIGHT := -20.0
 
 var _spawn := Transform3D.IDENTITY
+var rng := RandomNumberGenerator.new()
 var loadout_menu: LoadoutMenu
 var target_markers: TargetMarkers
 
@@ -22,6 +27,9 @@ var target_markers: TargetMarkers
 
 
 func _ready() -> void:
+	add_to_group("loot_spawner")
+	add_to_group("respawner")
+	rng.randomize()
 	_spawn = player.global_transform
 	player.camera_rig = camera_rig
 	camera_rig.setup(player)
@@ -38,6 +46,11 @@ func _ready() -> void:
 		room.wave_started.connect(func(r: WaveRoom, index: int, total: int):
 			hud.show_banner("%s — Wave %d / %d" % [r.room_name, index + 1, total]))
 		room.room_cleared.connect(func(r: WaveRoom): hud.show_banner("%s clear" % r.room_name))
+	for pad in get_tree().get_nodes_in_group("teleporters"):
+		pad.deposited.connect(func(_s: Player, amount: int):
+			hud.show_banner("Deposited %d Lumidium" % amount))
+	player.item_collected.connect(hud.show_pickup)
+	player.exp_gained.connect(func(amount: int): hud.show_pickup("+%d EXP" % amount))
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_bake_navmesh()
 
@@ -56,7 +69,35 @@ func _physics_process(_delta: float) -> void:
 		_respawn_player()
 
 
+## Called by every Enemy as it dies (group "loot_spawner").
+func on_enemy_defeated(enemy: Enemy) -> void:
+	player.gain_exp(enemy.data.exp_value())
+	var emblem := player.save.character.emblem_index() if player.save else 0
+	var drop := Loot.roll_drop(enemy.data, emblem, rng)
+	if not drop.is_empty():
+		spawn_drop(drop, enemy.global_position)
+
+
+func spawn_drop(drop: Dictionary, at: Vector3) -> ItemPickup:
+	var pickup := ItemPickup.create(drop)
+	add_child(pickup)
+	pickup.global_position = at
+	return pickup
+
+
+## Menu tool (Levels tab): back to the start, keeping carried Lumidium.
+func respawn_player() -> void:
+	_reset_player()
+
+
 func _respawn_player() -> void:
+	var lost := player.lose_carried()
+	if lost > 0:
+		hud.show_banner("Lost %d carried Lumidium" % lost)
+	_reset_player()
+
+
+func _reset_player() -> void:
 	player.global_transform = _spawn
 	player.velocity = Vector3.ZERO
 	player.reset_physics_interpolation()

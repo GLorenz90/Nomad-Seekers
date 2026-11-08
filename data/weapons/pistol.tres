@@ -108,6 +108,7 @@ display_name = "Pistol"
 weapon_type = &"pistol"
 weapon_class = 1
 base_damage = 12.0
+jobs = PackedStringArray("S", "R", "I")
 normal_attacks = Array[ExtResource("1_o8lbu")]([SubResource("Resource_snkot"), SubResource("Resource_qmstv"), SubResource("Resource_7et3l")])
 hard_attacks = Array[ExtResource("1_o8lbu")]([SubResource("Resource_wkg85"), SubResource("Resource_ldxvb"), SubResource("Resource_iejlt")])
 mesh_size = Vector3(0.08, 0.16, 0.38)

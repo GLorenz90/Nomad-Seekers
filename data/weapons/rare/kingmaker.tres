@@ -1,0 +1,107 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_mvmj6"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_451cw"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_ldjkl"]
+[ext_resource type="Script" path="res://scripts/items/special_tag.gd" id="4_ftju6"]
+
+[sub_resource type="Resource" id="Resource_oe2wb"]
+script = ExtResource("1_mvmj6")
+display_name = "Heavy Strike"
+damage_mult = 1.8
+duration = 1.5333333333333334
+active_start = 0.7333333333333333
+active_end = 0.8333333333333334
+window_open = 0.8
+window_close = 1.5333333333333334
+reach = 1.6
+hitbox_size = Vector3(3, 1.6, 2.4)
+
+[sub_resource type="Resource" id="Resource_ayvbo"]
+script = ExtResource("1_mvmj6")
+display_name = "Heavy Strike"
+damage_mult = 1.95
+swing = 1
+duration = 1.1666666666666667
+active_start = 0.5666666666666667
+active_end = 0.6666666666666666
+window_open = 0.6333333333333333
+window_close = 1.1666666666666667
+reach = 1.6
+hitbox_size = Vector3(3, 1.6, 2.4)
+
+[sub_resource type="Resource" id="Resource_2en3v"]
+script = ExtResource("1_mvmj6")
+display_name = "Heavy Finisher"
+damage_mult = 2.3
+swing = 2
+duration = 1.1666666666666667
+active_start = 0.4083333333333333
+active_end = 0.5083333333333333
+window_open = 1.1666666666666667
+window_close = 1.1666666666666667
+reach = 1.6
+hitbox_size = Vector3(3, 1.6, 2.4)
+
+[sub_resource type="Resource" id="Resource_bchun"]
+script = ExtResource("1_mvmj6")
+display_name = "Strike"
+duration = 1.3
+active_start = 0.5
+active_end = 0.6
+window_open = 0.5666666666666667
+window_close = 1.3
+reach = 1.6
+hitbox_size = Vector3(3, 1.6, 2.4)
+
+[sub_resource type="Resource" id="Resource_yba6e"]
+script = ExtResource("1_mvmj6")
+display_name = "Strike"
+damage_mult = 1.1
+swing = 1
+duration = 1.0
+active_start = 0.4
+active_end = 0.5
+window_open = 0.4666666666666667
+window_close = 1.0
+reach = 1.6
+hitbox_size = Vector3(3, 1.6, 2.4)
+
+[sub_resource type="Resource" id="Resource_uqr5k"]
+script = ExtResource("1_mvmj6")
+display_name = "Finisher"
+damage_mult = 1.3
+swing = 2
+duration = 1.1
+active_start = 0.3849999999999999
+active_end = 0.485
+window_open = 1.1
+window_close = 1.1
+reach = 1.6
+hitbox_size = Vector3(3, 1.6, 2.4)
+
+[sub_resource type="Resource" id="Resource_vnamd"]
+script = ExtResource("4_ftju6")
+line_name = "Master's"
+tier_names = PackedStringArray("Master\'s", "Lord\'s", "King\'s")
+effect = 4
+
+[resource]
+script = ExtResource("2_451cw")
+display_name = "Kingmaker"
+weapon_type = &"halberd"
+two_handed = true
+base_damage = 33.800000000000004
+jobs = PackedStringArray("S", "I")
+tag = SubResource("Resource_vnamd")
+tag_tier = 2
+type_bonus = {
+0: 0.15
+}
+rare = true
+base_name = "Halberd"
+normal_attacks = Array[ExtResource("1_mvmj6")]([SubResource("Resource_bchun"), SubResource("Resource_yba6e"), SubResource("Resource_uqr5k")])
+hard_attacks = Array[ExtResource("1_mvmj6")]([SubResource("Resource_oe2wb"), SubResource("Resource_ayvbo"), SubResource("Resource_2en3v")])
+mesh_size = Vector3(0.12, 0.3, 2)
+mesh_color = Color(0.78, 0.8, 0.86, 1)
+metadata/emblems = [2, 7, 11]

@@ -1,0 +1,116 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_l215j"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_r3ofr"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_gg4ux"]
+[ext_resource type="Script" path="res://scripts/items/special_tag.gd" id="4_6ocqe"]
+
+[sub_resource type="Resource" id="Resource_ye7gn"]
+script = ExtResource("1_l215j")
+display_name = "Heavy Sweep"
+damage_mult = 1.8
+duration = 1.5333333333333334
+active_start = 0.7333333333333333
+active_end = 0.8333333333333334
+window_open = 0.8
+window_close = 1.5333333333333334
+lunge_distance = 0.6
+reach = 1.4
+hitbox_size = Vector3(3, 1.6, 2.2)
+
+[sub_resource type="Resource" id="Resource_n76c2"]
+script = ExtResource("1_l215j")
+display_name = "Heavy Return"
+damage_mult = 1.95
+swing = 1
+duration = 1.1666666666666667
+active_start = 0.5666666666666667
+active_end = 0.6666666666666666
+window_open = 0.6333333333333333
+window_close = 1.1666666666666667
+lunge_distance = 0.6
+reach = 1.4
+hitbox_size = Vector3(3, 1.6, 2.2)
+
+[sub_resource type="Resource" id="Resource_74o0y"]
+script = ExtResource("1_l215j")
+display_name = "Earthsplitter"
+damage_mult = 2.4
+swing = 2
+duration = 1.4333333333333331
+active_start = 0.6666666666666666
+active_end = 0.7666666666666667
+window_open = 1.4333333333333331
+window_close = 1.4333333333333331
+lunge_distance = 0.6
+reach = 1.4
+hitbox_size = Vector3(3, 1.6, 2.2)
+
+[sub_resource type="Resource" id="Resource_ryrd0"]
+script = ExtResource("1_l215j")
+display_name = "Sweep"
+duration = 1.3
+active_start = 0.5
+active_end = 0.6
+window_open = 0.5666666666666667
+window_close = 1.3
+lunge_distance = 0.6
+reach = 1.4
+hitbox_size = Vector3(3, 1.6, 2.2)
+
+[sub_resource type="Resource" id="Resource_uepd8"]
+script = ExtResource("1_l215j")
+display_name = "Return Sweep"
+damage_mult = 1.1
+swing = 1
+duration = 1.0333333333333334
+active_start = 0.43333333333333335
+active_end = 0.5333333333333333
+window_open = 0.5
+window_close = 1.0333333333333334
+lunge_distance = 0.6
+reach = 1.4
+hitbox_size = Vector3(3, 1.6, 2.2)
+
+[sub_resource type="Resource" id="Resource_wsfra"]
+script = ExtResource("1_l215j")
+display_name = "Crushing Blow"
+damage_mult = 1.4
+swing = 2
+duration = 1.4333333333333331
+active_start = 0.6
+active_end = 0.7
+window_open = 1.4333333333333331
+window_close = 1.4333333333333331
+lunge_distance = 0.6
+reach = 1.4
+hitbox_size = Vector3(3, 1.6, 2.2)
+
+[sub_resource type="Resource" id="Resource_furiq"]
+script = ExtResource("4_6ocqe")
+line_name = "Ice"
+tier_names = PackedStringArray("Ice", "Frost", "Freeze", "Blizzard")
+element = 2
+
+[resource]
+script = ExtResource("2_r3ofr")
+display_name = "Glacier Maw"
+weapon_type = &"great_sword"
+weight = 1
+two_handed = true
+block_strength = 0.35
+base_damage = 44.2
+damage_type = 2
+jobs = PackedStringArray("S")
+tag = SubResource("Resource_furiq")
+tag_tier = 3
+type_bonus = {
+4: 0.2
+}
+rare = true
+base_name = "Great Sword"
+normal_attacks = Array[ExtResource("1_l215j")]([SubResource("Resource_ryrd0"), SubResource("Resource_uepd8"), SubResource("Resource_wsfra")])
+hard_attacks = Array[ExtResource("1_l215j")]([SubResource("Resource_ye7gn"), SubResource("Resource_n76c2"), SubResource("Resource_74o0y")])
+mesh_size = Vector3(0.14, 0.1, 1.6)
+mesh_color = Color(0.7, 0.72, 0.78, 1)
+metadata/emblems = [5, 10]

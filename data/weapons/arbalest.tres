@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_3qu3x"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_ponib"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_yo116"]
+
+[sub_resource type="Resource" id="Resource_rcces"]
+script = ExtResource("1_3qu3x")
+display_name = "Heavy Siege Bolt"
+damage_mult = 1.5
+lp_cost = 4.0
+swing = 4
+duration = 1.5
+active_start = 0.6666666666666666
+active_end = 0.7666666666666667
+window_open = 1.5
+window_close = 1.5
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 55.0
+projectile_radius = 0.15
+projectile_range = 45.0
+projectile_pierce = true
+
+[sub_resource type="Resource" id="Resource_udaba"]
+script = ExtResource("1_3qu3x")
+display_name = "Siege Bolt"
+lp_cost = 4.0
+swing = 4
+duration = 1.5
+active_start = 0.6666666666666666
+active_end = 0.7666666666666667
+window_open = 1.5
+window_close = 1.5
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 55.0
+projectile_radius = 0.15
+projectile_range = 45.0
+projectile_pierce = true
+
+[resource]
+script = ExtResource("2_ponib")
+display_name = "Arbalest"
+weapon_type = &"arbalest"
+weapon_class = 1
+weight = 1
+two_handed = true
+no_combo = true
+base_damage = 60.0
+jobs = PackedStringArray("R")
+normal_attacks = Array[ExtResource("1_3qu3x")]([SubResource("Resource_udaba")])
+hard_attacks = Array[ExtResource("1_3qu3x")]([SubResource("Resource_rcces")])
+mesh_size = Vector3(0.6, 0.15, 1.2)
+mesh_color = Color(0.55, 0.4, 0.28, 1)

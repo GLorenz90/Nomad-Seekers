@@ -27,7 +27,9 @@ func _initialize() -> void:
 func _run() -> void:
 	_player = _main.get_node("Player")
 	_combat = _player.combat
-	_combat.apply_loadout_set(CombatController.make_default_loadouts())
+	# A fresh save (Striker, default loadouts) that is never written to disk.
+	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	_player.autosave = false
 	_markers = _main.target_markers
 	_a = _main.get_node("Dummies/DummyA")  # at (0, 0, -8)
 	_b = load("res://scenes/enemies/target_dummy.tscn").instantiate()

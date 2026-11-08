@@ -33,6 +33,20 @@ enum Weight { LIGHT, HEAVY }
 @export_range(0.0, 1.0) var block_strength := 0.3
 @export var base_damage := 10.0
 @export var damage_type: Element.Type = Element.Type.GENERIC
+## Which jobs can equip it (North Star §5.3): any of "S" (Striker),
+## "R" (Ranger), "I" (Invoker).
+@export var jobs := PackedStringArray(["S", "R", "I"])
+
+@export_group("Item")
+## A found item's special tag (null = none). Elemental tags also set its damage type.
+@export var tag: SpecialTag
+@export var tag_tier := 0
+## Bonus damage against monster types, e.g. {EnemyData.EnemyType.BEAST: 0.15}.
+@export var type_bonus: Dictionary = {}
+## Rare weapons have a unique name and are marked in menus.
+@export var rare := false
+## Name of the base weapon this item was made from ("Sword").
+@export var base_name := ""
 
 @export var normal_attacks: Array[AttackData] = []
 @export var hard_attacks: Array[AttackData] = []
@@ -40,6 +54,10 @@ enum Weight { LIGHT, HEAVY }
 @export var spells: Array[SpellData] = []
 ## Sustained weapons only. Its duration is the wind-down after release.
 @export var sustained_attack: AttackData
+## Gunblade: the attacks used while locked on (a gun between pistol and rifle).
+## Empty for every other weapon. Unlocked, it uses normal / hard attacks.
+@export var locked_normal_attacks: Array[AttackData] = []
+@export var locked_hard_attacks: Array[AttackData] = []
 ## RT (Shift) + this hand's button uses this instead of the normal step
 ## (North Star §5.2 special tags, filled in by Part 5). Null = no special, so
 ## RT + the button is just a normal attack. There is no Hard special.
@@ -50,7 +68,16 @@ enum Weight { LIGHT, HEAVY }
 @export var mesh_color := Color(0.8, 0.8, 0.85)
 
 
-func get_attack(step: int, hard: bool, spell_slot: int = 0, special: bool = false) -> AttackData:
+func has_lock_mode() -> bool:
+	return not locked_normal_attacks.is_empty()
+
+
+func get_attack(step: int, hard: bool, spell_slot: int = 0, special: bool = false,
+		locked: bool = false) -> AttackData:
+	if special and not casting:
+		var tagged := get_special()
+		if tagged:
+			return tagged
 	if special and special_attack and not casting:
 		return special_attack
 	if casting:
@@ -61,9 +88,34 @@ func get_attack(step: int, hard: bool, spell_slot: int = 0, special: bool = fals
 	if hard and sustained:
 		return sustained_attack
 	var list := hard_attacks if hard else normal_attacks
+	if locked and has_lock_mode():
+		list = locked_hard_attacks if hard else locked_normal_attacks
 	if list.is_empty():
 		return null
 	return list[clampi(step - 1, 0, list.size() - 1)]
+
+
+## The RT special this weapon has: its own special_attack, or one built from
+## its tag. Null when it has neither.
+func get_special() -> AttackData:
+	if special_attack:
+		return special_attack
+	if tag and not normal_attacks.is_empty():
+		if _tag_special == null:
+			_tag_special = tag.make_special(self)
+		return _tag_special
+	return null
+
+
+var _tag_special: AttackData
+
+
+func can_be_used_by(job: String) -> bool:
+	return jobs.has(job)
+
+
+func jobs_text() -> String:
+	return "All" if jobs.size() >= 3 else ", ".join(jobs)
 
 
 func is_heavy() -> bool:

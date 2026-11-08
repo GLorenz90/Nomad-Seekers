@@ -39,7 +39,9 @@ func _run() -> void:
 	_combat.stats.resolve = 0.0
 	_combat.stats.evasion = 0.0
 	_combat.x_is_left = true  # these checks were written with X = left hand
-	_combat.apply_loadout_set(CombatController.make_default_loadouts())
+	# A fresh save (Striker, default loadouts) that is never written to disk.
+	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	_player.autosave = false
 	_dummy = _main.get_node("Dummies/DummyA")
 	_swinger = _main.get_node("Dummies/Swinger")
 	_swinger.attack_mode = TargetDummy.AttackMode.NONE  # driven by hand below

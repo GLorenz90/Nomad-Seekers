@@ -1,0 +1,123 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_uu6lf"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_qw5cl"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_3bexd"]
+
+[sub_resource type="Resource" id="Resource_5swxp"]
+script = ExtResource("1_uu6lf")
+display_name = "Charged Shot"
+damage_mult = 2.0
+lp_cost = 4.0
+swing = 4
+duration = 1.2333333333333334
+active_start = 0.7
+active_end = 0.7
+window_open = 0.7666666666666667
+window_close = 1.2333333333333334
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 40.0
+projectile_radius = 0.16
+projectile_range = 24.0
+multi_target = 3
+
+[sub_resource type="Resource" id="Resource_etwwf"]
+script = ExtResource("1_uu6lf")
+display_name = "Charged Shot"
+damage_mult = 2.1
+lp_cost = 4.0
+swing = 4
+duration = 1.0
+active_start = 0.5
+active_end = 0.5
+window_open = 0.5666666666666667
+window_close = 1.0
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 40.0
+projectile_radius = 0.16
+projectile_range = 24.0
+multi_target = 3
+
+[sub_resource type="Resource" id="Resource_qmwgx"]
+script = ExtResource("1_uu6lf")
+display_name = "Charged Shot"
+damage_mult = 2.4
+lp_cost = 4.0
+swing = 4
+duration = 0.8666666666666667
+active_start = 0.30333333333333334
+active_end = 0.30333333333333334
+window_open = 0.8666666666666667
+window_close = 0.8666666666666667
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 40.0
+projectile_radius = 0.16
+projectile_range = 24.0
+multi_target = 5
+
+[sub_resource type="Resource" id="Resource_evykd"]
+script = ExtResource("1_uu6lf")
+display_name = "Shot"
+lp_cost = 2.0
+swing = 4
+duration = 0.9666666666666667
+active_start = 0.43333333333333335
+active_end = 0.43333333333333335
+window_open = 0.5
+window_close = 0.9666666666666667
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 40.0
+projectile_range = 24.0
+multi_target = 3
+
+[sub_resource type="Resource" id="Resource_l4ew6"]
+script = ExtResource("1_uu6lf")
+display_name = "Shot"
+damage_mult = 1.05
+lp_cost = 2.0
+swing = 4
+duration = 0.8333333333333334
+active_start = 0.3333333333333333
+active_end = 0.3333333333333333
+window_open = 0.4
+window_close = 0.8333333333333334
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 40.0
+projectile_range = 24.0
+multi_target = 3
+
+[sub_resource type="Resource" id="Resource_wx8qu"]
+script = ExtResource("1_uu6lf")
+display_name = "Shot"
+damage_mult = 1.15
+lp_cost = 2.0
+swing = 4
+duration = 0.6666666666666666
+active_start = 0.23333333333333334
+active_end = 0.23333333333333334
+window_open = 0.6666666666666666
+window_close = 0.6666666666666666
+lunge_distance = 0.0
+is_projectile = true
+projectile_speed = 40.0
+projectile_range = 24.0
+multi_target = 5
+
+[resource]
+script = ExtResource("2_qw5cl")
+display_name = "Burstbow"
+weapon_type = &"burstbow"
+weapon_class = 1
+weight = 1
+two_handed = true
+base_damage = 15.0
+jobs = PackedStringArray("R")
+normal_attacks = Array[ExtResource("1_uu6lf")]([SubResource("Resource_evykd"), SubResource("Resource_l4ew6"), SubResource("Resource_wx8qu")])
+hard_attacks = Array[ExtResource("1_uu6lf")]([SubResource("Resource_5swxp"), SubResource("Resource_etwwf"), SubResource("Resource_qmwgx")])
+mesh_size = Vector3(0.6, 0.5, 0.12)
+mesh_color = Color(0.5, 0.42, 0.3, 1)

@@ -32,7 +32,9 @@ enum FollowMode { LOOSE, RIGID }
 ## LOOSE mode only. Bigger = the camera swings around more lazily.
 @export var leash_radius := 4.5
 @export var pivot_height := 1.55
-@export var shoulder_offset := 0.45
+## Sideways camera offset. 0 keeps the Seeker centred (Grayson, 2026-11-08):
+## twin SyncAIDa float on both shoulders, so neither side is favoured.
+@export var shoulder_offset := 0.0
 @export var distance := 4.5
 ## Positional lag. Lower = looser, more like a person keeping up.
 @export var follow_speed := 9.0

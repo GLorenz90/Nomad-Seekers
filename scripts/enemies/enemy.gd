@@ -27,6 +27,8 @@ var _agent: NavigationAgent3D
 var _label: Label3D
 var _material: StandardMaterial3D
 var _glow_tween: Tween
+## Debug view of the melee hit area (melee enemies only).
+var hit_area: HitAreaView
 var _timer := 0.0
 var _cooldown := 0.6
 var _aggro := false
@@ -66,6 +68,9 @@ func receive_hit(info: DamageInfo, attacker: Node3D, _projectile: Node = null) -
 		DamageNumber.spawn_text(get_parent(), get_lock_point() + Vector3.UP * 0.5, "Miss")
 		return 0.0
 	info.amount *= Defense.scale_for(info.kind, data.defense, data.resolve, data.evasion)
+	# PSO-style monster-type bonus on the weapon (e.g. +20% vs Beast).
+	if info.weapon and info.weapon.type_bonus.has(data.enemy_type):
+		info.amount *= 1.0 + float(info.weapon.type_bonus[data.enemy_type])
 	var amount := health.take_damage(info)
 	status.add_buildup(info, attacker)
 	_aggro = true
@@ -109,6 +114,8 @@ func _physics_process(delta: float) -> void:
 	var acting := status.can_act()
 	if not acting and state == State.WINDUP:
 		state = State.CHASE  # frozen or shocked mid-windup: the attack is lost
+		if hit_area:
+			hit_area.stop()
 	if seeker and acting:
 		move = _think(seeker, delta)
 
@@ -140,6 +147,8 @@ func _think(seeker: Player, delta: float) -> Vector3:
 		State.WINDUP:
 			_face(to, delta, 6.0 if data.attack_style == EnemyData.AttackStyle.MELEE else 12.0)
 			_timer -= delta * (0.5 if status.is_active(StatusEffects.Status.SLOW) else 1.0)
+			if hit_area:
+				hit_area.telegraph(1.0 - _timer / maxf(data.windup, 0.01))
 			if _timer <= 0.0:
 				_attack(seeker)
 				state = State.RECOVER
@@ -203,6 +212,8 @@ func _attack(seeker: Player) -> void:
 			var facing := -global_basis.z
 			var in_arc := data.melee_arc_deg >= 360.0 \
 				or facing.angle_to(to.normalized()) <= deg_to_rad(data.melee_arc_deg * 0.5)
+			if hit_area:
+				hit_area.strike()
 			if to.length() <= data.attack_range + 0.4 and in_arc:
 				HitResolver.apply(seeker, info, self)
 		_:
@@ -248,6 +259,8 @@ func _on_died() -> void:
 	collision_mask = WORLD_MASK
 	_label.visible = false
 	defeated.emit(self)
+	# EXP for the Seeker and a loot roll (Main is in the loot_spawner group).
+	get_tree().call_group("loot_spawner", "on_enemy_defeated", self)
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3(1.2, 0.05, 1.2), 0.4).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
@@ -312,6 +325,11 @@ func _build() -> void:
 			cm.radius = data.size.x * 0.5
 			cm.height = maxf(data.size.y, data.size.x)
 			mesh = cm
+
+	if data.attack_style == EnemyData.AttackStyle.MELEE:
+		# Same reach and arc as the hit check in _attack().
+		hit_area = HitAreaView.create(data.attack_range + 0.4, data.melee_arc_deg)
+		add_child(hit_area)
 
 	var collider := CollisionShape3D.new()
 	collider.shape = shape

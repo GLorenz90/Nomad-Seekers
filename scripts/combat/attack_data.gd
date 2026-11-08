@@ -10,6 +10,8 @@ extends Resource
 ## run past duration, which gives a short grace period after the attack ends.
 
 enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST, SPIN }
+## Support spells act on the caster instead of hitting enemies.
+enum Support { NONE, HEAL, CURE }
 
 @export var display_name := ""
 @export var damage_mult := 1.0
@@ -56,3 +58,31 @@ enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST, SPIN }
 @export var projectile_radius := 0.12
 @export var projectile_range := 30.0
 @export var projectile_pierce := false
+## Pellets per shot (shotguns), fanned across spread_deg.
+@export var projectile_count := 1
+@export var spread_deg := 0.0
+## Downward pull in m/s². Above 0 the shot is lobbed in an arc at its target
+## (grenades, launchers).
+@export var projectile_gravity := 0.0
+## Above 0: explodes on impact (or at the end of its range), hitting every
+## target within this radius (bazooka, grenades).
+@export var explosion_radius := 0.0
+## Boomerang: homes in on up to this many targets, one after another.
+@export var lock_targets := 0
+## Gigarang: flies to its target (or its range), then comes back, hitting
+## everything in its path both ways.
+@export var returns := false
+## Thrown weapons: step 3 of a chain that used this weapon for all three steps
+## throws this many extra projectiles (North Star step-3 finisher).
+@export var finisher_volley := 0
+## PSO-shotgun targeting (Thrown Daggers, Cards, Burstbow): up to this many
+## enemies ahead are picked, and one projectile flies at each. Each projectile
+## can only hit its own target, so no enemy is hit twice by one attack.
+@export var multi_target := 0
+## Thrown weapons that scale off a different stat still count as ranged hits.
+@export var ranged_hit := false
+
+@export_group("Support")
+@export var support: Support = Support.NONE
+## HEAL: fraction of the caster's max HP restored.
+@export var support_amount := 0.0

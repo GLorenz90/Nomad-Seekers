@@ -84,6 +84,7 @@ display_name = "Frost Sword"
 weapon_type = &"sword"
 base_damage = 20.0
 damage_type = 2
+jobs = PackedStringArray("S", "R", "I")
 normal_attacks = Array[ExtResource("1_lkmjt")]([SubResource("Resource_2g1l0"), SubResource("Resource_6imho"), SubResource("Resource_85v5n")])
 hard_attacks = Array[ExtResource("1_lkmjt")]([SubResource("Resource_j5ecy"), SubResource("Resource_jvmc7"), SubResource("Resource_e72ji")])
 mesh_color = Color(0.6, 0.85, 1, 1)

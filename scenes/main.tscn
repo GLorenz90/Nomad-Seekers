@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/enemies/target_dummy.tscn" id="4_dummy"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
 [ext_resource type="Shader" uid="uid://2uvuox5ybq6h" path="res://assets/shaders/blockout_grid.gdshader" id="6_grid"]
+[ext_resource type="Script" path="res://scripts/world/teleporter.gd" id="7_teleporter"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.32, 0.45, 0.68, 1)
@@ -314,3 +315,9 @@ max_hp = 400.0
 attack_mode = 1
 
 [node name="HUD" parent="." unique_id=809857340 instance=ExtResource("5_hud")]
+
+[node name="ArenaTeleporter" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 25)
+script = ExtResource("7_teleporter")
+destination = "res://scenes/arena.tscn"
+destination_name = "To the arena (test level)"

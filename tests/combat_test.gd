@@ -17,6 +17,7 @@ var _started: Array[String] = []
 
 # Default loadout slots (CombatController.DEFAULT_LOADOUTS).
 const WAND := 4
+const GREAT_SWORD := 5
 const DERVISH := 6
 
 
@@ -36,7 +37,9 @@ func _run() -> void:
 	_combat.stats.evasion = 0.0
 	_combat.x_is_left = true  # these checks were written with X = left hand  # no random crits in tests
 	# Never depend on (or overwrite) the player's saved loadouts.
-	_combat.apply_loadout_set(CombatController.make_default_loadouts())
+	# A fresh save (Striker, default loadouts) that is never written to disk.
+	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	_player.autosave = false
 	_dummy = _main.get_node("Dummies/DummyA")
 	_combat.hit_landed.connect(func(_t, _i, amount): _hits.append(amount))
 	_combat.combo_feedback.connect(func(text): _feedback.append(text))
@@ -236,13 +239,23 @@ func _run() -> void:
 	await _reset(Vector3(0, 0.1, -6.5))
 	_check("two-handed Dervish Blades answer both buttons",
 		_combat.current_weapon(CombatController.Hand.RIGHT) == _combat.current_weapon(CombatController.Hand.LEFT))
+	_started.clear()
+	for button in ["hand_x", "hand_y", "hand_x"]:
+		await _tap(button)
+		await _idle()
+	_check("sustained weapons don't combo: taps are each a standalone first attack (%s)" % [_started],
+		_started == ["Whirl Cut", "Whirl Cut", "Whirl Cut"] and _combat.chain_step == 0)
+	_set_loadout(GREAT_SWORD)
+	await _reset(Vector3(0, 0.1, -6.5))
+	_started.clear()
 	await _tap("hand_x")
 	await _until_window()
 	await _tap("hand_y")
 	await _until_window()
 	await _tap("hand_x")
 	await _idle()
-	_check("X, Y, X with one two-handed weapon reaches its step 3 (%s)" % [_started], _started == ["Whirl Cut", "Whirl Cut", "Cyclone"])
+	_check("X, Y, X with one two-handed weapon reaches its step 3 (%s)" % [_started], _started == ["Sweep", "Return Sweep", "Crushing Blow"])
+	_set_loadout(DERVISH)
 	await _reset(Vector3(0, 0.1, -6.5))
 	Input.action_press("hand_x")
 	await _frames(60)
