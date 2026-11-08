@@ -13,10 +13,25 @@ extends CanvasLayer
 ## found; weapons your job can't use are greyed out.
 ## SyncAIDa tab (Part 6): pair one of your SyncAIDa, feed it consumables or
 ## banked Lumidium, and pick its active Sync Burst.
+## Levels tab (prototype only): switch levels and testing tools (refills,
+## debug readout, hitboxes). Controls tab: the control reference.
+##
+## Fully usable by gamepad: d-pad / left stick move focus, A accepts, B goes
+## back (or closes), LB / RB switch tabs, Start closes. Every tab switch moves
+## focus into the new tab, and rebuilt lists put focus back on a real control.
 
 signal closed
 
 const WEAPON_DIR := "res://data/weapons/"
+## Level select (prototype): [label, scene].
+const LEVELS := [
+	["Test room", "res://scenes/main.tscn"],
+	["Arena (wave rooms, Lumidium, teleporters)", "res://scenes/arena.tscn"],
+]
+## Names for the gamepad-friendly "New name" button.
+const NAMES := ["Seeker", "Ardent", "Brielle", "Cassian", "Dara", "Eamon", "Fenna", "Galen",
+	"Halcyon", "Iris", "Jory", "Kestra", "Lumen", "Maren", "Nolan", "Orrin", "Perrin", "Quill",
+	"Rook", "Sable", "Tamsin", "Ulric", "Vesper", "Wren"]
 
 var combat: CombatController
 ## Tests turn this off so they never overwrite the player's saved loadouts.
@@ -49,6 +64,12 @@ var _sync_burst: OptionButton
 var _sync_message: Label
 ## Debug: feeding doesn't use up items (for trying evolutions quickly).
 var free_feeding := false
+var _free_feeding_toggle: CheckButton
+var _level_message: Label
+var _debug_toggle: CheckButton
+var _hitbox_toggle: CheckButton
+var _free_feeding_levels: CheckButton
+var _level_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -73,22 +94,23 @@ func open() -> void:
 	_set = combat.loadout_set
 	_rebuild_picker()
 	_load_character()
-	_tabs.current_tab = 0
+	_tabs.set_current_tab(0)
 	var seeker := _player()
 	if seeker and seeker.save and seeker.save.syncaida.is_empty():
-		_tabs.current_tab = _tabs.get_tab_idx_from_control(_tabs.get_node("SyncAIDa"))
+		_tabs.set_current_tab(_tab_index("SyncAIDa"))
 	visible = true
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_close_picker()
 	_refresh()
-	(_slot_buttons[combat.loadout_index][0] as Button).grab_focus()
+	_focus_tab()
 
 
 func close() -> void:
 	if not visible:
 		return
 	_close_picker()
+	get_viewport().gui_release_focus()
 	visible = false
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -112,8 +134,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif visible and (event.is_action_pressed("loadout_next") or event.is_action_pressed("loadout_prev")):
 		var step := 1 if event.is_action_pressed("loadout_next") else -1
+		_close_picker()
 		_tabs.current_tab = posmod(_tabs.current_tab + step, _tabs.get_tab_count())
-		_refresh()
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
 		if _picker.visible:
@@ -152,6 +174,9 @@ func _on_slot_pressed(index: int, hand: int) -> void:
 
 
 func _on_weapon_picked(weapon: WeaponData) -> void:
+	if weapon and combat and not weapon.can_be_used_by(combat.job_code):
+		_message.text = "%s needs %s (change job in the Character tab)." % [weapon.display_name, weapon.jobs_text()]
+		return
 	var error := equip(_editing.x, _editing.y, weapon)
 	if error == "":
 		error = combat.job_error(_set.loadouts[_editing.x])
@@ -199,6 +224,7 @@ func _refresh() -> void:
 	_refresh_inventory()
 	_refresh_character()
 	_refresh_syncaida()
+	_refresh_levels()
 
 
 func _lt_short(l: Loadout) -> String:
@@ -274,6 +300,12 @@ func _build() -> void:
 
 	_tabs = TabContainer.new()
 	_tabs.focus_mode = Control.FOCUS_NONE
+	# Tabs switch with LB / RB; keep the d-pad out of the tab bar.
+	_tabs.get_tab_bar().focus_mode = Control.FOCUS_NONE
+	_tabs.tab_changed.connect(func(_t: int):
+		if visible:
+			_refresh()
+			_focus_tab.call_deferred())
 	panel.add_child(_tabs)
 	var columns := HBoxContainer.new()
 	columns.name = "Loadouts"
@@ -282,6 +314,8 @@ func _build() -> void:
 	_build_inventory_tab()
 	_build_character_tab()
 	_build_syncaida_tab()
+	_build_levels_tab()
+	_build_controls_tab()
 
 	var left := VBoxContainer.new()
 	left.add_theme_constant_override("separation", 8)
@@ -356,7 +390,8 @@ func _rebuild_picker() -> void:
 	if _picker_list == null:
 		return
 	for child in _picker_list.get_children():
-		child.free()
+		_picker_list.remove_child(child)
+		child.queue_free()
 	var empty := Button.new()
 	empty.text = "(Empty)"
 	empty.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -384,7 +419,9 @@ func _weapon_button(w: WeaponData, found: bool) -> Button:
 	if found:
 		b.modulate = Color(1.0, 0.6, 1.0) if w.rare else Color(0.75, 0.9, 1.0)
 	if combat and not w.can_be_used_by(combat.job_code):
-		b.disabled = true
+		# Still focusable (so the d-pad doesn't skip it); A explains the lock.
+		b.modulate = Color(0.55, 0.55, 0.6)
+		b.set_meta("locked", true)
 	b.pressed.connect(_on_weapon_picked.bind(w))
 	return b
 
@@ -395,6 +432,9 @@ func _build_inventory_tab() -> void:
 	_inventory_text.bbcode_enabled = true
 	_inventory_text.custom_minimum_size = Vector2(1100.0, 600.0)
 	_inventory_text.add_theme_font_size_override("normal_font_size", 17)
+	# Focusable so the d-pad / left stick scroll it.
+	_inventory_text.focus_mode = Control.FOCUS_ALL
+	_inventory_text.scroll_active = true
 	_tabs.add_child(_inventory_text)
 
 
@@ -438,8 +478,19 @@ func _build_character_tab() -> void:
 	grid.add_child(_label("Name", 18))
 	_name_edit = LineEdit.new()
 	_name_edit.custom_minimum_size.x = 300.0
+	# Typing needs a keyboard: click to edit. Gamepads use "New name".
+	_name_edit.focus_mode = Control.FOCUS_CLICK
 	_name_edit.text_changed.connect(func(_t: String): _apply_character())
-	grid.add_child(_name_edit)
+	var name_row := HBoxContainer.new()
+	name_row.add_child(_name_edit)
+	var new_name := Button.new()
+	new_name.text = "New name"
+	new_name.pressed.connect(func():
+		var i := (NAMES.find(_name_edit.text) + 1) % NAMES.size()
+		_name_edit.text = NAMES[i]
+		_apply_character())
+	name_row.add_child(new_name)
+	grid.add_child(name_row)
 	_race = _option(grid, "Race", CharacterData.Race.keys())
 	_gender = _option(grid, "Gender", CharacterData.Gender.keys())
 	_job = _option(grid, "Job", CharacterData.Job.keys())
@@ -563,12 +614,10 @@ func _build_syncaida_tab() -> void:
 		_sync_feeds.add_child(b)
 		var effect := _label(_feed_text(item), 13)
 		_sync_feeds.add_child(effect)
-	var free := CheckButton.new()
-	free.text = "Free feeding (debug)"
-	free.toggled.connect(func(on: bool):
-		free_feeding = on
-		_refresh_syncaida())
-	right.add_child(free)
+	_free_feeding_toggle = CheckButton.new()
+	_free_feeding_toggle.text = "Free feeding (debug)"
+	_free_feeding_toggle.toggled.connect(_set_free_feeding)
+	right.add_child(_free_feeding_toggle)
 	_sync_message = _label("", 16)
 	_sync_message.modulate = Color(1.0, 0.85, 0.5)
 	right.add_child(_sync_message)
@@ -588,13 +637,23 @@ func _paired_data() -> SyncAIDaData:
 	return seeker.save.paired_syncaida() if seeker and seeker.save else null
 
 
+func _on_pair(index: int) -> void:
+	var seeker := _player()
+	if seeker == null:
+		return
+	seeker.pair_syncaida(index)
+	_sync_message.text = "Paired with %s." % seeker.syncaida.data.display_name
+	_refresh_syncaida.call_deferred()
+
+
 func _on_starter(index: int) -> void:
 	var seeker := _player()
 	if seeker == null:
 		return
 	seeker.choose_starter(index)
 	_sync_message.text = "%s joined you." % seeker.syncaida.data.display_name
-	_refresh_syncaida()
+	_refresh_syncaida.call_deferred()
+	_focus_paired.call_deferred()
 
 
 func _on_feed(item: StringName) -> void:
@@ -622,19 +681,22 @@ func _refresh_syncaida() -> void:
 	var seeker := _player()
 	if _sync_owned == null or seeker == null or seeker.save == null:
 		return
+	var focus := get_viewport().gui_get_focus_owner()
+	var had_focus := focus != null and (_sync_owned.is_ancestor_of(focus) or _sync_starters.is_ancestor_of(focus))
 	for child in _sync_owned.get_children():
-		child.free()
+		# Never free() here: this can run from one of these buttons' own signals.
+		_sync_owned.remove_child(child)
+		child.queue_free()
 	for i in seeker.save.syncaida.size():
 		var d := seeker.save.syncaida[i]
 		var b := Button.new()
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.text = "%s%s  Lv %d %s" % ["> " if i == seeker.save.paired else "   ", d.display_name, d.level(), d.form]
 		b.modulate = d.color().lightened(0.3)
-		b.pressed.connect(func():
-			seeker.pair_syncaida(i)
-			_sync_message.text = "Paired with %s." % d.display_name
-			_refresh_syncaida())
+		b.pressed.connect(_on_pair.bind(i))
 		_sync_owned.add_child(b)
+		if had_focus and i == seeker.save.paired:
+			b.grab_focus.call_deferred()
 	var inv := seeker.save.inventory
 	for child in _sync_feeds.get_children():
 		if child is Button:
@@ -669,3 +731,203 @@ func _refresh_syncaida() -> void:
 	else:
 		_sync_burst.disabled = false
 		_sync_burst.select(clampi(d.active_burst, 0, d.bursts.size() - 1))
+
+
+# --- Gamepad focus --------------------------------------------------------------
+
+func _tab_index(tab_name: String) -> int:
+	for i in _tabs.get_tab_count():
+		if _tabs.get_tab_control(i).name == tab_name:
+			return i
+	return 0
+
+
+## Puts focus on the first usable control of the current tab, so the d-pad
+## and A always have something to work with.
+func _focus_tab() -> void:
+	if not visible:
+		return
+	var page := _tabs.get_current_tab_control()
+	if page == null:
+		return
+	if page.name == "Loadouts" and combat:
+		(_slot_buttons[combat.loadout_index][0] as Button).grab_focus()
+		return
+	if page.name == "SyncAIDa" and _focus_paired():
+		return
+	var first := page if page.focus_mode == Control.FOCUS_ALL else _first_focusable(page)
+	if first:
+		first.grab_focus()
+	else:
+		get_viewport().gui_release_focus()
+
+
+func _first_focusable(node: Node) -> Control:
+	for child in node.get_children():
+		var c := child as Control
+		if c and c.is_visible_in_tree() and c.focus_mode == Control.FOCUS_ALL \
+				and not (c is BaseButton and (c as BaseButton).disabled):
+			return c
+		var inner := _first_focusable(child)
+		if inner:
+			return inner
+	return null
+
+
+func _focus_paired() -> bool:
+	var seeker := _player()
+	if seeker == null or seeker.save == null:
+		return false
+	if seeker.save.syncaida.is_empty():
+		if _sync_starters.get_child_count() > 0:
+			(_sync_starters.get_child(0) as Button).grab_focus()
+			return true
+		return false
+	for child in _sync_owned.get_children():
+		if child is Button and not child.is_queued_for_deletion() \
+				and child.get_index() == seeker.save.paired:
+			(child as Button).grab_focus()
+			return true
+	return false
+
+
+func _set_free_feeding(on: bool) -> void:
+	free_feeding = on
+	if _free_feeding_toggle:
+		_free_feeding_toggle.set_pressed_no_signal(on)
+	if _free_feeding_levels:
+		_free_feeding_levels.set_pressed_no_signal(on)
+	_refresh_syncaida()
+
+
+# --- Levels tab (prototype) -------------------------------------------------------
+
+func _build_levels_tab() -> void:
+	var columns := HBoxContainer.new()
+	columns.name = "Levels"
+	columns.add_theme_constant_override("separation", 40)
+	_tabs.add_child(columns)
+
+	var left := VBoxContainer.new()
+	left.custom_minimum_size.x = 480.0
+	left.add_theme_constant_override("separation", 8)
+	columns.add_child(left)
+	left.add_child(_label("Level select (prototype)", 22))
+	for level in LEVELS:
+		var b := Button.new()
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.custom_minimum_size.y = 38.0
+		b.set_meta("scene", level[1])
+		b.set_meta("title", level[0])
+		b.pressed.connect(_on_level.bind(level[1]))
+		left.add_child(b)
+		_level_buttons.append(b)
+	left.add_child(_label("Switching saves first. Carried Lumidium is banked on the way.", 13))
+	_level_message = _label("", 16)
+	_level_message.modulate = Color(1.0, 0.85, 0.5)
+	left.add_child(_level_message)
+
+	var right := VBoxContainer.new()
+	right.custom_minimum_size.x = 420.0
+	right.add_theme_constant_override("separation", 8)
+	columns.add_child(right)
+	right.add_child(_label("Testing tools", 22))
+	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
+			["+1000 Oro", _tool_oro], ["+5 of each consumable", _tool_items],
+			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn]]:
+		var b := Button.new()
+		b.text = spec[0]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.pressed.connect(spec[1])
+		right.add_child(b)
+	_debug_toggle = CheckButton.new()
+	_debug_toggle.text = "Debug readout (Select / F3)"
+	_debug_toggle.toggled.connect(func(on: bool):
+		var hud := _hud()
+		if hud:
+			hud.set_debug_visible(on))
+	right.add_child(_debug_toggle)
+	_hitbox_toggle = CheckButton.new()
+	_hitbox_toggle.text = "Show melee hitboxes"
+	_hitbox_toggle.toggled.connect(func(on: bool):
+		if combat:
+			combat.show_hitboxes = on)
+	right.add_child(_hitbox_toggle)
+	_free_feeding_levels = CheckButton.new()
+	_free_feeding_levels.text = "Free SyncAIDa feeding"
+	_free_feeding_levels.toggled.connect(_set_free_feeding)
+	right.add_child(_free_feeding_levels)
+
+
+func _hud() -> DebugHud:
+	for node in get_tree().get_nodes_in_group("hud"):
+		return node as DebugHud
+	return null
+
+
+func _refresh_levels() -> void:
+	if _debug_toggle == null:
+		return
+	var current := get_tree().current_scene.scene_file_path if get_tree().current_scene else ""
+	for b in _level_buttons:
+		var here: bool = b.get_meta("scene") == current
+		b.text = ("> " if here else "   ") + String(b.get_meta("title")) + ("  (here)" if here else "")
+	_free_feeding_levels.set_pressed_no_signal(free_feeding)
+	var hud := _hud()
+	_debug_toggle.set_pressed_no_signal(hud != null and hud.is_debug_visible())
+	_hitbox_toggle.set_pressed_no_signal(combat != null and combat.show_hitboxes)
+
+
+func _on_level(scene: String) -> void:
+	var seeker := _player()
+	if seeker:
+		seeker.deposit_lumidium()
+		seeker.save_game()
+	save_on_close = false  # already saved
+	close()
+	get_tree().change_scene_to_file(scene)
+
+
+func _tool_refill() -> void:
+	var seeker := _player()
+	seeker.health.restore_full()
+	combat.lp = combat.stats.max_lp
+	if seeker.syncaida.data:
+		seeker.syncaida.data.gauge = SyncAIDaCompanion.GAUGE_MAX
+	_level_message.text = "HP, LP and Sync gauge refilled."
+
+
+func _tool_cure() -> void:
+	_player().status.clear_all()
+	_level_message.text = "Statuses cleared."
+
+
+func _tool_oro() -> void:
+	_player().save.inventory.oro += 1000
+	_level_message.text = "+1000 Oro."
+
+
+func _tool_items() -> void:
+	for id in Inventory.CONSUMABLES:
+		_player().save.inventory.add_consumable(id, 5)
+	_level_message.text = "+5 of each consumable."
+
+
+func _tool_lumidium() -> void:
+	var inv := _player().save.inventory
+	for color in Inventory.LUMIDIUM:
+		inv.lumidium[color] = int(inv.lumidium.get(color, 0)) + 10
+	_level_message.text = "+10 of each Lumidium in the bank."
+
+
+func _tool_respawn() -> void:
+	get_tree().call_group("respawner", "respawn_player")
+	_level_message.text = "Back at the start."
+
+
+# --- Controls tab -------------------------------------------------------------------
+
+func _build_controls_tab() -> void:
+	var help := _label(DebugHud.HELP, 18)
+	help.name = "Controls"
+	_tabs.add_child(help)

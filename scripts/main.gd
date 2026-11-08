@@ -28,6 +28,7 @@ var target_markers: TargetMarkers
 
 func _ready() -> void:
 	add_to_group("loot_spawner")
+	add_to_group("respawner")
 	rng.randomize()
 	_spawn = player.global_transform
 	player.camera_rig = camera_rig
@@ -84,10 +85,19 @@ func spawn_drop(drop: Dictionary, at: Vector3) -> ItemPickup:
 	return pickup
 
 
+## Menu tool (Levels tab): back to the start, keeping carried Lumidium.
+func respawn_player() -> void:
+	_reset_player()
+
+
 func _respawn_player() -> void:
 	var lost := player.lose_carried()
 	if lost > 0:
 		hud.show_banner("Lost %d carried Lumidium" % lost)
+	_reset_player()
+
+
+func _reset_player() -> void:
 	player.global_transform = _spawn
 	player.velocity = Vector3.ZERO
 	player.reset_physics_interpolation()

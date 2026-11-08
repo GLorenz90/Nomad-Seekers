@@ -1,7 +1,9 @@
 class_name DebugHud
 extends CanvasLayer
-## Prototype HUD: HP/LP bars, combo pips, equipped hands, combo feedback, plus a
-## debug readout and control help. F3 / Select toggles the debug panel.
+## Prototype HUD: HP/LP/Sync bars, combo pips, equipped hands, combo feedback,
+## wallet and pickups, plus an optional debug readout (off by default; F3 /
+## Select or the menu's Levels tab toggles it). The control reference lives in
+## the menu's Controls tab (HELP).
 
 const HELP := """Controls (gamepad / keyboard+mouse)
 Move: Left stick / WASD    Camera: Right stick / mouse
@@ -15,7 +17,8 @@ Block: LT / F    Special: hold RT / E + hand    Loadout menu: Start / Tab
 Items: D-pad left/up/right / 1,2,3 (HP Gel, LP Cell, Cure Salt)
 Lumidium: hit a crystal 3 times; stand on a teleporter to deposit it
 Sync Burst (gauge full): L3 / R    Feed and pair SyncAIDa: menu, SyncAIDa tab
-Click to capture the mouse, Esc to release. F3 hides this panel."""
+Menu: Start / Tab. In menus: d-pad or stick to move, A to accept, B to go back, LB / RB to switch tabs.
+Click to capture the mouse, Esc to release. Debug readout: Select / F3."""
 
 var player: Player
 var camera_rig: CameraRig
@@ -41,8 +44,19 @@ var _feed: VBoxContainer
 
 
 func _ready() -> void:
-	_help.text = HELP
+	add_to_group("hud")
+	_help.text = ""
+	_help.visible = false
+	_panel.visible = false
 	_build_status()
+
+
+func set_debug_visible(on: bool) -> void:
+	_panel.visible = on
+
+
+func is_debug_visible() -> bool:
+	return _panel.visible
 
 
 func setup(seeker: Player, rig: CameraRig) -> void:

@@ -99,6 +99,20 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
   - Firing a burst gives a moment of invulnerability.
 - **Free feeding (debug)** in the SyncAIDa tab feeds without using items, so you can try evolutions quickly.
 
+## Menu (Start / Tab)
+Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goes back (closes the weapon picker, then the menu), **LB / RB** switch tabs, Start closes.
+
+| Tab | What's there |
+|---|---|
+| Loadouts | 8 loadouts, weapon picker (job-locked weapons are grey; A on one says which job needs it), Double-Heavy augment |
+| Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
+| Character | Name (New name button for gamepads), race, gender, job, emblem and drop pool |
+| SyncAIDa | Starter choice, pairing, feeding, active Sync Burst |
+| Levels | Prototype only: level select, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
+| Controls | The control reference (moved out of the debug overlay) |
+
+The debug readout is off by default. Select / F3 or the Levels tab turns it on.
+
 ## Controls
 | Action | Gamepad | Keyboard / mouse |
 |---|---|---|
@@ -152,6 +166,7 @@ godot --headless --path . --script res://tests/targeting_test.gd
 godot --headless --path . --script res://tests/enemy_test.gd
 godot --headless --path . --script res://tests/loot_test.gd
 godot --headless --path . --script res://tests/syncaida_test.gd
+godot --headless --path . --script res://tests/menu_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
@@ -166,6 +181,8 @@ godot --headless --path . --script res://tests/syncaida_test.gd
 - `loot_test.gd` (in the arena): the full weapon list and every emblem's favored families, job locks, the 7 rares covering all 10 emblems, drop rates and emblem weighting, tag tiers, tag names and RT specials, the +30% vs Beast bonus, Gush / Mind / King's / Hell effects (and Hell never killing a boss), the Charge special paying Oro, Shotgun pellets, a Grenade arc and its blast (and its prediction), the Boomerang lock chain, the Gigarang hitting out and back, the Thrown Daggers finisher, Machine Pistol automatic fire, the Staff's four spells, Heal and Cure, EXP and drops, pickups and an HP Gel, a Lumidium node breaking, losing carried Lumidium on death, a teleporter deposit, and a save round-trip.
 
 - `syncaida_test.gd` (in the arena): no SyncAIDa until a starter is chosen, the four starters at level 5 in their stat and the instant bonus, level-10 forms following stats rather than job, feeding from inventory and bank, the stat math, the Seeker stat bonus following the paired SyncAIDa, every evolution (job, strongest stat, top two, Prime), burst unlocks, the 200 cap, the gauge from damage dealt and taken, L3 firing Lumen Nova (in range only), Aegis Pulse in both directions, Mending Bloom, feeding from the menu, and a save round-trip.
+
+- `menu_test.gd` (in the arena): drives every tab with real joypad button events: Start opens, starter pick with the d-pad and A, re-pressing the paired SyncAIDa, feeding, RB / LB tab switching with focus following, the weapon picker (B backs out, a job-locked weapon explains itself, A equips), the Character tab's New name and dropdowns, a Levels tool, B closing the menu, and switching levels.
 
 The tests always use a fresh save and never write yours.
 

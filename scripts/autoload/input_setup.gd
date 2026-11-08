@@ -89,6 +89,10 @@ func _enter_tree() -> void:
 	_define("toggle_debug")
 	_joy_button("toggle_debug", JOY_BUTTON_BACK)
 	_key("toggle_debug", KEY_F3)
+	# Menus: Godot's built-in ui_accept / ui_cancel have no gamepad buttons.
+	# A accepts and B cancels (keeping Enter / Space / Esc).
+	_joy_button("ui_accept", JOY_BUTTON_A)
+	_joy_button("ui_cancel", JOY_BUTTON_B)
 
 
 func _define(action: StringName, deadzone: float = 0.5) -> void:
