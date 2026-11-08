@@ -50,6 +50,7 @@ const STARTERS := [["Aegi", &"def"], ["Kindle", &"str"], ["Swift", &"dex"], ["Lu
 const STARTER_LEVEL := 5
 
 ## What feeding each item does (stat XP; negatives as in PSO's mag feeding).
+## Unlike PSO, a negative never drops a stat below a level it has reached.
 ## Consumables come from the inventory, Lumidium from the bank.
 const FEEDS := {
 	&"hp_gel": {&"def": 40.0, &"sol": 10.0, &"dex": -10.0},
@@ -160,7 +161,10 @@ func feed(item: StringName) -> Array[String]:
 		var gain := float(effect[stat])
 		if gain > 0.0 and level() >= MAX_LEVEL:
 			continue
-		stat_xp[stat] = maxf(float(stat_xp[stat]) + gain, 0.0)
+		# A stat level, once earned, is never lost (Grayson, 2026-11-08): a negative
+		# feed only eats into progress toward the next level.
+		var floor_xp := stat_level(stat) * XP_PER_LEVEL
+		stat_xp[stat] = maxf(float(stat_xp[stat]) + gain, floor_xp)
 	var after := level()
 	if after != before:
 		events.append("level")

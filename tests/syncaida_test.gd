@@ -68,6 +68,15 @@ func _run() -> void:
 	(_main.loadout_menu as LoadoutMenu)._refresh_syncaida()
 	_check("the SyncAIDa tab shows a progress bar per stat (DEF %s, %s)" % [(menu_rows[&"def"][0] as Label).text, (menu_rows[&"def"][2] as Label).text],
 		is_equal_approx((menu_rows[&"def"][1] as ProgressBar).value, 0.4) and (menu_rows[&"str"][0] as Label).text == "Lv 5")
+	# Earned stat levels never drop (a separate SyncAIDa, so Pip's path is untouched).
+	var keeper := SyncAIDaData.starter(1)  # Kindle: STR 500 XP = Lv 5
+	keeper.stat_xp[&"str"] = 560.0
+	keeper.feed(&"lp_cell")  # STR -10: progress 60 -> 50
+	var progress_lost := is_equal_approx(keeper.stat_xp[&"str"], 550.0)
+	for i in 30:
+		keeper.feed(&"lp_cell")
+	_check("negative feeding eats progress but never an earned level (STR Lv %d, %.0f XP)" % [keeper.stat_level(&"str"), keeper.stat_xp[&"str"]],
+		progress_lost and keeper.stat_level(&"str") == 5 and is_equal_approx(keeper.stat_xp[&"str"], 500.0))
 	_check("Lumidium you don't have can't be fed", _sync.feed(&"fire").is_empty())
 	save.inventory.lumidium[&"fire"] = 2
 	_sync.feed(&"fire")
