@@ -152,6 +152,45 @@ func _run() -> void:
 	_dummy.health.multipliers.erase(Element.Type.FIRE)
 	_combat.loadout_index = 0
 
+	# --- Mobility: rooted vs moving attacks (PSU-style) ---
+	var run := _player.move_speed
+	var sword_tap := await _speed_while(0, "hand_x", false)
+	_check("sword roots you (%.1f m/s)" % sword_tap, sword_tap < 1.5)
+	var pistol_tap := await _speed_while(0, "hand_y", false)
+	_check("Normal pistol shots keep you moving at half speed (%.1f m/s)" % pistol_tap, absf(pistol_tap - run * 0.5) < 0.8)
+	var pistol_hold := await _speed_while(0, "hand_y", true)
+	_check("Charged pistol shots root you (%.1f m/s)" % pistol_hold, pistol_hold < 1.0)
+	var wand_tap := await _speed_while(1, "hand_x", false)
+	_check("Normal spells keep you moving at half speed (%.1f m/s)" % wand_tap, absf(wand_tap - run * 0.5) < 0.8)
+	var wand_hold := await _speed_while(1, "hand_x", true)
+	_check("Hard spells root you (%.1f m/s)" % wand_hold, wand_hold < 1.0)
+	var dervish_tap := await _speed_while(3, "hand_x", false)
+	_check("Dervish Blades slashes keep you moving (%.1f m/s)" % dervish_tap, absf(dervish_tap - run * 0.5) < 0.8)
+	var dervish_hold := await _speed_while(3, "hand_x", true)
+	_check("Dervish Blades spin keeps you moving (%.1f m/s)" % dervish_hold, absf(dervish_hold - run * 0.6) < 0.8)
+
+	# --- Dervish Blades: two-handed combo and sustained spin ---
+	_set_loadout(3)
+	await _reset(Vector3(0, 0.1, -6.5))
+	_check("two-handed Dervish Blades answer both buttons",
+		_combat.current_weapon(CombatController.Hand.RIGHT) == _combat.current_weapon(CombatController.Hand.LEFT))
+	await _tap("hand_x")
+	await _until_window()
+	await _tap("hand_y")
+	await _until_window()
+	await _tap("hand_x")
+	await _idle()
+	_check("X, Y, X with one two-handed weapon reaches its step 3 (%s)" % [_started], _started == ["Whirl Cut", "Whirl Cut", "Cyclone"])
+	await _reset(Vector3(0, 0.1, -6.5))
+	Input.action_press("hand_x")
+	await _frames(60)
+	var spinning := _combat.is_attacking() and _combat._current.sustained
+	Input.action_release("hand_x")
+	await _frames(30)
+	_check("holding X spins and hits repeatedly (%d hits in 1 s)" % _hits.size(), spinning and _hits.size() >= 4)
+	_check("releasing ends the spin", not _combat.is_attacking())
+	_set_loadout(0)
+
 	# --- Death and respawn ---
 	_dummy.health.hp = 1.0
 	await _reset(Vector3(0, 0.1, -5.5), false)
@@ -177,6 +216,33 @@ func _run() -> void:
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
+
+
+func _set_loadout(index: int) -> void:
+	_combat.loadout_index = index
+	_combat._equip_visuals()
+
+
+## Runs forward in an empty corner, attacks, and returns the speed mid-attack.
+func _speed_while(loadout: int, action: StringName, hold: bool) -> float:
+	_set_loadout(loadout)
+	await _reset(Vector3(-24, 0.1, 10))
+	Input.action_press("move_forward")
+	await _frames(30)
+	Input.action_press(action)
+	if hold:
+		await _frames(28)
+	else:
+		await _frames(2)
+		Input.action_release(action)
+		await _frames(26)
+	var speed := Vector2(_player.velocity.x, _player.velocity.z).length()
+	var attacking := _combat.is_attacking()
+	Input.action_release(action)
+	Input.action_release("move_forward")
+	await _idle()
+	_set_loadout(0)
+	return speed if attacking else -1.0
 
 
 func _reset(at: Vector3, heal := true) -> void:

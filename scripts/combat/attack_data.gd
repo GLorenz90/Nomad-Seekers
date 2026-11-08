@@ -9,7 +9,7 @@ extends Resource
 ## Pressing before window_open breaks the combo (PSO timing). window_close can
 ## run past duration, which gives a short grace period after the attack ends.
 
-enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST }
+enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST, SPIN }
 
 @export var display_name := ""
 @export var damage_mult := 1.0
@@ -18,6 +18,14 @@ enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST }
 @export var damage_type: Element.Type = Element.Type.GENERIC
 @export var lp_cost := 0.0
 @export var swing: Swing = Swing.SLASH_RIGHT
+
+@export_group("Movement")
+## 0 = rooted in place for the attack. Above 0 = the Seeker can keep moving at
+## this fraction of normal speed (PSU-style moving fire, spells, spins).
+@export_range(0.0, 1.0) var move_speed_scale := 0.0
+## Mobile attacks normally keep facing their aim (strafe while firing). Set this
+## to turn toward the movement direction instead (spins).
+@export var face_movement := false
 
 @export_group("Timing")
 @export var duration := 0.45
@@ -31,6 +39,10 @@ enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST }
 ## Distance from the Seeker's center to the hitbox center.
 @export var reach := 1.1
 @export var hitbox_size := Vector3(2.2, 1.6, 1.8)
+
+@export_group("Sustained")
+## Sustained attacks only: seconds between hits while the button is held.
+@export var sustained_tick := 0.15
 
 @export_group("Projectile")
 @export var is_projectile := false

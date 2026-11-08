@@ -10,6 +10,7 @@ func _initialize() -> void:
 	_save(_sword(), "sword")
 	_save(_pistol(), "pistol")
 	_save(_wand(), "wand")
+	_save(_dervish_blades(), "dervish_blades")
 	quit()
 
 
@@ -22,6 +23,8 @@ func _save(weapon: WeaponData, file: String) -> void:
 ## PSO Blue Burst runs at 30 fps. Timings below are PSO frame counts from the
 ## Ephinea wiki (wiki.pioneer2.net/w/Game_mechanics/Frame_data), converted here.
 const PSO_FPS := 30.0
+## Movement speed while attacking with a mobile attack (fraction of run speed).
+const MOBILE_SPEED := 0.5
 
 
 func _f(frames: float) -> float:
@@ -81,6 +84,8 @@ func _sword() -> WeaponData:
 func _shot(name: String, mult: float, hard: bool, fire: float, combo: float, full: float) -> AttackData:
 	var a := _attack(name, AttackData.Swing.SHOT, mult, fire, combo, full)
 	a.lp_cost = 3.0 if hard else 1.0
+	# PSU-style: walk while firing Normal shots; Charged shots plant your feet.
+	a.move_speed_scale = 0.0 if hard else MOBILE_SPEED
 	a.projectile_radius = 0.14 if hard else 0.08
 	a.lunge_distance = 0.0
 	a.is_projectile = true
@@ -113,11 +118,13 @@ func _pistol() -> WeaponData:
 ## Lv16+). PSO has no charged techs, so the Hard cast is a deliberately slower,
 ## stronger version (PSO2 charges Foie for about 1 second).
 func _spell_attack(name: String, element: Element.Type, mult: float, lp: float,
-		cast: float, total: float, speed: float, radius: float, pierce: bool) -> AttackData:
+		cast: float, total: float, speed: float, radius: float, pierce: bool, hard: bool) -> AttackData:
 	var a := _attack(name, AttackData.Swing.CAST, mult, cast, total, total)
 	a.override_damage_type = true
 	a.damage_type = element
 	a.lp_cost = lp
+	# Normal casts keep you moving; Hard casts stand in place.
+	a.move_speed_scale = 0.0 if hard else MOBILE_SPEED
 	a.lunge_distance = 0.0
 	a.is_projectile = true
 	a.projectile_speed = speed
@@ -139,13 +146,52 @@ func _wand() -> WeaponData:
 
 	var fire := SpellData.new()
 	fire.display_name = "Fire Bolt"
-	fire.normal = _spell_attack("Fire Bolt", Element.Type.FIRE, 1.0, 6.0, 15, 35, 16.0, 0.18, false)
-	fire.hard = _spell_attack("Fire Bolt (Hard)", Element.Type.FIRE, 2.2, 14.0, 24, 45, 15.0, 0.32, false)
+	fire.normal = _spell_attack("Fire Bolt", Element.Type.FIRE, 1.0, 6.0, 15, 35, 16.0, 0.18, false, false)
+	fire.hard = _spell_attack("Fire Bolt (Hard)", Element.Type.FIRE, 2.2, 14.0, 24, 45, 15.0, 0.32, false, true)
 
 	var frost := SpellData.new()
 	frost.display_name = "Frost Lance"
-	frost.normal = _spell_attack("Frost Lance", Element.Type.ICE, 0.85, 8.0, 15, 35, 24.0, 0.12, true)
-	frost.hard = _spell_attack("Frost Lance (Hard)", Element.Type.ICE, 1.9, 18.0, 24, 45, 24.0, 0.2, true)
+	frost.normal = _spell_attack("Frost Lance", Element.Type.ICE, 0.85, 8.0, 15, 35, 24.0, 0.12, true, false)
+	frost.hard = _spell_attack("Frost Lance (Hard)", Element.Type.ICE, 1.9, 18.0, 24, 45, 24.0, 0.2, true, true)
 
 	w.spells = [fire, frost]
+	return w
+
+
+## Dervish Blades: the machinegun of melee. Original timings (PSO has no
+## equivalent): quick spinning slashes you can walk through, and holding the
+## button spins continuously, hitting everything around you every 0.15 s.
+func _dervish_blades() -> WeaponData:
+	var w := WeaponData.new()
+	w.display_name = "Dervish Blades"
+	w.weapon_class = WeaponData.WeaponClass.MELEE
+	w.two_handed = true
+	w.sustained = true
+	w.base_damage = 11.0
+	w.mesh_size = Vector3(0.06, 0.06, 0.6)
+	w.mesh_color = Color(0.4, 0.9, 0.85)
+
+	var steps: Array[AttackData] = []
+	for spec in [["Whirl Cut", 1.0, 6, 10, 20], ["Whirl Cut", 1.0, 6, 10, 20], ["Cyclone", 1.4, 8, 24, 24]]:
+		var a := _attack(spec[0], AttackData.Swing.SPIN, spec[1], spec[2], spec[3], spec[4])
+		a.active_end = a.active_start + _f(6)
+		a.move_speed_scale = MOBILE_SPEED
+		a.lunge_distance = 0.0
+		a.reach = 0.2
+		a.hitbox_size = Vector3(3.2, 1.6, 3.2)
+		steps.append(a)
+	w.normal_attacks = steps
+
+	var spin := AttackData.new()
+	spin.display_name = "Whirlwind"
+	spin.swing = AttackData.Swing.SPIN
+	spin.damage_mult = 0.55
+	spin.sustained_tick = 0.15
+	spin.duration = _f(9)  # wind-down after release
+	spin.move_speed_scale = 0.6
+	spin.face_movement = true
+	spin.lunge_distance = 0.0
+	spin.reach = 0.0
+	spin.hitbox_size = Vector3(3.6, 1.6, 3.6)
+	w.sustained_attack = spin
 	return w

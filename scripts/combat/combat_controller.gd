@@ -16,6 +16,14 @@ extends Node3D
 ##   step 2 and 3 attacks and their bonus damage.
 ## - No-combo weapons and casting items are standalone and end any chain.
 ##
+## Movement (PSU-style): each attack's move_speed_scale decides whether the
+## Seeker is rooted (0) or keeps moving at a reduced speed. Melee is rooted
+## except Dervish Blades; Normal shots and Normal spells are mobile; Hard shots
+## and Hard spells are rooted.
+##
+## Sustained weapons (Dervish Blades): holding the button runs the weapon's
+## sustained_attack, hitting every sustained_tick until released.
+##
 ## Must be a direct child of the Player.
 
 signal attack_started(hand: int, weapon: WeaponData, attack: AttackData, chain_step: int, hard: bool)
@@ -30,7 +38,8 @@ const MAX_CHAIN := 3
 const WEAPON_DIR := "res://data/weapons/"
 ## Prototype loadouts as [left hand, right hand]. LB/RB cycles. Proper loadout
 ## editing arrives in Part 3.
-const STARTER_LOADOUTS := [["sword", "pistol"], ["wand", "sword"], ["pistol", "pistol"]]
+## An empty slot next to a two-handed weapon means both buttons use it.
+const STARTER_LOADOUTS := [["sword", "pistol"], ["wand", "sword"], ["pistol", "pistol"], ["dervish_blades", ""]]
 
 @export var stats: Stats
 ## North Star: the player chooses which face button is which hand.
@@ -59,12 +68,17 @@ class ActiveAttack:
 	var hit: Array[Node] = []
 	var direction := Vector3.FORWARD
 	var target: Node3D
+	var sustained := false
+	var tick := 0.0
+	var releasing := false
+	var release_timer := 0.0
 
 
 var _current: ActiveAttack
 var _chain_expire := 0.0
 var _chain_locked := false
 var _last_hand := -1
+var _last_weapon: WeaponData
 var _weapon_streak := 0
 var _time := 0.0
 var _lp_regen_delay := 0.0
@@ -76,6 +90,8 @@ var _pivots: Array[Node3D] = []
 var _meshes: Array[MeshInstance3D] = []
 var _tweens: Array[Tween] = [null, null]
 var _hitbox_debug: MeshInstance3D
+var _hitbox_flash := 0.0
+var _spin_tweening := false
 
 
 func _ready() -> void:
@@ -84,11 +100,25 @@ func _ready() -> void:
 		stats = Stats.new()
 	lp = stats.max_lp
 	for pair in STARTER_LOADOUTS:
-		loadouts.append([load(WEAPON_DIR + pair[0] + ".tres"), load(WEAPON_DIR + pair[1] + ".tres")])
+		loadouts.append([_load_weapon(pair[0]), _load_weapon(pair[1])])
 	_build_hand(Vector3(-0.5, 1.05, -0.1))
 	_build_hand(Vector3(0.5, 1.05, -0.1))
 	_build_hitbox_debug()
 	_equip_visuals()
+
+
+func _load_weapon(file: String) -> WeaponData:
+	if file.is_empty():
+		return null
+	return load(WEAPON_DIR + file + ".tres")
+
+
+func _process(delta: float) -> void:
+	# Spin the hands around the Seeker while a sustained spin is running.
+	if _current and _current.sustained and not _current.releasing:
+		rotation.y -= TAU * 2.5 * delta
+	elif not _spin_tweening and rotation.y != 0.0:
+		rotation.y = 0.0
 
 
 func _physics_process(delta: float) -> void:
@@ -110,12 +140,29 @@ func _physics_process(delta: float) -> void:
 func current_weapon(hand: int) -> WeaponData:
 	if loadouts.is_empty():
 		return null
-	return loadouts[loadout_index][hand]
+	var w: WeaponData = loadouts[loadout_index][hand]
+	if w == null:
+		# A two-handed weapon in the other hand covers this button too.
+		var other: WeaponData = loadouts[loadout_index][1 - hand]
+		if other and other.two_handed:
+			return other
+	return w
 
 
 func is_attacking() -> bool:
 	return _current != null
 
+
+## 0 while rooted; otherwise the fraction of normal speed the Seeker may move at.
+func get_move_scale() -> float:
+	if _current == null:
+		return 1.0
+	return _current.attack.move_speed_scale
+
+
+## True when the attack decides which way the Seeker faces.
+func controls_facing() -> bool:
+	return _current != null and not _current.attack.face_movement
 
 ## Dashing can cancel an attack once its hit is out.
 func can_dash_cancel() -> bool:
@@ -132,7 +179,7 @@ func cancel() -> void:
 
 ## Lunge velocity for the Seeker while a melee attack winds up.
 func get_lunge_velocity() -> Vector3:
-	if _current == null or _current.attack.is_projectile:
+	if _current == null or _current.attack.is_projectile or _current.attack.move_speed_scale > 0.0:
 		return Vector3.ZERO
 	var a := _current.attack
 	if _current.elapsed >= a.active_end or a.lunge_distance <= 0.0:
@@ -208,12 +255,12 @@ func _request_attack(hand: int, hard: bool) -> void:
 	var weapon := current_weapon(hand)
 	if weapon == null:
 		return
-	var standalone := weapon.no_combo or weapon.casting
+	var standalone := weapon.no_combo or weapon.casting or (hard and weapon.sustained)
 	var slot := 1 if Input.is_action_pressed("shift") else 0
 
 	if _current:
 		var cur := _current
-		if cur.weapon.no_combo or cur.weapon.casting or _chain_locked:
+		if cur.weapon.no_combo or cur.weapon.casting or cur.sustained or _chain_locked:
 			return
 		if cur.elapsed < cur.attack.window_open:
 			_chain_locked = true
@@ -233,9 +280,12 @@ func _request_attack(hand: int, hard: bool) -> void:
 func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bool) -> void:
 	var next_step := chain_step + 1 if continuing else 1
 	var next_streak := 1
-	if continuing and hand == _last_hand:
+	# Same weapon = same hand, or the same two-handed weapon on either button.
+	var same_weapon := hand == _last_hand or (weapon.two_handed and weapon == _last_weapon)
+	if continuing and same_weapon:
 		next_streak = _weapon_streak + 1
-	if weapon.no_combo or weapon.casting:
+	var sustained := hard and weapon.sustained
+	if weapon.no_combo or weapon.casting or sustained:
 		next_step = 0
 		next_streak = 1
 
@@ -251,6 +301,7 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 	chain_step = next_step
 	_weapon_streak = next_streak
 	_last_hand = hand
+	_last_weapon = weapon
 	lp -= attack.lp_cost
 	if attack.lp_cost > 0.0:
 		_lp_regen_delay = 0.75
@@ -260,10 +311,11 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
 	a.weapon = weapon
 	a.attack = attack
 	a.hard = hard
+	a.sustained = sustained
 	_aim(a)
 	_current = a
 	_chain_expire = 0.0
-	_animate(hand, attack)
+	_animate(hand, attack, sustained)
 	if chain_step == MAX_CHAIN and _weapon_streak == MAX_CHAIN:
 		combo_feedback.emit("Finisher!")
 	attack_started.emit(hand, weapon, attack, chain_step, hard)
@@ -273,6 +325,9 @@ func _update_attack(delta: float) -> void:
 	var cur := _current
 	cur.elapsed += delta
 	var a := cur.attack
+	if cur.sustained:
+		_update_sustained(cur, delta)
+		return
 	if a.is_projectile:
 		if not cur.fired and cur.elapsed >= a.active_start:
 			cur.fired = true
@@ -289,6 +344,33 @@ func _update_attack(delta: float) -> void:
 		else:
 			# Grace period: the window can stay open a little after the attack ends.
 			_chain_expire = _time + maxf(a.window_close - a.duration, 0.0)
+		_current = null
+
+
+## Hits every sustained_tick while the button is held, then winds down for the
+## attack's duration after release.
+func _update_sustained(cur: ActiveAttack, delta: float) -> void:
+	var a := cur.attack
+	if not cur.releasing and Input.is_action_pressed(_action_for(cur.hand)):
+		cur.tick -= delta
+		if cur.tick <= 0.0:
+			if a.lp_cost > 0.0 and lp < a.lp_cost:
+				combo_feedback.emit("Not enough LP")
+				cur.releasing = true
+			else:
+				lp -= a.lp_cost
+				cur.tick = a.sustained_tick
+				cur.hit.clear()
+				_melee_hits(cur)
+				_hitbox_flash = 0.08
+		return
+	if not cur.releasing:
+		cur.releasing = true
+		cur.release_timer = a.duration
+		_return_to_rest(cur.hand)
+	cur.release_timer -= delta
+	if cur.release_timer <= 0.0:
+		chain_step = 0
 		_current = null
 
 
@@ -319,6 +401,11 @@ func _aim(a: ActiveAttack) -> void:
 	var dir := -_player.global_basis.z
 	if target:
 		dir = target.global_position - _player.global_position
+	elif a.attack.move_speed_scale > 0.0:
+		# Mobile attack with nothing to aim at: fire where the stick points.
+		var move := _player.get_move_input_direction()
+		if move.length_squared() > 0.04:
+			dir = move
 	dir.y = 0.0
 	if dir.length_squared() < 0.0001:
 		dir = -_player.global_basis.z
@@ -426,6 +513,7 @@ func _equip_visuals() -> void:
 	for hand in [Hand.LEFT, Hand.RIGHT]:
 		var w := current_weapon(hand)
 		var mesh_instance := _meshes[hand]
+		rotation.y = 0.0
 		if w == null:
 			mesh_instance.mesh = null
 			continue
@@ -455,7 +543,7 @@ func _return_to_rest(hand: int) -> void:
 	_pivots[hand].position.z = -0.1
 
 
-func _animate(hand: int, a: AttackData) -> void:
+func _animate(hand: int, a: AttackData, sustained: bool = false) -> void:
 	var pivot := _pivots[hand]
 	if _tweens[hand]:
 		_tweens[hand].kill()
@@ -481,6 +569,16 @@ func _animate(hand: int, a: AttackData) -> void:
 		AttackData.Swing.CAST:
 			start = Vector3(0.3, 0.0, 0.0)
 			finish = Vector3(0.1, 0.0, 0.0)
+		AttackData.Swing.SPIN:
+			# Arms out, then the whole Combat node spins once around the Seeker.
+			start = Vector3(-0.1, 0.0, 0.0)
+			finish = Vector3(-0.1, 0.0, 0.0)
+			if not sustained:
+				_spin_once(a)
+
+	if sustained:
+		pivot.rotation = start  # arms out for the whole spin
+		return
 
 	var windup := maxf(a.active_start, 0.03)
 	var active := maxf(a.active_end - a.active_start, 0.05)
@@ -494,6 +592,17 @@ func _animate(hand: int, a: AttackData) -> void:
 		tween.tween_property(pivot, "rotation", finish, active)
 	tween.tween_property(pivot, "rotation", _rest_pose(hand), recover)
 	_tweens[hand] = tween
+
+
+func _spin_once(a: AttackData) -> void:
+	_spin_tweening = true
+	rotation.y = 0.0
+	var spin := create_tween()
+	spin.tween_interval(maxf(a.active_start - 0.03, 0.0))
+	spin.tween_property(self, "rotation:y", -TAU, maxf(a.active_end - a.active_start, 0.1) + 0.06)
+	spin.tween_callback(func():
+		rotation.y = 0.0
+		_spin_tweening = false)
 
 
 func _build_hitbox_debug() -> void:
@@ -513,9 +622,11 @@ func _build_hitbox_debug() -> void:
 
 
 func _update_hitbox_debug() -> void:
+	_hitbox_flash = maxf(_hitbox_flash - get_physics_process_delta_time(), 0.0)
 	var live := show_hitboxes and _current != null and not _current.attack.is_projectile \
-		and _current.elapsed >= _current.attack.active_start \
-		and _current.elapsed <= _current.attack.active_end
+		and ((_current.sustained and _hitbox_flash > 0.0) or (not _current.sustained
+			and _current.elapsed >= _current.attack.active_start
+			and _current.elapsed <= _current.attack.active_end))
 	_hitbox_debug.visible = live
 	if live:
 		(_hitbox_debug.mesh as BoxMesh).size = _current.attack.hitbox_size

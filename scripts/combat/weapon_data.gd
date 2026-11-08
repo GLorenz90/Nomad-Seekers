@@ -17,6 +17,9 @@ enum Weight { LIGHT, HEAVY }
 @export var no_combo := false
 ## Exists only to cast spells. Spells never build a chain.
 @export var casting := false
+## Holding the button runs sustained_attack for as long as it's held, in place
+## of a Hard attack (North Star "Sustained" tag).
+@export var sustained := false
 @export var base_damage := 10.0
 @export var damage_type: Element.Type = Element.Type.GENERIC
 
@@ -24,6 +27,8 @@ enum Weight { LIGHT, HEAVY }
 @export var hard_attacks: Array[AttackData] = []
 ## Casting items only: slot 0 on the hand button, slot 1 with Shift (RT) held.
 @export var spells: Array[SpellData] = []
+## Sustained weapons only. Its duration is the wind-down after release.
+@export var sustained_attack: AttackData
 
 @export_group("Placeholder visual")
 @export var mesh_size := Vector3(0.08, 0.08, 1.0)
@@ -36,6 +41,8 @@ func get_attack(step: int, hard: bool, spell_slot: int = 0) -> AttackData:
 			return null
 		var spell := spells[clampi(spell_slot, 0, spells.size() - 1)]
 		return spell.hard if hard else spell.normal
+	if hard and sustained:
+		return sustained_attack
 	var list := hard_attacks if hard else normal_attacks
 	if list.is_empty():
 		return null

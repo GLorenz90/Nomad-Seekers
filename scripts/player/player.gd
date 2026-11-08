@@ -10,8 +10,9 @@ extends CharacterBody3D
 ## stops, a forgiving jump (coyote time + input buffer), and a dash you can
 ## chain into a jump.
 ##
-## While an attack plays (see CombatController) the Seeker is rooted apart from
-## the attack's lunge. Dashing cancels an attack once its hit is out.
+## While an attack plays (see CombatController) the Seeker is either rooted
+## (apart from the attack's lunge) or keeps moving at the attack's reduced
+## move_speed_scale, without jumping. Dashing cancels an attack once its hit is out.
 
 signal jumped
 signal landed
@@ -92,7 +93,7 @@ func _physics_process(delta: float) -> void:
 	if state == State.DASH:
 		_process_dash(delta)
 	elif combat.is_attacking():
-		_process_attacking(delta)
+		_process_attacking(delta, move_dir)
 	else:
 		_process_movement(delta, move_dir)
 
@@ -113,6 +114,11 @@ func is_invulnerable() -> bool:
 	return _invuln_timer > 0.0
 
 
+## Camera-relative stick direction (zero when the stick is centered).
+func get_move_input_direction() -> Vector3:
+	return _get_move_direction()
+
+
 ## Snap to face a direction (used when an attack starts).
 func face_direction(direction: Vector3) -> void:
 	direction.y = 0.0
@@ -129,10 +135,11 @@ func get_debug_text() -> String:
 
 # --- Movement ---------------------------------------------------------------
 
-func _process_movement(delta: float, move_dir: Vector3) -> void:
+func _process_movement(delta: float, move_dir: Vector3, speed_scale: float = 1.0,
+		can_jump: bool = true) -> void:
 	var on_floor := is_on_floor()
 
-	if _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
+	if can_jump and _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
 		_do_jump()
 		on_floor = false
 
@@ -142,7 +149,7 @@ func _process_movement(delta: float, move_dir: Vector3) -> void:
 			gravity *= jump_cut_gravity_scale
 		velocity.y = maxf(velocity.y - gravity * delta, -max_fall_speed)
 
-	var speed := move_speed * (lock_on_speed_scale if get_lock_target() else 1.0)
+	var speed := move_speed * speed_scale * (lock_on_speed_scale if get_lock_target() else 1.0)
 	var desired := move_dir * speed
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z)
 	var rate := acceleration if move_dir.length_squared() > 0.0001 else deceleration
@@ -153,8 +160,12 @@ func _process_movement(delta: float, move_dir: Vector3) -> void:
 	velocity.z = horizontal.z
 
 
-## Rooted while attacking, apart from the attack's own lunge.
-func _process_attacking(delta: float) -> void:
+## Mobile attacks keep walking at a reduced speed; rooted ones only lunge.
+func _process_attacking(delta: float, move_dir: Vector3) -> void:
+	var scale := combat.get_move_scale()
+	if scale > 0.0:
+		_process_movement(delta, move_dir, scale, false)
+		return
 	if not is_on_floor():
 		velocity.y = maxf(velocity.y - _gravity_down * delta, -max_fall_speed)
 	var lunge := combat.get_lunge_velocity()
@@ -215,8 +226,8 @@ func _camera_forward() -> Vector3:
 
 func _update_facing(delta: float, move_dir: Vector3) -> void:
 	var target := get_lock_target()
-	if combat.is_attacking() and target == null:
-		return  # The attack set our facing.
+	if combat.controls_facing() and target == null:
+		return  # The attack aims us (strafe while firing).
 	var face := Vector3.ZERO
 	if target:
 		face = target.global_position - global_position
