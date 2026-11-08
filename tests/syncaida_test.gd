@@ -62,6 +62,12 @@ func _run() -> void:
 	_check("and gives DEF +40, SOL +10, DEX stays at 0 (%s)" % [pip.stat_xp],
 		is_equal_approx(pip.stat_xp[&"def"], 40.0) and is_equal_approx(pip.stat_xp[&"sol"], 10.0)
 		and is_equal_approx(pip.stat_xp[&"dex"], 0.0))
+	_check("stat progress shows how close each stat is to its next level (DEF 40%, STR 0%)",
+		is_equal_approx(pip.stat_progress(&"def"), 0.4) and is_equal_approx(pip.stat_progress(&"str"), 0.0))
+	var menu_rows: Dictionary = (_main.loadout_menu as LoadoutMenu)._sync_stat_rows
+	(_main.loadout_menu as LoadoutMenu)._refresh_syncaida()
+	_check("the SyncAIDa tab shows a progress bar per stat (DEF %s, %s)" % [(menu_rows[&"def"][0] as Label).text, (menu_rows[&"def"][2] as Label).text],
+		is_equal_approx((menu_rows[&"def"][1] as ProgressBar).value, 0.4) and (menu_rows[&"str"][0] as Label).text == "Lv 5")
 	_check("Lumidium you don't have can't be fed", _sync.feed(&"fire").is_empty())
 	save.inventory.lumidium[&"fire"] = 2
 	_sync.feed(&"fire")

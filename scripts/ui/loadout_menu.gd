@@ -59,6 +59,8 @@ var _sync_owned: VBoxContainer
 var _sync_starter_title: Label
 var _sync_starters: VBoxContainer
 var _sync_info: Label
+## Per-stat rows: stat -> [level Label, ProgressBar, percent Label].
+var _sync_stat_rows := {}
 var _sync_feeds: GridContainer
 var _sync_burst: OptionButton
 var _sync_message: Label
@@ -594,6 +596,36 @@ func _build_syncaida_tab() -> void:
 	columns.add_child(mid)
 	_sync_info = _label("", 17)
 	mid.add_child(_sync_info)
+	# PSO-style per-stat progress: level, a bar to the next level, and percent.
+	var stats := GridContainer.new()
+	stats.columns = 4
+	stats.add_theme_constant_override("h_separation", 10)
+	mid.add_child(stats)
+	for stat in SyncAIDaData.STATS:
+		var stat_label := _label(SyncAIDaData.STAT_NAMES[stat], 17)
+		stat_label.modulate = SyncAIDaData.STAT_COLORS[stat].lightened(0.3)
+		stat_label.custom_minimum_size.x = 48.0
+		stats.add_child(stat_label)
+		var lv := _label("", 17)
+		lv.custom_minimum_size.x = 64.0
+		stats.add_child(lv)
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(220.0, 16.0)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.max_value = 1.0
+		bar.step = 0.001
+		bar.show_percentage = false
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = SyncAIDaData.STAT_COLORS[stat]
+		bar.add_theme_stylebox_override("fill", fill)
+		var track := StyleBoxFlat.new()
+		track.bg_color = Color(0.2, 0.22, 0.28)
+		bar.add_theme_stylebox_override("background", track)
+		stats.add_child(bar)
+		var pct := _label("", 15)
+		pct.custom_minimum_size.x = 56.0
+		stats.add_child(pct)
+		_sync_stat_rows[stat] = [lv, bar, pct]
 	var burst_row := HBoxContainer.new()
 	burst_row.add_child(_label("Active Sync Burst ", 17))
 	_sync_burst = OptionButton.new()
@@ -722,14 +754,24 @@ func _refresh_syncaida() -> void:
 		_sync_info.text = "No SyncAIDa yet. Pick a starter on the left:\neach begins at level 5 in one stat."
 		_sync_burst.clear()
 		_sync_burst.disabled = true
+		for stat in SyncAIDaData.STATS:
+			var row: Array = _sync_stat_rows[stat]
+			(row[0] as Label).text = "-"
+			(row[1] as ProgressBar).value = 0.0
+			(row[2] as Label).text = ""
 		return
 	var next := d.next_milestone()
 	var bonus := d.bonuses()
-	_sync_info.text = "%s  (%s)\nLevel %d / %d%s\n%s\nAdds to you: DEF +%d  STR +%d  DEX +%d  SOL +%d\nSync gauge %d%%" % [
+	_sync_info.text = "%s  (%s)\nLevel %d / %d%s\nAdds to you: DEF +%d  STR +%d  DEX +%d  SOL +%d\nSync gauge %d%%" % [
 		d.display_name, d.form, d.level(), SyncAIDaData.MAX_LEVEL,
 		"   next evolution at %d" % next if next > 0 else "",
-		d.describe_stats(), int(bonus[&"def"]), int(bonus[&"str"]), int(bonus[&"dex"]), int(bonus[&"sol"]),
+		int(bonus[&"def"]), int(bonus[&"str"]), int(bonus[&"dex"]), int(bonus[&"sol"]),
 		roundi(d.gauge)]
+	for stat in SyncAIDaData.STATS:
+		var row: Array = _sync_stat_rows[stat]
+		(row[0] as Label).text = "Lv %d" % d.stat_level(stat)
+		(row[1] as ProgressBar).value = d.stat_progress(stat)
+		(row[2] as Label).text = "%d%%" % floori(d.stat_progress(stat) * 100.0)
 	_sync_info.modulate = d.color().lightened(0.4)
 	_sync_burst.clear()
 	for b in d.bursts:

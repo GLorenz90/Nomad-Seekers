@@ -102,6 +102,11 @@ func stat_level(stat: StringName) -> int:
 	return floori(float(stat_xp.get(stat, 0.0)) / XP_PER_LEVEL)
 
 
+## How far the stat is toward its next level, 0..1 (PSO's per-stat gauge).
+func stat_progress(stat: StringName) -> float:
+	return fmod(float(stat_xp.get(stat, 0.0)), XP_PER_LEVEL) / XP_PER_LEVEL
+
+
 func level() -> int:
 	var total := 0
 	for stat in STATS:

@@ -287,6 +287,14 @@ func _run() -> void:
 	Input.action_release("hand_x")
 	await _idle()
 	_check("Machine Pistol automatic fire (%d shots in 1 s)" % fired, fired >= 6)
+	var mp := _w("machine_pistol")
+	var ar := _w("assault_rifle")
+	_check("Machine Pistol: single-shot taps, half its old damage, the AR's old rate (count %d, base %.1f, tick %.2f)" % [
+		mp.normal_attacks[0].projectile_count, mp.base_damage, mp.sustained_attack.sustained_tick],
+		mp.normal_attacks[0].projectile_count == 1 and is_equal_approx(mp.base_damage, 3.0)
+		and is_equal_approx(mp.sustained_attack.sustained_tick, 0.11))
+	_check("Assault Rifle: 33%% slower, +25%% damage (tick %.3f, base %.2f)" % [ar.sustained_attack.sustained_tick, ar.base_damage],
+		is_equal_approx(ar.sustained_attack.sustained_tick, 0.146) and is_equal_approx(ar.base_damage, 11.25))
 
 	# --- Staff, Heal and Cure ----------------------------------------------
 	_combat.set_job("I")

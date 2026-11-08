@@ -548,14 +548,13 @@ func _full_list() -> Array[WeaponData]:
 		0.9, Vector3(1.1, 1.4, 1.4), 0.5))
 
 	# --- Ranged ---
-	# Machine Pistol: tap = a 3-round burst (PSO mechgun frames x0.6), hold = automatic fire.
-	var mp := _gun(_weapon("Machine Pistol", &"machine_pistol", WeaponData.WeaponClass.RANGED, false, false, 6.0,
-		Vector3(0.08, 0.16, 0.42), gun), MECHGUN_N, MECHGUN_N, 0.6, 38.0, 25.0, true, 1.5, 1.5)
-	for a in mp.normal_attacks:
-		a.projectile_count = 3
-		a.spread_deg = 6.0
+	# Machine Pistol: an automatic pistol (Grayson, 2026-11-08). Hold fires at the
+	# Assault Rifle's original rate (0.11 s); taps are single quick pistol shots
+	# (PSO handgun frames x0.7). Half the damage it had (base 6 -> 3).
+	var mp := _gun(_weapon("Machine Pistol", &"machine_pistol", WeaponData.WeaponClass.RANGED, false, false, 3.0,
+		Vector3(0.08, 0.16, 0.42), gun), HANDGUN_N, HANDGUN_H, 0.7, 38.0, 25.0, true, 0.5, 1.5)
 	mp.sustained = true
-	mp.sustained_attack = _auto_fire("Automatic Fire", 0.1, 38.0, 25.0, 0.5, 0.5)
+	mp.sustained_attack = _auto_fire("Automatic Fire", 0.11, 38.0, 25.0, 0.5, 0.4)
 	list.append(mp)
 	# Hand Shotgun: close-range spread; PSO shot frames x0.8.
 	var hs := _gun(_weapon("Hand Shotgun", &"hand_shotgun", WeaponData.WeaponClass.RANGED, true, false, 7.0,
@@ -572,11 +571,13 @@ func _full_list() -> Array[WeaponData]:
 		a.projectile_pierce = true
 		a.window_close += _f(15)
 	list.append(rifle)
-	# Assault Rifle: heavy repeater; taps are rifle shots, hold = automatic fire at a slow walk.
-	var ar := _gun(_weapon("Assault Rifle", &"assault_rifle", WeaponData.WeaponClass.RANGED, true, true, 9.0,
-		Vector3(0.1, 0.18, 1.1), gun), RIFLE_N, RIFLE_H, 0.8, 50.0, 35.0, false, 1.0, 2.0)
+	# Assault Rifle: heavy repeater; taps are rifle shots, hold = automatic fire at a
+	# slow walk. Tuned by feel (Grayson, 2026-11-08): 33% slower (tick 0.11 -> 0.146,
+	# taps x0.8 -> x1.065) and 25% more damage (base 9 -> 11.25).
+	var ar := _gun(_weapon("Assault Rifle", &"assault_rifle", WeaponData.WeaponClass.RANGED, true, true, 11.25,
+		Vector3(0.1, 0.18, 1.1), gun), RIFLE_N, RIFLE_H, 1.065, 50.0, 35.0, false, 1.0, 2.0)
 	ar.sustained = true
-	ar.sustained_attack = _auto_fire("Automatic Fire", 0.11, 50.0, 35.0, 0.3, 0.6)
+	ar.sustained_attack = _auto_fire("Automatic Fire", 0.146, 50.0, 35.0, 0.3, 0.6)
 	list.append(ar)
 	# Shotgun: wide spread; PSO shot frames.
 	var sg := _gun(_weapon("Shotgun", &"shotgun", WeaponData.WeaponClass.RANGED, true, true, 8.0,
