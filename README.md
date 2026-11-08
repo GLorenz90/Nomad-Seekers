@@ -108,7 +108,7 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 
 | Tab | What's there |
 |---|---|
-| Loadouts | 8 loadouts, weapon picker (job-locked weapons are grey; A on one says which job needs it), Double-Heavy augment |
+| Loadouts | 8 loadouts, weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy augment |
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
 | Character | Name (New name button for gamepads), race, gender, emblem and drop pool. The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst |

@@ -30,13 +30,13 @@ func _initialize() -> void:
 
 ## Job locks (North Star §5.3 Jobs column): S = Striker, R = Ranger, I = Invoker.
 const JOBS := {
-	&"sword": "SRI", &"great_sword": "S", &"bladestaff": "S", &"dagger": "SRI", &"spear": "S",
+	&"sword": "SRI", &"great_sword": "S", &"bladestaff": "SI", &"dagger": "SRI", &"spear": "S",
 	&"halberd": "S", &"mace": "SI", &"maul": "S", &"flail": "S", &"axe": "S", &"great_axe": "S",
 	&"glove": "S", &"dervish_blades": "S", &"shield": "SRI", &"heavy_shield": "S",
 	&"pistol": "SRI", &"machine_pistol": "R", &"hand_shotgun": "R", &"rifle": "R",
 	&"assault_rifle": "R", &"shotgun": "R", &"bazooka": "R", &"grenade": "RS",
 	&"grenade_launcher": "R", &"thrown_daggers": "RS", &"boomerang": "SR", &"gigarang": "S",
-	&"bow": "R", &"crossbow": "R", &"arbalest": "R", &"gunblade": "SR", &"burstbow": "R", &"wand": "SRI", &"cane": "I",
+	&"bow": "RI", &"crossbow": "RI", &"arbalest": "R", &"gunblade": "SR", &"burstbow": "R", &"wand": "SRI", &"cane": "I",
 	&"staff": "I", &"cards": "IR", &"talisman": "I", &"totem": "I", &"ward": "IS", &"barrier": "I",
 }
 

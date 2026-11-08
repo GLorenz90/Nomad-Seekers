@@ -73,11 +73,24 @@ func _run() -> void:
 	await _pad(JOY_BUTTON_B)
 	_check("B closes only the picker", _menu.visible and not _menu._picker.visible and _focused() == _menu._slot_buttons[0][1])
 	await _pad(JOY_BUTTON_A)
-	await _pad(JOY_BUTTON_DPAD_DOWN)  # first base weapon: Arbalest (Ranger only)
+	var listed := []
+	for child in _menu._picker_list.get_children():
+		if child is Button:
+			listed.append((child as Button).text.get_slice("  (", 0))
+	_check("the picker lists all 41 weapons, Gunblade and Burstbow included (%d)" % (listed.size() - 1),
+		listed.size() - 1 == 41 and "Burstbow" in listed and "Gunblade" in listed)
+	for i in 30:
+		if _focused_text().begins_with("Arbalest"):  # Ranger only
+			break
+		await _pad(JOY_BUTTON_DPAD_DOWN)
 	_menu._message.text = ""
 	await _pad(JOY_BUTTON_A)
 	_check("A on a job-locked weapon explains the lock and keeps the picker open (%s)" % _menu._message.text,
 		_menu._picker.visible and _menu._message.text.contains("needs"))
+	for i in 40:
+		if _focused_text().begins_with("Dagger"):
+			break
+		await _pad(JOY_BUTTON_DPAD_UP)
 	for i in 40:
 		if _focused_text().begins_with("Dagger"):
 			break

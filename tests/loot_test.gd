@@ -57,6 +57,9 @@ func _run() -> void:
 	_check("Rifle is Ranger-only (%s)" % rifle.jobs_text(), not rifle.can_be_used_by("S") and rifle.can_be_used_by("R"))
 	_check("Pistol, Sword, Dagger and Wand are for every job",
 		_w("pistol").jobs.size() == 3 and _w("sword").jobs.size() == 3 and _w("dagger").jobs.size() == 3 and _w("wand").jobs.size() == 3)
+	_check("Bow, Crossbow and Bladestaff are open to Invokers (%s / %s / %s)" % [_w("bow").jobs_text(), _w("crossbow").jobs_text(), _w("bladestaff").jobs_text()],
+		_w("bow").can_be_used_by("I") and _w("crossbow").can_be_used_by("I") and _w("bladestaff").can_be_used_by("I")
+		and not _w("burstbow").can_be_used_by("I"))
 	_check("Staff is a 2h Invoker item with 4 spells", _w("staff").two_handed and _w("staff").spells.size() == 4 and _w("staff").jobs_text() == "I")
 	var rare_emblems := {}
 	for r in Loot.rare_weapons():

@@ -408,9 +408,15 @@ func _rebuild_picker() -> void:
 		_picker_list.add_child(_label("Found", 14))
 	for w in found:
 		_picker_list.add_child(_weapon_button(w, true))
-	_picker_list.add_child(_label("Base weapons", 14))
-	for w in _weapons:
-		_picker_list.add_child(_weapon_button(w, false))
+	# Base weapons grouped like the North Star's weapon table, A-Z in each group.
+	for group in [["Melee", WeaponData.WeaponClass.MELEE, false], ["Ranged", WeaponData.WeaponClass.RANGED, false],
+			["Magic", WeaponData.WeaponClass.MAGIC, false], ["Shields", -1, true]]:
+		var header := _label(group[0], 14)
+		header.modulate = Color(0.7, 0.8, 1.0)
+		_picker_list.add_child(header)
+		for w in _weapons:
+			if w.is_shield == group[2] and (group[2] or w.weapon_class == group[1]):
+				_picker_list.add_child(_weapon_button(w, false))
 
 
 func _weapon_button(w: WeaponData, found: bool) -> Button:
