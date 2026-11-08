@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1_b7eyv"]
+
+[resource]
+script = ExtResource("1_b7eyv")
+display_name = "Sentry Drone"
+enemy_type = 2
+notes = "Malfunctioning security robot. Holds ~9 m and fires Lightning bolts (ranged, reflectable)."
+max_hp = 140.0
+defense = 30.0
+resolve = 5.0
+weak_to = 3
+resists = 2
+move_speed = 3.0
+hover_height = 0.4
+attack_style = 1
+attack_damage = 14.0
+attack_element = 3
+status_power = 1.5
+attack_range = 10.0
+min_range = 5.0
+recovery = 0.5
+attack_interval = 2.2
+projectile_speed = 14.0
+shape = 1
+color = Color(0.55, 0.58, 0.62, 1)
+size = Vector3(1, 1.2, 1)

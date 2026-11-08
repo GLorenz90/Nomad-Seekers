@@ -69,6 +69,7 @@ var _squash_tween: Tween
 @onready var _visual: Node3D = $Visual
 @onready var combat: CombatController = $Combat
 @onready var health: Health = $Health
+@onready var status: StatusEffects = $StatusEffects
 
 
 func _ready() -> void:
@@ -86,7 +87,7 @@ func _physics_process(delta: float) -> void:
 
 	var move_dir := _get_move_direction()
 
-	if Input.is_action_just_pressed("dash") and _can_dash():
+	if Input.is_action_just_pressed("dash") and _can_dash() and status.can_act():
 		combat.cancel()
 		_start_dash(move_dir)
 
@@ -114,17 +115,23 @@ func is_invulnerable() -> bool:
 	return _invuln_timer > 0.0
 
 
-## Every incoming enemy hit goes through here: dash i-frames, then blocking and
-## parrying (CombatController.resolve_incoming), then Health.
-func receive_hit(info: DamageInfo, attacker: Node3D) -> float:
+## Every incoming enemy hit goes through here: dash i-frames, an EVA miss
+## roll, blocking / parrying / reflecting (CombatController.resolve_incoming),
+## then DEF / RES / EVA reduction, Health, and status buildup.
+func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) -> float:
 	if is_invulnerable():
 		combat.combo_feedback.emit("Dodged")
 		return 0.0
-	var scale := combat.resolve_incoming(attacker)
-	if scale <= 0.0:
+	var s := combat.stats
+	if randf() < Defense.miss_chance(info.kind, s.evasion):
+		DamageNumber.spawn_text(get_parent(), global_position + Vector3.UP * 1.9, "Miss")
 		return 0.0
-	info.amount *= scale
+	var block_scale := combat.resolve_incoming(attacker, projectile)
+	if block_scale <= 0.0:
+		return 0.0
+	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense, s.resolve, s.evasion)
 	var amount := health.take_damage(info)
+	status.add_buildup(info, attacker)
 	DamageNumber.spawn(get_parent(), global_position + Vector3.UP * 1.9, amount, info.damage_type, false)
 	return amount
 
@@ -154,7 +161,7 @@ func _process_movement(delta: float, move_dir: Vector3, speed_scale: float = 1.0
 		can_jump: bool = true) -> void:
 	var on_floor := is_on_floor()
 
-	if can_jump and _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
+	if can_jump and status.can_act() and _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
 		_do_jump()
 		on_floor = false
 
@@ -164,7 +171,8 @@ func _process_movement(delta: float, move_dir: Vector3, speed_scale: float = 1.0
 			gravity *= jump_cut_gravity_scale
 		velocity.y = maxf(velocity.y - gravity * delta, -max_fall_speed)
 
-	var speed := move_speed * speed_scale * (lock_on_speed_scale if get_lock_target() else 1.0)
+	var speed := move_speed * speed_scale * status.move_scale() \
+		* (lock_on_speed_scale if get_lock_target() else 1.0)
 	var desired := move_dir * speed
 	var horizontal := Vector3(velocity.x, 0.0, velocity.z)
 	var rate := acceleration if move_dir.length_squared() > 0.0001 else deceleration

@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1_jlbpl"]
+
+[resource]
+script = ExtResource("1_jlbpl")
+display_name = "Umbral Eye"
+enemy_type = 3
+notes = "Alien-eldritch spawn of Malbona Mallumo. Hangs back and casts Dark bolts that Drain (magic, reflectable)."
+max_hp = 110.0
+resolve = 35.0
+weak_to = 5
+resists = 6
+move_speed = 2.6
+hover_height = 1.0
+attack_style = 2
+attack_damage = 20.0
+attack_element = 6
+status_power = 2.0
+attack_range = 12.0
+min_range = 6.0
+windup = 0.9
+recovery = 0.7
+attack_interval = 2.8
+projectile_speed = 9.0
+shape = 2
+color = Color(0.35, 0.2, 0.5, 1)
+size = Vector3(1.1, 1.1, 1.1)

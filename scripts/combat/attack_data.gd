@@ -17,6 +17,8 @@ enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST, SPIN }
 @export var override_damage_type := false
 @export var damage_type: Element.Type = Element.Type.GENERIC
 @export var lp_cost := 0.0
+## Multiplies the status buildup this attack's elemental damage adds.
+@export var status_power := 1.0
 @export var swing: Swing = Swing.SLASH_RIGHT
 
 @export_group("Movement")

@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_526w1"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_fprbl"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_jexfg"]
+
+[sub_resource type="Resource" id="Resource_nadk3"]
+script = ExtResource("1_526w1")
+display_name = "Reflect"
+damage_mult = 0.3
+swing = 3
+duration = 0.4
+active_start = 0.1
+active_end = 0.2
+window_open = 0.4
+window_close = 0.4
+lunge_distance = 0.0
+reach = 0.9
+hitbox_size = Vector3(1.4, 1.6, 1)
+opens_parry = 0.3
+
+[resource]
+script = ExtResource("2_fprbl")
+display_name = "Ward"
+weapon_type = &"ward"
+weapon_class = 2
+no_combo = true
+is_shield = true
+reflects = true
+block_strength = 0.5
+base_damage = 6.0
+normal_attacks = Array[ExtResource("1_526w1")]([SubResource("Resource_nadk3")])
+hard_attacks = Array[ExtResource("1_526w1")]([SubResource("Resource_nadk3")])
+mesh_size = Vector3(0.55, 0.65, 0.06)
+mesh_color = Color(0.6, 0.45, 1, 1)

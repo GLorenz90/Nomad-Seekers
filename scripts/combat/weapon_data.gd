@@ -25,6 +25,9 @@ enum Weight { LIGHT, HEAVY }
 @export var sustained := false
 ## Shields block with LT; their hand button deflects (light) or shoves (heavy).
 @export var is_shield := false
+## Magic shields (Ward, Barrier): a parry reflects enemy shots and spells back
+## at the shooter, but they can't parry melee (only block it).
+@export var reflects := false
 ## Fraction of damage stopped when blocking with LT. Shields set their own;
 ## two-handed weapons default to about half a light shield.
 @export_range(0.0, 1.0) var block_strength := 0.3

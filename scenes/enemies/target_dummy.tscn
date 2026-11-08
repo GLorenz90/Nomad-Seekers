@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/enemies/target_dummy.gd" id="1_dummy"]
 [ext_resource type="Script" path="res://scripts/combat/health.gd" id="2_health"]
+[ext_resource type="Script" path="res://scripts/combat/status_effects.gd" id="3_status"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_dummy"]
 radius = 0.45
@@ -44,3 +45,6 @@ path_desired_distance = 0.5
 target_desired_distance = 0.5
 height = 1.8
 radius = 0.45
+
+[node name="StatusEffects" type="Node" parent="."]
+script = ExtResource("3_status")

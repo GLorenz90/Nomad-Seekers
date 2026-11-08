@@ -22,6 +22,9 @@ var _lp_bar: ProgressBar
 var _pips: Label
 var _hands: Label
 var _lt: Label
+var _status: Label
+var _banner: Label
+var _banner_tween: Tween
 var _feedback: Label
 var _feedback_tween: Tween
 
@@ -66,6 +69,7 @@ func _process(_delta: float) -> void:
 	else:
 		_hands.text = "%d  X: %s    Y: %s" % [combat.loadout_index + 1, _weapon_label(x_hand), _weapon_label(y_hand)]
 	_lt.text = combat.get_lt_text()
+	_status.text = player.status.describe()
 	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE
 	if _panel.visible:
 		_debug.text = "%s\n%s\n%s\nFPS: %d" % [
@@ -83,6 +87,17 @@ func _weapon_label(hand: int) -> String:
 	return w.display_name
 
 
+## Big centered text for room events ("Wave 2 / 3", "Room clear").
+func show_banner(text: String) -> void:
+	_banner.text = text
+	_banner.modulate.a = 1.0
+	if _banner_tween:
+		_banner_tween.kill()
+	_banner_tween = create_tween()
+	_banner_tween.tween_interval(1.4)
+	_banner_tween.tween_property(_banner, "modulate:a", 0.0, 0.6)
+
+
 func _show_feedback(text: String) -> void:
 	_feedback.text = text
 	_feedback.modulate.a = 1.0
@@ -98,7 +113,7 @@ func _build_status() -> void:
 	box.anchor_top = 1.0
 	box.anchor_bottom = 1.0
 	box.offset_left = 24.0
-	box.offset_top = -175.0
+	box.offset_top = -200.0
 	box.offset_right = 420.0
 	box.offset_bottom = -20.0
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -108,6 +123,8 @@ func _build_status() -> void:
 	_pips = _label(box, 20)
 	_hands = _label(box, 18)
 	_lt = _label(box, 16)
+	_status = _label(box, 16)
+	_status.modulate = Color(1.0, 0.75, 0.5)
 
 	_feedback = _label(self, 34)
 	_feedback.anchor_left = 0.5
@@ -118,6 +135,16 @@ func _build_status() -> void:
 	_feedback.offset_right = 200.0
 	_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_feedback.modulate.a = 0.0
+
+	_banner = _label(self, 44)
+	_banner.anchor_left = 0.5
+	_banner.anchor_right = 0.5
+	_banner.anchor_top = 0.18
+	_banner.anchor_bottom = 0.18
+	_banner.offset_left = -400.0
+	_banner.offset_right = 400.0
+	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner.modulate.a = 0.0
 
 
 func _bar(parent: Node, caption: String, color: Color) -> ProgressBar:

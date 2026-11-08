@@ -16,6 +16,8 @@ func _initialize() -> void:
 	_save(_axe(), "axe")
 	_save(_shield(), "shield")
 	_save(_heavy_shield(), "heavy_shield")
+	_save(_ward(), "ward")
+	_save(_barrier(), "barrier")
 	quit()
 
 
@@ -324,3 +326,38 @@ func _heavy_shield() -> WeaponData:
 	w.normal_attacks = [shove]
 	w.hard_attacks = [shove]
 	return w
+
+
+## Magic shields (North Star §5.1): a parry reflects enemy shots and spells
+## back at the shooter. They can't parry melee, only block it. The hand button
+## opens a reflect window.
+func _magic_shield(name: String, type: StringName, heavy: bool, block: float,
+		window_frames: float, color: Color, size: Vector3) -> WeaponData:
+	var w := WeaponData.new()
+	w.display_name = name
+	w.weapon_type = type
+	w.weapon_class = WeaponData.WeaponClass.MAGIC
+	w.weight = WeaponData.Weight.HEAVY if heavy else WeaponData.Weight.LIGHT
+	w.is_shield = true
+	w.reflects = true
+	w.no_combo = true
+	w.block_strength = block
+	w.base_damage = 6.0
+	w.mesh_size = size
+	w.mesh_color = color
+	var reflect := _attack("Reflect", AttackData.Swing.THRUST, 0.3, 3, 12, 12)
+	reflect.opens_parry = _f(window_frames)
+	reflect.lunge_distance = 0.0
+	reflect.reach = 0.9
+	reflect.hitbox_size = Vector3(1.4, 1.6, 1.0)
+	w.normal_attacks = [reflect]
+	w.hard_attacks = [reflect]
+	return w
+
+
+func _ward() -> WeaponData:
+	return _magic_shield("Ward", &"ward", false, 0.5, 9, Color(0.6, 0.45, 1.0), Vector3(0.55, 0.65, 0.06))
+
+
+func _barrier() -> WeaponData:
+	return _magic_shield("Barrier", &"barrier", true, 0.75, 12, Color(0.45, 0.3, 0.9), Vector3(0.75, 0.95, 0.1))

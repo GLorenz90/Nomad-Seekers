@@ -3,7 +3,8 @@ extends Node3D
 ## Bullet / spell bolt. Moves in a straight line, sweeps for hits each physics
 ## step (so fast shots don't tunnel through enemies) and stops on world geometry.
 ## Hits bodies on target_mask: enemies for the Seeker's shots, the player for
-## enemy shots. Bodies with receive_hit() (the Player) get to block or parry.
+## enemy shots. Hits go through HitResolver, so the Seeker can block, parry or
+## (with a Ward or Barrier) reflect them back at the shooter.
 
 const WORLD_MASK := 1
 const ENEMY_MASK := 4
@@ -19,6 +20,7 @@ var target_mask := ENEMY_MASK
 var shooter: Node3D
 
 var _travelled := 0.0
+var _reflected := false
 var _already_hit: Array[Node] = []
 var _exclude: Array[RID] = []
 
@@ -83,14 +85,10 @@ func _physics_process(delta: float) -> void:
 			continue
 		_already_hit.append(body)
 		damage.hit_position = to
-		var amount := 0.0
-		if body.has_method("receive_hit"):
-			amount = body.receive_hit(damage, shooter if is_instance_valid(shooter) else null)
-		else:
-			var health := Health.find(body)
-			if health == null or health.is_dead():
-				continue
-			amount = health.take_damage(damage)
+		var amount := HitResolver.apply(body, damage, shooter if is_instance_valid(shooter) else null, self)
+		if _reflected:
+			_reflected = false
+			return  # turned around: keep flying, now at the shooter
 		if is_instance_valid(reporter):
 			reporter.report_hit(body, damage, amount)
 		if not pierce:
@@ -101,3 +99,21 @@ func _physics_process(delta: float) -> void:
 	_travelled += from.distance_to(to)
 	if not wall.is_empty() or _travelled >= max_range:
 		queue_free()
+
+
+## Ward / Barrier parry: send this shot back at whoever fired it, as the
+## Seeker's shot, a little faster.
+func reflect(new_shooter: CollisionObject3D, combat: CombatController) -> void:
+	var old_shooter := shooter
+	var dir := -velocity.normalized()
+	if is_instance_valid(old_shooter):
+		dir = (CameraRig.get_lock_point(old_shooter) - global_position).normalized()
+	velocity = dir * velocity.length() * 1.25
+	target_mask = ENEMY_MASK
+	shooter = new_shooter
+	_exclude = [new_shooter.get_rid()]
+	_already_hit.clear()
+	_travelled = 0.0
+	reporter = combat
+	damage.source = new_shooter
+	_reflected = true
