@@ -1,0 +1,308 @@
+class_name CameraRig
+extends Node3D
+## PSO-style over-the-shoulder camera with Dark Souls-style lock-on.
+##
+## Layout: CameraRig (follows the player, rotates for yaw) > Pitch > SpringArm3D > Camera3D
+##
+## Lock-on (R3): picks the lockable target closest to where the camera faces.
+## With nothing in range, R3 recenters the camera behind the Seeker instead.
+## While locked, flicking the right stick (or sweeping the mouse) switches to the
+## next target on that side of the screen.
+##
+## Anything in the "lockable" group can be targeted. If it has a
+## get_lock_point() method, the camera aims there; otherwise 1 m above its origin.
+
+signal lock_target_changed(target: Node3D)
+
+const WORLD_MASK := 1
+
+@export_group("Framing")
+@export var pivot_height := 1.55
+@export var shoulder_offset := 0.45
+@export var distance := 4.5
+@export var follow_speed := 18.0
+## Lower than follow_speed so jumps don't jerk the camera.
+@export var vertical_follow_speed := 9.0
+
+@export_group("Look")
+## Right-stick turn speed in radians per second (yaw, pitch).
+@export var stick_speed := Vector2(3.2, 2.2)
+@export var mouse_sensitivity := 0.0025
+@export var invert_y := false
+@export var default_pitch_deg := -12.0
+@export var min_pitch_deg := -65.0
+@export var max_pitch_deg := 35.0
+@export var recenter_speed := 14.0
+
+@export_group("Lock-on")
+@export var lock_range := 22.0
+@export var lock_break_range := 28.0
+## Targets further than this from the camera's facing are ignored.
+@export var lock_max_angle_deg := 75.0
+@export var lock_turn_speed := 10.0
+@export var lock_pitch_offset_deg := -10.0
+@export var switch_stick_threshold := 0.7
+@export var switch_mouse_pixels := 80.0
+
+var player: Player
+var lock_target: Node3D = null
+
+var _yaw := 0.0
+var _pitch := 0.0
+var _recentering := false
+var _switch_armed := true
+var _mouse_switch_accum := 0.0
+
+@onready var _pitch_pivot: Node3D = $Pitch
+@onready var _spring_arm: SpringArm3D = $Pitch/SpringArm3D
+@onready var camera: Camera3D = $Pitch/SpringArm3D/Camera3D
+@onready var _marker: Node3D = $LockMarker
+
+
+func setup(seeker: Player) -> void:
+	player = seeker
+	_spring_arm.add_excluded_object(seeker.get_rid())
+	_yaw = seeker.rotation.y
+	_pitch = deg_to_rad(default_pitch_deg)
+	global_position = _player_pivot()
+	_apply_rotation()
+
+
+func get_flat_forward() -> Vector3:
+	var forward := -global_basis.z
+	forward.y = 0.0
+	return forward.normalized()
+
+
+func get_debug_text() -> String:
+	return "Lock-on: %s" % (lock_target.name if is_instance_valid(lock_target) else "none")
+
+
+static func get_lock_point(node: Node3D) -> Vector3:
+	if node.has_method("get_lock_point"):
+		return node.call("get_lock_point")
+	return node.global_position + Vector3.UP
+
+
+# --- Input ------------------------------------------------------------------
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause"):
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		return
+
+	if event is InputEventMouseButton and event.is_pressed() \
+			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		get_viewport().set_input_as_handled()
+		return
+
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var motion := event as InputEventMouseMotion
+		if lock_target:
+			_mouse_switch_accum += motion.relative.x
+		else:
+			_recentering = false
+			_yaw -= motion.relative.x * mouse_sensitivity
+			_pitch -= motion.relative.y * mouse_sensitivity * (-1.0 if invert_y else 1.0)
+
+
+# --- Lock-on (physics step, because it raycasts) ----------------------------
+
+func _physics_process(delta: float) -> void:
+	if player == null:
+		return
+
+	if Input.is_action_just_pressed("lock_on"):
+		_toggle_lock()
+
+	_validate_lock()
+
+	if lock_target:
+		_handle_switch_input(Input.get_axis("look_left", "look_right"), delta)
+
+
+func _toggle_lock() -> void:
+	if lock_target:
+		_set_lock(null)
+		return
+	var best := _find_best_target()
+	if best:
+		_set_lock(best)
+	else:
+		_recentering = true
+
+
+func _set_lock(target: Node3D) -> void:
+	if target == lock_target:
+		return
+	lock_target = target
+	_marker.visible = target != null
+	_mouse_switch_accum = 0.0
+	lock_target_changed.emit(target)
+
+
+func _validate_lock() -> void:
+	if lock_target == null:
+		return
+	if not is_instance_valid(lock_target):
+		_set_lock(null)
+		return
+	if not lock_target.is_inside_tree() or not lock_target.is_in_group("lockable") \
+			or not lock_target.is_visible_in_tree():
+		_set_lock(null)
+		return
+	if _player_center().distance_to(get_lock_point(lock_target)) > lock_break_range:
+		_set_lock(null)
+
+
+func _find_best_target() -> Node3D:
+	var origin := _player_center()
+	var forward := -camera.global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	var max_angle := deg_to_rad(lock_max_angle_deg)
+
+	var best: Node3D = null
+	var best_score := INF
+	for node in get_tree().get_nodes_in_group("lockable"):
+		var candidate := node as Node3D
+		if candidate == null or not candidate.is_visible_in_tree():
+			continue
+		var point := get_lock_point(candidate)
+		var to := point - origin
+		var dist := to.length()
+		if dist > lock_range:
+			continue
+		var flat := Vector3(to.x, 0.0, to.z)
+		if flat.length_squared() < 0.01:
+			continue
+		var angle := forward.angle_to(flat.normalized())
+		if angle > max_angle:
+			continue
+		if not _has_line_of_sight(origin, point):
+			continue
+		# Facing matters most, distance breaks ties.
+		var score := (angle / max_angle) * 2.0 + dist / lock_range
+		if score < best_score:
+			best_score = score
+			best = candidate
+	return best
+
+
+func _handle_switch_input(look_x: float, delta: float) -> void:
+	if absf(look_x) < 0.3:
+		_switch_armed = true
+	elif _switch_armed and absf(look_x) > switch_stick_threshold:
+		_switch_armed = false
+		_switch_target(signf(look_x))
+
+	if absf(_mouse_switch_accum) > switch_mouse_pixels:
+		_switch_target(signf(_mouse_switch_accum))
+		_mouse_switch_accum = 0.0
+	_mouse_switch_accum = move_toward(_mouse_switch_accum, 0.0, 200.0 * delta)
+
+
+## Switch to the nearest target on the given side of the screen (-1 left, 1 right).
+func _switch_target(side: float) -> void:
+	var current_x := camera.unproject_position(get_lock_point(lock_target)).x
+	var origin := _player_center()
+	var best: Node3D = null
+	var best_dx := INF
+	for node in get_tree().get_nodes_in_group("lockable"):
+		var candidate := node as Node3D
+		if candidate == null or candidate == lock_target or not candidate.is_visible_in_tree():
+			continue
+		var point := get_lock_point(candidate)
+		if origin.distance_to(point) > lock_range or camera.is_position_behind(point):
+			continue
+		if not _has_line_of_sight(origin, point):
+			continue
+		var dx := (camera.unproject_position(point).x - current_x) * side
+		if dx > 1.0 and dx < best_dx:
+			best_dx = dx
+			best = candidate
+	if best:
+		_set_lock(best)
+
+
+func _has_line_of_sight(from: Vector3, to: Vector3) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(from, to, WORLD_MASK)
+	query.exclude = [player.get_rid()]
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+# --- Camera motion (render step, for smoothness) ----------------------------
+
+func _process(delta: float) -> void:
+	if player == null:
+		return
+
+	if is_instance_valid(lock_target):
+		_track_lock_target(delta)
+	else:
+		_free_look(delta)
+
+	_pitch = clampf(_pitch, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
+	_apply_rotation()
+	_follow(delta)
+	_update_marker()
+
+
+func _free_look(delta: float) -> void:
+	var look := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+	if look != Vector2.ZERO:
+		_recentering = false
+		_yaw -= look.x * stick_speed.x * delta
+		_pitch -= look.y * stick_speed.y * delta * (-1.0 if invert_y else 1.0)
+
+	if _recentering:
+		var t := 1.0 - exp(-recenter_speed * delta)
+		_yaw = lerp_angle(_yaw, player.rotation.y, t)
+		_pitch = lerpf(_pitch, deg_to_rad(default_pitch_deg), t)
+		if absf(angle_difference(_yaw, player.rotation.y)) < 0.01:
+			_recentering = false
+
+
+func _track_lock_target(delta: float) -> void:
+	var to := get_lock_point(lock_target) - global_position
+	var flat_dist := Vector2(to.x, to.z).length()
+	if flat_dist < 0.5:
+		return
+	var desired_yaw := atan2(-to.x, -to.z)
+	var desired_pitch := atan2(to.y, flat_dist) + deg_to_rad(lock_pitch_offset_deg)
+	var t := 1.0 - exp(-lock_turn_speed * delta)
+	_yaw = lerp_angle(_yaw, desired_yaw, t)
+	_pitch = lerp_angle(_pitch, desired_pitch, t)
+
+
+func _apply_rotation() -> void:
+	rotation = Vector3(0.0, _yaw, 0.0)
+	_pitch_pivot.rotation = Vector3(_pitch, 0.0, 0.0)
+	_spring_arm.spring_length = distance
+	_spring_arm.position.x = shoulder_offset
+
+
+func _follow(delta: float) -> void:
+	var goal := _player_pivot()
+	var pos := global_position
+	var t_flat := 1.0 - exp(-follow_speed * delta)
+	var t_vertical := 1.0 - exp(-vertical_follow_speed * delta)
+	pos.x = lerpf(pos.x, goal.x, t_flat)
+	pos.z = lerpf(pos.z, goal.z, t_flat)
+	pos.y = lerpf(pos.y, goal.y, t_vertical)
+	global_position = pos
+
+
+func _update_marker() -> void:
+	if is_instance_valid(lock_target):
+		_marker.global_position = get_lock_point(lock_target)
+
+
+func _player_pivot() -> Vector3:
+	# Interpolated position, because the camera moves every rendered frame.
+	return player.get_global_transform_interpolated().origin + Vector3.UP * pivot_height
+
+
+func _player_center() -> Vector3:
+	return player.global_position + Vector3.UP * 1.2
