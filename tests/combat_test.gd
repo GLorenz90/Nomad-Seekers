@@ -15,6 +15,10 @@ var _hits: Array[float] = []
 var _feedback: Array[String] = []
 var _started: Array[String] = []
 
+# Default loadout slots (CombatController.DEFAULT_LOADOUTS).
+const WAND := 4
+const DERVISH := 6
+
 
 func _initialize() -> void:
 	_main = load("res://scenes/main.tscn").instantiate()
@@ -25,7 +29,10 @@ func _initialize() -> void:
 func _run() -> void:
 	_player = _main.get_node("Player")
 	_combat = _player.combat
-	_combat.stats.luck = 0.0  # no random crits in tests
+	_combat.stats.luck = 0.0
+	_combat.x_is_left = true  # these checks were written with X = left hand  # no random crits in tests
+	# Never depend on (or overwrite) the player's saved loadouts.
+	_combat.apply_loadout_set(CombatController.make_default_loadouts())
 	_dummy = _main.get_node("Dummies/DummyA")
 	_combat.hit_landed.connect(func(_t, _i, amount): _hits.append(amount))
 	_combat.combo_feedback.connect(func(text): _feedback.append(text))
@@ -63,8 +70,56 @@ func _run() -> void:
 		await _tap("hand_y")
 	await _idle()
 	var pistol: WeaponData = _combat.current_weapon(CombatController.Hand.RIGHT)
-	_check("mashing the pistol can't beat PSO's 14-frame window (window opens %.2f s)" % pistol.normal_attacks[0].window_open,
+	_check("mashing the pistol can't beat PSO's 14-frame window (opens %.2f s)" % pistol.normal_attacks[0].window_open,
 		is_equal_approx(pistol.normal_attacks[0].window_open, 14.0 / 30.0) and _started.size() <= 2)
+
+	# --- PSO cadence: a rhythm sword chain moves on at PSO's combo frames ---
+	await _reset(Vector3(0, 0.1, -5.5))
+	var starts: Array[float] = []
+	var t0 := Time.get_ticks_msec()
+	var on_start := func(_h, _w, _a, _c, _hd): starts.append(_combat._time)
+	_combat.attack_started.connect(on_start)
+	await _tap("hand_x")
+	await _until_window()
+	await _tap("hand_x")
+	await _idle()
+	_combat.attack_started.disconnect(on_start)
+	var gap := starts[1] - starts[0] if starts.size() == 2 else 99.0
+	_check("Slash chains into Return Slash about 0.43 s in, like PSO's saber (gap %.2f s)" % gap, gap > 0.4 and gap < 0.6)
+
+	# --- Input buffer: a slightly early press fires right when the window opens ---
+	await _reset(Vector3(0, 0.1, -5.5))
+	await _tap("hand_x")
+	var first: AttackData = _combat._current.attack
+	while _combat._current.elapsed < first.window_open - 0.1:
+		await physics_frame
+	var opened_hits := 0
+	Input.action_press("hand_x")
+	await physics_frame
+	Input.action_release("hand_x")
+	for i in 30:
+		await physics_frame
+		if _started.size() == 2:
+			break
+	opened_hits = _hits.size()
+	await _idle()
+	_check("a press 0.1 s early is buffered and chains (%s)" % [_started], _started == ["Slash", "Return Slash"])
+	_check("the buffered press doesn't cut the first swing short (%d hits before step 2)" % opened_hits, opened_hits >= 1)
+
+	# --- Three Hard attacks chain: slower, not tighter ---
+	await _reset(Vector3(0, 0.1, -5.5))
+	var hard_chain := 0
+	for i in 3:
+		if i > 0:
+			await _until_window()
+		Input.action_press("hand_x")
+		await _frames(20)  # hold past hold_threshold
+		Input.action_release("hand_x")
+		await _frames(2)
+		hard_chain = maxi(hard_chain, _combat.chain_step)
+	await _idle()
+	_check("three Hard attacks chain when each hold starts in the window (%s)" % [_started],
+		hard_chain == 3 and _started == ["Heavy Slash", "Heavy Return", "Piercing Thrust"])
 
 	# --- Too early breaks the combo ---
 	await _reset(Vector3(0, 0.1, -5.5))
@@ -75,10 +130,10 @@ func _run() -> void:
 	await _tap("hand_x")  # would have chained
 	await _frames(2)
 	_check("early press shows 'Too early!'", "Too early!" in _feedback)
-	_check("early press blocks the chain (chain %d, attacks %s)" % [_combat.chain_step, _started],
-		_started.size() == 1)
+	_check("after a too-early press, an in-window press doesn't chain (%s)" % [_started],
+		_started == ["Slash"])
 	await _idle()
-	_check("chain resets after a broken combo", _combat.chain_step == 0)
+	_check("the chain ends after a broken combo", _combat.chain_step == 0)
 
 	# --- Late press starts a fresh chain ---
 	await _reset(Vector3(0, 0.1, -5.5))
@@ -134,7 +189,9 @@ func _run() -> void:
 	Input.action_press("loadout_next")
 	await _frames(2)
 	Input.action_release("loadout_next")
-	_check("LB/RB switches to the wand loadout", _combat.current_weapon(CombatController.Hand.LEFT).display_name == "Wand")
+	_check("LB/RB cycles to the next loadout (now %d)" % (_combat.loadout_index + 1), _combat.loadout_index == 1)
+	_set_loadout(WAND)
+	_check("wand loadout equipped", _combat.current_weapon(CombatController.Hand.LEFT).display_name == "Wand")
 	_dummy.health.multipliers[Element.Type.FIRE] = 2.0
 	await _tap("hand_x")
 	await _idle()
@@ -148,9 +205,10 @@ func _run() -> void:
 	await _idle()
 	await _frames(30)
 	_check("Shift casts the second spell (%s)" % [_started], _started == ["Frost Lance"])
-	_check("Frost Lance deals Ice damage (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], 18.0 * 0.85 * 1.3))
+	# Frost Lance pierces, so it can also catch the patrolling DummyB behind DummyA.
+	_check("Frost Lance deals Ice damage (%s)" % [_hits], _hits.size() >= 1 and is_equal_approx(_hits[0], 18.0 * 0.85 * 1.3))
 	_dummy.health.multipliers.erase(Element.Type.FIRE)
-	_combat.loadout_index = 0
+	_set_loadout(0)
 
 	# --- Mobility: rooted vs moving attacks (PSU-style) ---
 	var run := _player.move_speed
@@ -160,17 +218,17 @@ func _run() -> void:
 	_check("Normal pistol shots keep you moving at half speed (%.1f m/s)" % pistol_tap, absf(pistol_tap - run * 0.5) < 0.8)
 	var pistol_hold := await _speed_while(0, "hand_y", true)
 	_check("Charged pistol shots root you (%.1f m/s)" % pistol_hold, pistol_hold < 1.0)
-	var wand_tap := await _speed_while(1, "hand_x", false)
+	var wand_tap := await _speed_while(WAND, "hand_x", false)
 	_check("Normal spells keep you moving at half speed (%.1f m/s)" % wand_tap, absf(wand_tap - run * 0.5) < 0.8)
-	var wand_hold := await _speed_while(1, "hand_x", true)
+	var wand_hold := await _speed_while(WAND, "hand_x", true)
 	_check("Hard spells root you (%.1f m/s)" % wand_hold, wand_hold < 1.0)
-	var dervish_tap := await _speed_while(3, "hand_x", false)
+	var dervish_tap := await _speed_while(DERVISH, "hand_x", false)
 	_check("Dervish Blades slashes keep you moving (%.1f m/s)" % dervish_tap, absf(dervish_tap - run * 0.5) < 0.8)
-	var dervish_hold := await _speed_while(3, "hand_x", true)
+	var dervish_hold := await _speed_while(DERVISH, "hand_x", true)
 	_check("Dervish Blades spin keeps you moving (%.1f m/s)" % dervish_hold, absf(dervish_hold - run * 0.6) < 0.8)
 
 	# --- Dervish Blades: two-handed combo and sustained spin ---
-	_set_loadout(3)
+	_set_loadout(DERVISH)
 	await _reset(Vector3(0, 0.1, -6.5))
 	_check("two-handed Dervish Blades answer both buttons",
 		_combat.current_weapon(CombatController.Hand.RIGHT) == _combat.current_weapon(CombatController.Hand.LEFT))
@@ -187,7 +245,7 @@ func _run() -> void:
 	var spinning := _combat.is_attacking() and _combat._current.sustained
 	Input.action_release("hand_x")
 	await _frames(30)
-	_check("holding X spins and hits repeatedly (%d hits in 1 s)" % _hits.size(), spinning and _hits.size() >= 4)
+	_check("holding X spins and hits about every 0.2 s (%d hits in 1 s)" % _hits.size(), spinning and _hits.size() >= 3 and _hits.size() <= 5)
 	_check("releasing ends the spin", not _combat.is_attacking())
 	_set_loadout(0)
 
@@ -219,8 +277,7 @@ func _run() -> void:
 
 
 func _set_loadout(index: int) -> void:
-	_combat.loadout_index = index
-	_combat._equip_visuals()
+	_combat.select_loadout(index)
 
 
 ## Runs forward in an empty corner, attacks, and returns the speed mid-attack.
@@ -260,10 +317,11 @@ func _reset(at: Vector3, heal := true) -> void:
 	_started.clear()
 
 
+## Waits until the current attack's chain window is open (PSO: just after the hit).
 func _until_window() -> void:
-	for i in 120:
+	for i in 180:
 		var cur = _combat._current
-		if cur != null and cur.elapsed >= cur.attack.window_open + 0.03:
+		if cur == null or cur.elapsed >= cur.attack.window_open + 0.03:
 			return
 		await physics_frame
 

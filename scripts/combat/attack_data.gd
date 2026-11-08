@@ -39,6 +39,10 @@ enum Swing { SLASH_RIGHT, SLASH_LEFT, OVERHEAD, THRUST, SHOT, CAST, SPIN }
 ## Distance from the Seeker's center to the hitbox center.
 @export var reach := 1.1
 @export var hitbox_size := Vector3(2.2, 1.6, 1.8)
+## Pushes targets away (m/s) on hit. Heavy Shield shove uses this.
+@export var knockback := 0.0
+## Seconds of parry opened when the attack starts (light shield deflect).
+@export var opens_parry := 0.0
 
 @export_group("Sustained")
 ## Sustained attacks only: seconds between hits while the button is held.

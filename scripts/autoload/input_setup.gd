@@ -75,9 +75,11 @@ func _enter_tree() -> void:
 	_key("sync_burst", KEY_R)
 
 	# --- System ---
-	_define("pause")
-	_joy_button("pause", JOY_BUTTON_START)
+	_define("pause")  # Esc releases the mouse
 	_key("pause", KEY_ESCAPE)
+	_define("menu")  # Loadout menu
+	_joy_button("menu", JOY_BUTTON_START)
+	_key("menu", KEY_TAB)
 	_define("toggle_debug")
 	_joy_button("toggle_debug", JOY_BUTTON_BACK)
 	_key("toggle_debug", KEY_F3)

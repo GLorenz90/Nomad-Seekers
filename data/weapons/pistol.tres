@@ -105,6 +105,7 @@ projectile_radius = 0.08
 [resource]
 script = ExtResource("2_6ryra")
 display_name = "Pistol"
+weapon_type = &"pistol"
 weapon_class = 1
 base_damage = 12.0
 normal_attacks = Array[ExtResource("1_o8lbu")]([SubResource("Resource_snkot"), SubResource("Resource_qmstv"), SubResource("Resource_7et3l")])

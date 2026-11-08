@@ -1,0 +1,89 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_lkmjt"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_k45v3"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_hawt1"]
+
+[sub_resource type="Resource" id="Resource_j5ecy"]
+script = ExtResource("1_lkmjt")
+display_name = "Heavy Slash"
+damage_mult = 1.8
+duration = 1.2333333333333334
+active_start = 0.6666666666666666
+active_end = 0.7666666666666667
+window_open = 0.7
+window_close = 1.2333333333333334
+lunge_distance = 0.8
+hitbox_size = Vector3(1.2, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_jvmc7"]
+script = ExtResource("1_lkmjt")
+display_name = "Heavy Return"
+damage_mult = 1.95
+swing = 1
+duration = 0.9666666666666667
+active_start = 0.5
+active_end = 0.6
+window_open = 0.5
+window_close = 0.9666666666666667
+lunge_distance = 0.8
+hitbox_size = Vector3(1.2, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_e72ji"]
+script = ExtResource("1_lkmjt")
+display_name = "Piercing Thrust"
+damage_mult = 2.3
+swing = 3
+duration = 1.1333333333333333
+active_start = 0.4666666666666667
+active_end = 0.5666666666666667
+window_open = 1.1333333333333333
+window_close = 1.1333333333333333
+lunge_distance = 1.4
+reach = 1.6
+hitbox_size = Vector3(1.2, 1.4, 2.6)
+
+[sub_resource type="Resource" id="Resource_2g1l0"]
+script = ExtResource("1_lkmjt")
+display_name = "Slash"
+duration = 0.9666666666666667
+active_start = 0.36666666666666664
+active_end = 0.4666666666666667
+window_open = 0.43333333333333335
+window_close = 0.9666666666666667
+hitbox_size = Vector3(1.2, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_6imho"]
+script = ExtResource("1_lkmjt")
+display_name = "Return Slash"
+damage_mult = 1.1
+swing = 1
+duration = 0.8
+active_start = 0.3333333333333333
+active_end = 0.43333333333333335
+window_open = 0.3333333333333333
+window_close = 0.8
+hitbox_size = Vector3(1.2, 1.6, 1.8)
+
+[sub_resource type="Resource" id="Resource_85v5n"]
+script = ExtResource("1_lkmjt")
+display_name = "Cleave"
+damage_mult = 1.3
+swing = 2
+duration = 1.0333333333333334
+active_start = 0.26666666666666666
+active_end = 0.36666666666666664
+window_open = 1.0333333333333334
+window_close = 1.0333333333333334
+lunge_distance = 0.8
+hitbox_size = Vector3(1.2, 1.6, 1.8)
+
+[resource]
+script = ExtResource("2_k45v3")
+display_name = "Frost Sword"
+weapon_type = &"sword"
+base_damage = 20.0
+damage_type = 2
+normal_attacks = Array[ExtResource("1_lkmjt")]([SubResource("Resource_2g1l0"), SubResource("Resource_6imho"), SubResource("Resource_85v5n")])
+hard_attacks = Array[ExtResource("1_lkmjt")]([SubResource("Resource_j5ecy"), SubResource("Resource_jvmc7"), SubResource("Resource_e72ji")])
+mesh_color = Color(0.6, 0.85, 1, 1)

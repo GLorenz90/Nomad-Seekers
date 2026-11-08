@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_30ij8"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_m340w"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_xalps"]
+
+[sub_resource type="Resource" id="Resource_it2k4"]
+script = ExtResource("1_30ij8")
+display_name = "Shove"
+damage_mult = 0.6
+swing = 3
+duration = 0.6666666666666666
+active_start = 0.26666666666666666
+active_end = 0.36666666666666664
+window_open = 0.6666666666666666
+window_close = 0.6666666666666666
+lunge_distance = 0.4
+reach = 1.0
+hitbox_size = Vector3(2, 1.6, 1.4)
+knockback = 9.0
+
+[resource]
+script = ExtResource("2_m340w")
+display_name = "Heavy Shield"
+weapon_type = &"heavy_shield"
+weight = 1
+no_combo = true
+is_shield = true
+block_strength = 0.85
+base_damage = 12.0
+normal_attacks = Array[ExtResource("1_30ij8")]([SubResource("Resource_it2k4")])
+hard_attacks = Array[ExtResource("1_30ij8")]([SubResource("Resource_it2k4")])
+mesh_size = Vector3(0.8, 1, 0.12)
+mesh_color = Color(0.45, 0.45, 0.55, 1)

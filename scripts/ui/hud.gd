@@ -10,6 +10,8 @@ Lock on: R3 / Q / middle mouse    Switch target: flick right stick
 Attack: X / left click, Y / right click (tap = Normal, hold = Hard)
 Chain: press again inside the timing window (too early breaks the combo)
 Second spell: hold RT / E while casting    Loadouts: LB/RB / Z,C
+Same-type pair (e.g. Sword + Frost Sword): every attack uses both hands
+Block: LT / F    Special: hold RT / E + hand    Loadout menu: Start / Tab
 Click to capture the mouse, Esc to release. F3 hides this panel."""
 
 var player: Player
@@ -19,6 +21,7 @@ var _hp_bar: ProgressBar
 var _lp_bar: ProgressBar
 var _pips: Label
 var _hands: Label
+var _lt: Label
 var _feedback: Label
 var _feedback_tween: Tween
 
@@ -57,7 +60,13 @@ func _process(_delta: float) -> void:
 	_pips.text = "Chain  " + pips
 	var x_hand := CombatController.Hand.LEFT if combat.x_is_left else CombatController.Hand.RIGHT
 	var y_hand := CombatController.Hand.RIGHT if combat.x_is_left else CombatController.Hand.LEFT
-	_hands.text = "X: %s    Y: %s" % [_weapon_label(x_hand), _weapon_label(y_hand)]
+	var two_hand := combat.get_loadout().two_handed_weapon()
+	if two_hand:
+		_hands.text = "%d  X / Y: %s (both hands)" % [combat.loadout_index + 1, two_hand.display_name]
+	else:
+		_hands.text = "%d  X: %s    Y: %s" % [combat.loadout_index + 1, _weapon_label(x_hand), _weapon_label(y_hand)]
+	_lt.text = combat.get_lt_text()
+	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE
 	if _panel.visible:
 		_debug.text = "%s\n%s\n%s\nFPS: %d" % [
 			player.get_debug_text(), camera_rig.get_debug_text(),
@@ -89,7 +98,7 @@ func _build_status() -> void:
 	box.anchor_top = 1.0
 	box.anchor_bottom = 1.0
 	box.offset_left = 24.0
-	box.offset_top = -150.0
+	box.offset_top = -175.0
 	box.offset_right = 420.0
 	box.offset_bottom = -20.0
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -98,6 +107,7 @@ func _build_status() -> void:
 	_lp_bar = _bar(box, "LP", Color(0.3, 0.6, 1.0))
 	_pips = _label(box, 20)
 	_hands = _label(box, 18)
+	_lt = _label(box, 16)
 
 	_feedback = _label(self, 34)
 	_feedback.anchor_left = 0.5

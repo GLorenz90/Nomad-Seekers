@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/attack_data.gd" id="1_64hgg"]
+[ext_resource type="Script" path="res://scripts/combat/weapon_data.gd" id="2_lec4l"]
+[ext_resource type="Script" path="res://scripts/combat/spell_data.gd" id="3_a0dgu"]
+
+[sub_resource type="Resource" id="Resource_tf3lf"]
+script = ExtResource("1_64hgg")
+display_name = "Deflect"
+damage_mult = 0.5
+swing = 3
+duration = 0.4
+active_start = 0.1
+active_end = 0.2
+window_open = 0.4
+window_close = 0.4
+lunge_distance = 0.0
+reach = 0.9
+hitbox_size = Vector3(1.6, 1.6, 1.2)
+opens_parry = 0.26666666666666666
+
+[resource]
+script = ExtResource("2_lec4l")
+display_name = "Shield"
+weapon_type = &"shield"
+no_combo = true
+is_shield = true
+block_strength = 0.6
+base_damage = 8.0
+normal_attacks = Array[ExtResource("1_64hgg")]([SubResource("Resource_tf3lf")])
+hard_attacks = Array[ExtResource("1_64hgg")]([SubResource("Resource_tf3lf")])
+mesh_size = Vector3(0.6, 0.7, 0.08)
+mesh_color = Color(0.35, 0.55, 0.85, 1)

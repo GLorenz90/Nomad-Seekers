@@ -62,6 +62,8 @@ enum FollowMode { LOOSE, RIGID }
 @export var lock_pitch_offset_deg := -18.0
 @export var switch_stick_threshold := 0.7
 @export var switch_mouse_pixels := 80.0
+## The simple sphere marker. Off when TargetMarkers draws the lock-on ring.
+@export var show_lock_marker := true
 
 var player: Player
 var lock_target: Node3D = null
@@ -162,7 +164,7 @@ func _set_lock(target: Node3D) -> void:
 		return
 	lock_target = target
 	_since_manual_pitch = 0.0
-	_marker.visible = target != null
+	_marker.visible = target != null and show_lock_marker
 	_mouse_switch_accum = 0.0
 	lock_target_changed.emit(target)
 
