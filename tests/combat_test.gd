@@ -55,6 +55,17 @@ func _run() -> void:
 		and is_equal_approx(_hits[1], sword * 1.1) and is_equal_approx(_hits[2], sword * 1.3))
 	_check("finisher feedback shown", "Finisher!" in _feedback)
 
+	# --- PSO cadence: two pistol shots can't be closer than 14 frames at 30 fps ---
+	await _reset(Vector3(0, 0.1, -5.5))
+	var times: Array[float] = []
+	_combat.attack_started.connect(func(_h, _w, _a, _c, _hd): times.append(Time.get_ticks_msec() / 1000.0))
+	for i in 6:
+		await _tap("hand_y")
+	await _idle()
+	var pistol: WeaponData = _combat.current_weapon(CombatController.Hand.RIGHT)
+	_check("mashing the pistol can't beat PSO's 14-frame window (window opens %.2f s)" % pistol.normal_attacks[0].window_open,
+		is_equal_approx(pistol.normal_attacks[0].window_open, 14.0 / 30.0) and _started.size() <= 2)
+
 	# --- Too early breaks the combo ---
 	await _reset(Vector3(0, 0.1, -5.5))
 	await _tap("hand_x")
@@ -103,15 +114,16 @@ func _run() -> void:
 	await _reset(Vector3(0, 0.1, -5.5))
 	var lp_before := _combat.lp
 	await _tap("hand_y")
-	await _frames(25)
+	await _frames(10)  # LP is spent when the shot starts; regen waits 0.75 s
 	_check("pistol shot costs 1 LP (%.1f -> %.1f)" % [lp_before, _combat.lp], absf(lp_before - 1.0 - _combat.lp) < 0.01)
-	_check("pistol projectile hits from range (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], 12.0 * 1.3))
 	await _idle()
+	_check("pistol projectile hits from range (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], 12.0 * 1.3))
 
 	# --- Dash cancels an attack after its hit ---
 	await _reset(Vector3(0, 0.1, -5.5))
 	await _tap("hand_x")
-	await _frames(16)  # past active_end (0.22 s)
+	while _combat.is_attacking() and _combat._current.elapsed < _combat._current.attack.active_end + 0.02:
+		await physics_frame
 	await _tap("dash")
 	await _frames(2)
 	_check("dash cancels the sword's recovery", not _combat.is_attacking() and _player.state == Player.State.DASH)
@@ -125,14 +137,16 @@ func _run() -> void:
 	_check("LB/RB switches to the wand loadout", _combat.current_weapon(CombatController.Hand.LEFT).display_name == "Wand")
 	_dummy.health.multipliers[Element.Type.FIRE] = 2.0
 	await _tap("hand_x")
-	await _frames(40)
+	await _idle()
+	await _frames(30)
 	var bolt := 18.0 * 1.3 * 2.0
 	_check("Fire Bolt does double to a fire-weak dummy (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], bolt))
 	await _reset(Vector3(0, 0.1, -5.5))
 	Input.action_press("shift")
 	await _tap("hand_x")
 	Input.action_release("shift")
-	await _frames(40)
+	await _idle()
+	await _frames(30)
 	_check("Shift casts the second spell (%s)" % [_started], _started == ["Frost Lance"])
 	_check("Frost Lance deals Ice damage (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], 18.0 * 0.85 * 1.3))
 	_dummy.health.multipliers.erase(Element.Type.FIRE)
@@ -142,13 +156,15 @@ func _run() -> void:
 	_dummy.health.hp = 1.0
 	await _reset(Vector3(0, 0.1, -5.5), false)
 	await _tap("hand_y")
-	await _frames(20)
+	await _idle()
 	_check("dummy dies and leaves the lockable group", not _dummy.is_in_group("lockable") and not _dummy.visible)
 
 	# --- Navmesh ---
 	var map := _player.get_world_3d().navigation_map
 	_check("navmesh baked (%d polygons)" % _main.get_node("Navigation").navigation_mesh.get_polygon_count(),
 		_main.get_node("Navigation").navigation_mesh.get_polygon_count() > 0 and NavigationServer3D.map_get_iteration_id(map) > 0)
+	var patroller: TargetDummy = _main.get_node("Dummies/DummyB")
+	var patrol_x0 := patroller.global_position.x
 	var chaser: TargetDummy = _main.get_node("Dummies/DummyE")
 	_player.global_position = Vector3(8, 0.1, 18.0)
 	_player.reset_physics_interpolation()
@@ -156,8 +172,8 @@ func _run() -> void:
 	await _frames(180)
 	var d1 := chaser.global_position.distance_to(_player.global_position)
 	_check("chase dummy paths toward the Seeker (%.1f -> %.1f m)" % [d0, d1], d1 < d0 - 3.0 and d1 > 1.5)
-	var patroller: TargetDummy = _main.get_node("Dummies/DummyB")
-	_check("patrol dummy moves along its route (x = %.1f)" % patroller.global_position.x, patroller.global_position.x > -5.0)
+	_check("patrol dummy moves along its route (x %.1f -> %.1f)" % [patrol_x0, patroller.global_position.x],
+		absf(patroller.global_position.x - patrol_x0) > 2.0)
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)

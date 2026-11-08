@@ -10,14 +10,14 @@ display_name = "Charged Shot"
 damage_mult = 2.0
 lp_cost = 3.0
 swing = 4
-duration = 0.5
-active_start = 0.14
-active_end = 0.14
-window_open = 0.3
-window_close = 0.7
+duration = 1.1333333333333333
+active_start = 0.6666666666666666
+active_end = 0.7666666666666667
+window_open = 0.7333333333333333
+window_close = 1.1333333333333333
 lunge_distance = 0.0
 is_projectile = true
-projectile_speed = 40.0
+projectile_speed = 28.0
 projectile_radius = 0.14
 
 [sub_resource type="Resource" id="Resource_ldxvb"]
@@ -26,14 +26,14 @@ display_name = "Charged Shot"
 damage_mult = 2.1
 lp_cost = 3.0
 swing = 4
-duration = 0.5
-active_start = 0.14
-active_end = 0.14
-window_open = 0.3
-window_close = 0.7
+duration = 1.0
+active_start = 0.4666666666666667
+active_end = 0.5666666666666667
+window_open = 0.5333333333333333
+window_close = 1.0
 lunge_distance = 0.0
 is_projectile = true
-projectile_speed = 40.0
+projectile_speed = 28.0
 projectile_radius = 0.14
 
 [sub_resource type="Resource" id="Resource_iejlt"]
@@ -42,14 +42,14 @@ display_name = "Charged Shot"
 damage_mult = 2.4
 lp_cost = 3.0
 swing = 4
-duration = 0.5
-active_start = 0.14
-active_end = 0.14
-window_open = 0.3
-window_close = 0.7
+duration = 0.8333333333333334
+active_start = 0.4
+active_end = 0.5
+window_open = 0.8333333333333334
+window_close = 0.8333333333333334
 lunge_distance = 0.0
 is_projectile = true
-projectile_speed = 40.0
+projectile_speed = 28.0
 projectile_radius = 0.14
 
 [sub_resource type="Resource" id="Resource_snkot"]
@@ -57,14 +57,14 @@ script = ExtResource("1_o8lbu")
 display_name = "Shot"
 lp_cost = 1.0
 swing = 4
-duration = 0.3
-active_start = 0.06
-active_end = 0.06
-window_open = 0.14
-window_close = 0.45
+duration = 0.9
+active_start = 0.4
+active_end = 0.5
+window_open = 0.4666666666666667
+window_close = 0.9
 lunge_distance = 0.0
 is_projectile = true
-projectile_speed = 40.0
+projectile_speed = 28.0
 projectile_radius = 0.08
 
 [sub_resource type="Resource" id="Resource_qmstv"]
@@ -73,14 +73,14 @@ display_name = "Shot"
 damage_mult = 1.05
 lp_cost = 1.0
 swing = 4
-duration = 0.3
-active_start = 0.06
-active_end = 0.06
-window_open = 0.14
-window_close = 0.45
+duration = 0.8333333333333334
+active_start = 0.3
+active_end = 0.4
+window_open = 0.36666666666666664
+window_close = 0.8333333333333334
 lunge_distance = 0.0
 is_projectile = true
-projectile_speed = 40.0
+projectile_speed = 28.0
 projectile_radius = 0.08
 
 [sub_resource type="Resource" id="Resource_7et3l"]
@@ -89,14 +89,14 @@ display_name = "Shot"
 damage_mult = 1.15
 lp_cost = 1.0
 swing = 4
-duration = 0.3
-active_start = 0.06
-active_end = 0.06
-window_open = 0.14
-window_close = 0.45
+duration = 0.6333333333333333
+active_start = 0.3
+active_end = 0.4
+window_open = 0.6333333333333333
+window_close = 0.6333333333333333
 lunge_distance = 0.0
 is_projectile = true
-projectile_speed = 40.0
+projectile_speed = 28.0
 projectile_radius = 0.08
 
 [resource]

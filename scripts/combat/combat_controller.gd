@@ -221,6 +221,7 @@ func _request_attack(hand: int, hard: bool) -> void:
 			return
 		if cur.elapsed > cur.attack.window_close or chain_step >= MAX_CHAIN:
 			return
+		_resolve_pending_hit(cur)
 		_begin(hand, weapon, hard, slot, not standalone)
 		return
 
@@ -292,6 +293,19 @@ func _update_attack(delta: float) -> void:
 
 
 # --- Aim, hits, damage ------------------------------------------------------
+
+## PSO windows can open on the same frame the hit comes out. Make sure an
+## attack that's being chained out of still lands its hit or fires its shot.
+func _resolve_pending_hit(cur: ActiveAttack) -> void:
+	if cur.elapsed < cur.attack.active_start:
+		return
+	if cur.attack.is_projectile:
+		if not cur.fired:
+			cur.fired = true
+			_fire_projectile(cur)
+	else:
+		_melee_hits(cur)
+
 
 func _aim(a: ActiveAttack) -> void:
 	var target := _player.get_lock_target()

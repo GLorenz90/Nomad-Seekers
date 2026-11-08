@@ -14,6 +14,7 @@ Built in playable parts (see the Prototype Roadmap in the Claude project). Curre
 - **Hand buttons** (`scripts/combat/combat_controller.gd`): X and Y are your two hands (`x_is_left` chooses which is which). Tap for a Normal attack, hold for a Hard attack.
 - **Timing combos**: 3 steps per chain. Press again inside the current attack's window to chain. Too early breaks the combo; too late starts a new chain. Any attack from either hand can fill the next step.
 - **Weapon steps**: each weapon counts its own consecutive uses. Sword, Sword, Sword plays Slash, Return Slash, Cleave with bonus damage. Sword, Pistol, Sword plays the sword's Slash both times.
+- **PSO timing**: the starter weapons use PSO Blue Burst's frame data (30 fps) from the [Ephinea wiki](https://wiki.pioneer2.net/w/Game_mechanics/Frame_data): saber timings for the Sword, handgun for the Pistol, and Foie's cast time for spells. `tools/build_starter_weapons.gd` lists the source frame numbers next to each attack.
 - **Starter weapons** (`data/weapons/*.tres`): Sword (melee), Pistol (projectiles, costs a little LP), Wand (casting item: Fire Bolt, or Frost Lance with RT held). Spells are standalone and end a chain. Edit the `.tres` files in the Inspector.
 - **LP**: spells and shots cost LP. It regenerates slowly for now so testing never stalls.
 - **Damage types and stats**: damage = base x step multiplier x (1 + STR/DEX/SOL / 100), with crits from LCK. Every attack carries one element.
@@ -66,6 +67,6 @@ godot --headless --path . --script res://tests/combat_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
-- `combat_test.gd`: tap and hold, 3-step rhythm combos, step damage bonuses, too-early and too-late presses, mixed-weapon steps, LP, projectiles, spells and Shift, elemental weakness, dash cancel, death and respawn, navmesh bake, chase and patrol pathing.
+- `combat_test.gd`: tap and hold, 3-step rhythm combos, PSO pistol cadence, step damage bonuses, too-early and too-late presses, mixed-weapon steps, LP, projectiles, spells and Shift, elemental weakness, dash cancel, death and respawn, navmesh bake, chase and patrol pathing.
 
 `tools/build_starter_weapons.gd` regenerates the starter weapon `.tres` files with their default values (this overwrites any edits).
