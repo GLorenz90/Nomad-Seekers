@@ -172,7 +172,8 @@ func _run() -> void:
 	await _idle()
 	await _frames(30)
 	_check("Shift casts the second spell (%s)" % [_started], _started == ["Frost Lance"])
-	_check("Frost Lance deals Ice damage (%s)" % [_hits], _hits.size() == 1 and is_equal_approx(_hits[0], 18.0 * 0.85 * 1.3))
+	# Frost Lance pierces, so it can also catch the patrolling DummyB behind DummyA.
+	_check("Frost Lance deals Ice damage (%s)" % [_hits], _hits.size() >= 1 and is_equal_approx(_hits[0], 18.0 * 0.85 * 1.3))
 	_dummy.health.multipliers.erase(Element.Type.FIRE)
 	_set_loadout(0)
 
