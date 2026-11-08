@@ -78,6 +78,8 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 			var aim := direction
 			if target_alive:
 				aim = (CameraRig.get_lock_point(target_alive) - origin).normalized()
+			if spell.shape == SpellDef.Shape.BIG_ORB:
+				aim = Vector3(aim.x, 0.0, aim.z).normalized()  # rolls level, through the whole pack
 			var p := _projectile(ctrl, item, attack, hard, origin, aim, spell.radius * (1.4 if spell.shape == SpellDef.Shape.BIG_ORB and hard else 1.0))
 			if spell.shape == SpellDef.Shape.HOMING_ORB and target_alive:
 				p.chain.append(target_alive)

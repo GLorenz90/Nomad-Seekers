@@ -183,6 +183,7 @@ static func _burst(element: Element.Type, root: String, req: int) -> void:
 			s = _make(id, element, SpellDef.Kind.BURST, SpellDef.Shape.CONE_STRIKE, req, GI_AVERAGE)
 			s.cone_deg = 30.0
 			s.reach = 9.0
+			s.max_targets = 99
 		Element.Type.LIGHT:
 			# Beams from the sky on up to 10 enemies in a 60-degree cone.
 			s = _make(id, element, SpellDef.Kind.BURST, SpellDef.Shape.CONE_STRIKE, req, GI_AVERAGE)
