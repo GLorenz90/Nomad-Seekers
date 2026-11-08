@@ -48,6 +48,10 @@ enum FollowMode { LOOSE, RIGID }
 @export var min_pitch_deg := -65.0
 @export var max_pitch_deg := 35.0
 @export var recenter_speed := 14.0
+## Seconds after the last manual up/down look before the camera eases back to
+## default_pitch_deg. Set to a negative number to turn this off.
+@export var pitch_return_delay := 0.8
+@export var pitch_return_speed := 2.5
 
 @export_group("Lock-on")
 @export var lock_range := 22.0
@@ -66,6 +70,7 @@ var _yaw := 0.0
 var _pitch := 0.0
 var _recentering := false
 var _recenter_yaw := 0.0
+var _since_manual_pitch := 0.0
 var _switch_armed := true
 var _mouse_switch_accum := 0.0
 
@@ -121,6 +126,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_recentering = false
 			_yaw -= motion.relative.x * mouse_sensitivity
 			_pitch -= motion.relative.y * mouse_sensitivity * (-1.0 if invert_y else 1.0)
+			if absf(motion.relative.y) > 0.0:
+				_since_manual_pitch = 0.0
 
 
 # --- Lock-on (physics step, because it raycasts) ----------------------------
@@ -154,6 +161,7 @@ func _set_lock(target: Node3D) -> void:
 	if target == lock_target:
 		return
 	lock_target = target
+	_since_manual_pitch = 0.0
 	_marker.visible = target != null
 	_mouse_switch_accum = 0.0
 	lock_target_changed.emit(target)
@@ -292,6 +300,12 @@ func _free_look(delta: float) -> void:
 		_recentering = false
 		_yaw -= look.x * stick_speed.x * delta
 		_pitch -= look.y * stick_speed.y * delta * (-1.0 if invert_y else 1.0)
+	if absf(look.y) > 0.0:
+		_since_manual_pitch = 0.0
+	else:
+		_since_manual_pitch += delta
+		if pitch_return_delay >= 0.0 and _since_manual_pitch > pitch_return_delay and not _recentering:
+			_pitch = lerp_angle(_pitch, deg_to_rad(default_pitch_deg), 1.0 - exp(-pitch_return_speed * delta))
 
 	if _recentering:
 		var t := 1.0 - exp(-recenter_speed * delta)

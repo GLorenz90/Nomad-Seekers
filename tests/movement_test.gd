@@ -102,6 +102,18 @@ func _run() -> void:
 	_check("recenter lands on the press-time angle (off by %.3f rad)" % absf(angle_difference(_rig._yaw, expected)),
 		absf(angle_difference(_rig._yaw, expected)) < 0.15)
 
+	# --- Camera height eases back after manual look ---
+	var default_pitch := deg_to_rad(_rig.default_pitch_deg)
+	await _hold("look_up", 30)
+	var raised := absf(angle_difference(_rig._pitch, default_pitch))
+	await _frames(15)
+	var after_short := absf(angle_difference(_rig._pitch, default_pitch))
+	_check("pitch holds briefly after looking up (%.2f -> %.2f rad)" % [raised, after_short],
+		raised > 0.3 and after_short > raised * 0.8)
+	await _frames(150)
+	var after_long := absf(angle_difference(_rig._pitch, default_pitch))
+	_check("pitch eases back to default (off by %.3f rad)" % after_long, after_long < 0.05)
+
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
 
