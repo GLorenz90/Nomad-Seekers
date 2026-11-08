@@ -11,7 +11,7 @@ Built in playable parts (see the Prototype Roadmap in the Claude project). Curre
 - **Input map** (`scripts/autoload/input_setup.gd`): the full North Star control map, registered in code.
 
 ## Part 2: combat
-- **Hand buttons** (`scripts/combat/combat_controller.gd`): X and Y are your two hands (`x_is_left` chooses which is which). Tap for a Normal attack, hold for a Hard attack.
+- **Hand buttons** (`scripts/combat/combat_controller.gd`): X is your right hand and Y your left (`x_is_left` swaps them). Tap for a Normal attack, hold for a Hard attack.
 - **Timing combos**: 3 steps per chain, using PSO's windows. The chain window opens when the swing ends (PSO's "combo" frame, just after the hit) and closes when the recovery ends; chaining cancels the rest of the recovery. Timing is judged when the button goes down, so a Hard hold that starts in the window still chains. `early_tolerance` (0.15 s) is an input buffer: a press slightly before the window counts and fires the moment the window opens, never cutting the swing short. Earlier than that breaks the combo; too late starts a new chain. Any attack from either hand can fill the next step.
 - **Weapon steps**: each weapon counts its own consecutive uses. Sword, Sword, Sword plays Slash, Return Slash, Cleave with bonus damage. Sword, Pistol, Sword plays the sword's Slash both times.
 - **PSO timing**: the starter weapons use PSO Blue Burst's frame data for hit frames, attack length and window length (30 fps) from the [Ephinea wiki](https://wiki.pioneer2.net/w/Game_mechanics/Frame_data): saber timings for the Sword, handgun for the Pistol, and Foie's cast time for spells. `tools/build_starter_weapons.gd` lists the source frame numbers next to each attack.
@@ -36,7 +36,7 @@ Built in playable parts (see the Prototype Roadmap in the Claude project). Curre
 - **Powerstance**: a pair of the same weapon type (even different items, like Sword + Frost Sword) always attacks with both weapons, each at 75% (1.5x total), on either button. Twin attacks chain their own 3 steps. Twin casting items cast both spells at full power and full LP.
 - **RT + a hand's button** uses the special of the weapon in that hand (`WeaponData.special_attack`); with a powerstanced pair, the other hand swings normally at the same time. No weapon has a special until Part 5, so for now RT + a button is a normal attack (or the second spell on a casting item).
 - **Two-handed weapons are one item**, held in the right hand and used by both buttons.
-- **Target markers** (PSU-style, `scripts/ui/target_markers.gd`): small yellow rings mark every enemy your next attack would hit, so you can see a Great Sword sweep catching two enemies, or a piercing Frost Lance lining up a row. The locked-on enemy gets a larger red ring, dimmed when your next attack won't reach it. The preview follows the last hand you pressed, includes the attack's lunge, and updates with RT held (specials and second spells).
+- **Target markers** (PSU-style, `scripts/ui/target_markers.gd`): rings on every enemy each hand's next attack would hit, shown for both hands at once: **blue** for the right hand (X), **yellow** for the left hand (Y), **green** when both would hit the same enemy. You can see a Great Sword sweep catching two enemies, or a piercing Frost Lance lining up a row. The locked-on enemy also gets a larger red ring, dimmed when neither hand would reach it. Predictions include the attack's lunge and update while you hold RT (specials and second spells).
 - **Sword hitbox narrowed** to match PSO's single-target saber; the Great Sword is the wide sweep.
 - **Shield hand button**: Shield **Deflect** opens a parry window; Heavy Shield **Shove** knocks enemies back.
 - **Dodge**: hits during the dash's i-frames are dodged.
@@ -96,7 +96,7 @@ godot --headless --path . --script res://tests/targeting_test.gd
 
 - `loadout_test.gd`: one-Heavy and two-handed rules, the augment, cycling past empty and invalid loadouts, LT mode per loadout, shield / arms-up / two-handed block percentages, parry and stagger, no block from behind, Deflect, dash dodge, Heavy Shield shove, blocking a real Shooter bolt, powerstance twin hits and twin combos, twin pistols, the powerstance option, and the menu opening and pausing.
 
-- `targeting_test.gd`: Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release.
+- `targeting_test.gd`: default buttons (X = right hand); Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; blue / yellow / green per hand, and using one hand doesn't hide the other hand's marker; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release.
 
 The tests always use the default loadouts and never overwrite your saved ones.
 

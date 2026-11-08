@@ -3,7 +3,8 @@ extends Node3D
 ## The Seeker's hands: input, loadouts, timing combos, blocking, powerstance,
 ## LP and attack execution (North Star §4, §5).
 ##
-## Input: each face button is one hand (x_is_left picks which). Tap = Normal
+## Input: each face button is one hand. By default X is the right hand and Y the
+## left (x_is_left swaps them). Tap = Normal
 ## attack (fires on release), hold past hold_threshold = Hard attack. Holding
 ## Shift (RT) uses that hand's special (WeaponData.special_attack; none exist
 ## until Part 5, so it's a normal attack) or, on a casting item, its second spell.
@@ -40,8 +41,8 @@ extends Node3D
 ## Blocks only stop hits from the front (block_arc_deg). With a shield you can
 ## keep blocking while you attack, at shield_attack_damage_scale damage.
 ##
-## Target preview (PSU): predict_targets() returns every enemy the next attack
-## from preview_hand would hit; TargetMarkers draws them.
+## Target preview (PSU): predict_targets(hand) returns every enemy that hand's
+## next attack would hit; TargetMarkers draws both hands at once.
 ##
 ## Powerstance: a matching pair (same weapon_type, e.g. Sword + Frost Sword)
 ## always attacks with both hands, each at TWIN_DAMAGE_SCALE. RT + a hand's
@@ -74,7 +75,8 @@ const DEFAULT_LOADOUTS := [
 
 @export var stats: Stats
 ## North Star: the player chooses which face button is which hand.
-@export var x_is_left := true
+## Default: X = right hand, Y = left hand.
+@export var x_is_left := false
 @export var hold_threshold := 0.22
 @export var soft_aim_angle_deg := 25.0
 @export var soft_aim_range := 25.0
@@ -96,8 +98,6 @@ const DEFAULT_LOADOUTS := [
 ## With a shield you can attack without dropping the block, at this much damage.
 @export_range(0.0, 1.0) var shield_attack_damage_scale := 0.66
 
-## Hand whose next attack the target markers preview (the last hand pressed).
-var preview_hand := 0
 
 var lp := 0.0
 var loadout_set: LoadoutSet
@@ -162,7 +162,6 @@ func _ready() -> void:
   _build_hand(Vector3(-0.5, 1.05, -0.1))
   _build_hand(Vector3(0.5, 1.05, -0.1))
   _build_hitbox_debug()
-  preview_hand = Hand.LEFT if x_is_left else Hand.RIGHT
   if use_saved_loadouts:
     apply_loadout_set(LoadoutSet.load_or_default(make_default_loadouts()))
   else:
@@ -407,7 +406,6 @@ func _read_hand(hand: int, delta: float) -> void:
   if Input.is_action_just_pressed(action):
     _held[hand] = 0.0
     _hard_fired[hand] = false
-    preview_hand = hand
     _press_chains[hand] = _judge_press()
   elif _held[hand] >= 0.0:
     if Input.is_action_pressed(action):
@@ -668,9 +666,9 @@ func _choose_aim(attack: AttackData) -> Array:
 
 # --- Target preview (PSU target cursor) ---------------------------------------
 
-## Every enemy the next attack from preview_hand would hit, as things stand now.
-func predict_targets() -> Array[Node3D]:
-  var weapon := current_weapon(preview_hand)
+## Every enemy the given hand's next attack would hit, as things stand now.
+func predict_targets(hand: int) -> Array[Node3D]:
+  var weapon := current_weapon(hand)
   if weapon == null or weapon.is_shield:
     return []
   var special := Input.is_action_pressed("shift")
@@ -678,7 +676,7 @@ func predict_targets() -> Array[Node3D]:
   if _current and _current.sustained:
     attack = _current.attack
   else:
-    attack = weapon.get_attack(_predicted_step(preview_hand), false, 1 if special else 0, special)
+    attack = weapon.get_attack(_predicted_step(hand), false, 1 if special else 0, special)
   if attack == null:
     return []
   var aim := _choose_aim(attack)

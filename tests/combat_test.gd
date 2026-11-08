@@ -29,7 +29,8 @@ func _initialize() -> void:
 func _run() -> void:
 	_player = _main.get_node("Player")
 	_combat = _player.combat
-	_combat.stats.luck = 0.0  # no random crits in tests
+	_combat.stats.luck = 0.0
+	_combat.x_is_left = true  # these checks were written with X = left hand  # no random crits in tests
 	# Never depend on (or overwrite) the player's saved loadouts.
 	_combat.apply_loadout_set(CombatController.make_default_loadouts())
 	_dummy = _main.get_node("Dummies/DummyA")

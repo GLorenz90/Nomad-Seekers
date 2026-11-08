@@ -35,58 +35,69 @@ func _run() -> void:
 	_main.get_node("Dummies").add_child(_b)
 	await _frames(30)
 
+	_check("default buttons: X is the right hand, Y the left",
+		_combat.button_for(CombatController.Hand.RIGHT) == "X" and _combat.button_for(CombatController.Hand.LEFT) == "Y")
+	var LEFT := CombatController.Hand.LEFT
+	var RIGHT := CombatController.Hand.RIGHT
+
 	# --- Melee: the Sword (single-target saber) vs the Great Sword sweep ---
 	_place(_b, Vector3(1.6, 0, -8))  # side by side with DummyA
-	await _stand(Vector3(0.8, 0.1, -5.6), SWORD_PISTOL)
-	var sword_targets := _combat.predict_targets()
+	await _stand(Vector3(0.8, 0.1, -5.6), SWORD_PISTOL)  # left Sword, right Pistol
+	var sword_targets := _combat.predict_targets(LEFT)
 	_check("Sword marks one of two side-by-side enemies (%s)" % _names(sword_targets), sword_targets.size() == 1)
-	_check("a small marker sits on it", _markers.get_marked().size() == 1)
-	_check("the real swing hits exactly what was marked (%s)" % _names(await _swing_hits()),
+	_check("the real swing hits exactly what was marked (%s)" % _names(await _swing_hits("hand_y")),
 		_last_hit_targets.size() == 1 and _last_hit_targets[0] == sword_targets[0])
 	await _stand(Vector3(0.8, 0.1, -5.6), GREAT_SWORD)
-	var great := _combat.predict_targets()
+	var great := _combat.predict_targets(RIGHT)
 	_check("Great Sword marks both enemies it would sweep (%s)" % _names(great), great.size() == 2)
-	_check("two small markers show", _markers.get_marked().size() == 2)
+	_check("two markers show, green (both buttons use the Great Sword)", _marked_bits() == [3, 3])
 	await _stand(Vector3(0.8, 0.1, -5.6), GREAT_SWORD)
-	_check("the real Great Sword swing hits both (%s)" % _names(await _swing_hits()), _last_hit_targets.size() == 2)
+	_check("the real Great Sword swing hits both (%s)" % _names(await _swing_hits("hand_x")), _last_hit_targets.size() == 2)
 	await _stand(Vector3(0.8, 0.1, 2.0), GREAT_SWORD)
-	_check("nothing in reach, nothing marked (%s)" % _names(_combat.predict_targets()),
-		_combat.predict_targets().is_empty() and _markers.get_marked().is_empty())
+	_check("nothing in reach, nothing marked", _combat.predict_targets(RIGHT).is_empty() and _markers.get_marked().is_empty())
+
+	# --- Both hands at once: no more "last weapon used" ---
+	_place(_b, Vector3(0, 0, -11))  # directly behind DummyA
+	await _stand(Vector3(0, 0.1, -5.6), SWORD_PISTOL)
+	_check("Sword (left) and Pistol (right) on the same enemy: green", _markers.get_marked().get(_a, 0) == 3)
+	await _stand(Vector3(0, 0.1, -2), SWORD_PISTOL)
+	_check("out of Sword reach, only the Pistol (right) marks it: blue", _markers.get_marked().get(_a, 0) == TargetMarkers.RIGHT_BIT)
+	await _stand(Vector3(0, 0.1, -2), WAND_SWORD)  # left Wand, right Sword
+	_check("only the Wand (left) reaches: yellow", _markers.get_marked().get(_a, 0) == TargetMarkers.LEFT_BIT)
+	var before_swing: int = _markers.get_marked().get(_a, 0)
+	await _swing_hits("hand_x")  # use the Sword; the Wand's marker must stay
+	await _frames(2)
+	_check("using the Sword doesn't hide the Wand's marker (before %d, after %d)" % [before_swing, _markers.get_marked().get(_a, 0)],
+		_markers.get_marked().get(_a, 0) & TargetMarkers.LEFT_BIT != 0)
 
 	# --- Projectiles: first enemy on the line; piercing spells mark the whole line ---
-	_place(_b, Vector3(0, 0, -11))  # directly behind DummyA
 	await _stand(Vector3(0, 0.1, -2), SWORD_PISTOL)
-	_combat.preview_hand = CombatController.Hand.RIGHT  # Pistol
-	await _frames(2)
-	var shot := _combat.predict_targets()
+	var shot := _combat.predict_targets(RIGHT)
 	_check("Pistol marks only the first enemy in line (%s)" % _names(shot), shot.size() == 1 and shot[0] == _a)
 	await _stand(Vector3(0, 0.1, -2), WAND_SWORD)
-	_combat.preview_hand = CombatController.Hand.LEFT  # Wand
-	await _frames(2)
-	var bolt := _combat.predict_targets()
+	var bolt := _combat.predict_targets(LEFT)
 	_check("Fire Bolt (no pierce) marks one (%s)" % _names(bolt), bolt.size() == 1)
 	Input.action_press("shift")
 	await _frames(2)
-	var lance := _combat.predict_targets()
+	var lance := _combat.predict_targets(LEFT)
 	Input.action_release("shift")
 	_check("Frost Lance (pierce) marks both enemies on the line (%s)" % _names(lance), lance.size() == 2)
 
-	# --- Lock-on: a large marker on the locked enemy ---
+	# --- Lock-on: a large ring on the locked enemy, plus its hand colors ---
 	await _stand(Vector3(0, 0.1, -5.5), SWORD_PISTOL)
-	_combat.preview_hand = CombatController.Hand.LEFT
 	Input.action_press("lock_on")
 	await _frames(2)
 	Input.action_release("lock_on")
 	await _frames(3)
 	var rig: CameraRig = _main.get_node("CameraRig")
-	_check("lock-on shows the large marker (locked: %s)" % (rig.lock_target.name if rig.lock_target else "none"),
+	_check("lock-on shows the large ring (locked: %s)" % (rig.lock_target.name if rig.lock_target else "none"),
 		rig.lock_target == _a and _markers.is_lock_marker_visible())
-	_check("the locked enemy doesn't also get a small marker", not _a in _markers.get_marked())
+	_check("the locked enemy still shows which hands would hit it", _markers.get_marked().get(_a, 0) == 3)
 	Input.action_press("lock_on")
 	await _frames(2)
 	Input.action_release("lock_on")
 	await _frames(3)
-	_check("unlocking hides the large marker", not _markers.is_lock_marker_visible())
+	_check("unlocking hides the large ring", not _markers.is_lock_marker_visible())
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
@@ -95,16 +106,16 @@ func _run() -> void:
 var _last_hit_targets: Array[Node] = []
 
 
-## Taps X and returns the distinct enemies the swing actually hit.
-func _swing_hits() -> Array[Node]:
+## Taps a hand button and returns the distinct enemies the attack actually hit.
+func _swing_hits(action: StringName) -> Array[Node]:
 	_last_hit_targets.clear()
 	var record := func(target, _info, _amount):
 		if not target in _last_hit_targets:
 			_last_hit_targets.append(target)
 	_combat.hit_landed.connect(record)
-	Input.action_press("hand_x")
+	Input.action_press(action)
 	await _frames(2)
-	Input.action_release("hand_x")
+	Input.action_release(action)
 	for i in 120:
 		await physics_frame
 		if not _combat.is_attacking():
@@ -116,6 +127,12 @@ func _swing_hits() -> Array[Node]:
 	_place(_b, _b._start)
 	await _frames(10)
 	return _last_hit_targets
+
+
+func _marked_bits() -> Array:
+	var bits := _markers.get_marked().values()
+	bits.sort()
+	return bits
 
 
 func _place(dummy: TargetDummy, at: Vector3) -> void:
