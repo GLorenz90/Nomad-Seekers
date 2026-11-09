@@ -107,6 +107,7 @@ func use_save(data: SaveData) -> void:
 	save = data
 	combat.inventory = save.inventory
 	combat.job_code = save.character.job_code()
+	combat.set_left_handed(save.character.left_handed)
 	combat.apply_loadout_set(save.loadouts)
 	if syncaida:
 		syncaida.pair(save.paired_syncaida())

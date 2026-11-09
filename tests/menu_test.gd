@@ -67,7 +67,7 @@ func _run() -> void:
 		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
 	await _frames(3)
 	_check("RB switches tabs and focus follows (Loadouts, %s)" % _focus_name(), _tab() == "Loadouts" and _focused() is Button)
-	await _pad(JOY_BUTTON_DPAD_RIGHT)  # right hand of loadout 1
+	_check("focus starts on loadout 1's primary hand, the first column", _focused() == _menu._slot_buttons[0][CombatController.PRIMARY])
 	await _pad(JOY_BUTTON_A)
 	_check("A on a hand opens the weapon picker", _menu._picker.visible and _menu._picker_list.is_ancestor_of(_focused()))
 	await _pad(JOY_BUTTON_B)

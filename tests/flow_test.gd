@@ -87,9 +87,11 @@ func _run() -> void:
 	title._gender.select(CharacterData.Gender.FEMALE)
 	title._job.select(CharacterData.Job.INVOKER)
 	title._starter.select(3)
+	title._hand.select(1)  # left-handed
 	title._update_preview()
-	_check("the preview shows race, job and emblem (%s)" % title._preview.text.get_slice("\n", 0),
-		title._preview.text.contains("+10 SOL") and title._preview.text.contains("Emblem:"))
+	_check("the preview shows race, job, handedness and emblem (%s)" % title._preview.text.get_slice("\n", 2),
+		title._preview.text.contains("+10 SOL") and title._preview.text.contains("Emblem:")
+		and title._preview.text.contains("Left-handed: primary weapon (X) in the left hand"))
 	title._create_button.grab_focus()
 	await _frames(2)
 	await _pad(JOY_BUTTON_A)
@@ -103,6 +105,14 @@ func _run() -> void:
 	_check("with the chosen SyncAIDa paired (Lumi) and the Field Frame on",
 		player.save.paired_syncaida() != null and player.save.paired_syncaida().display_name == "Lumi"
 		and c.torso != null)
+	await _frames(3)
+	var wallet: String = (current_scene.get_node("HUD") as DebugHud)._wallet.text
+	_check("the HUD wallet is filled in (%s)" % wallet.get_slice("\n", 0), wallet.begins_with("Lirael") and not "%" in wallet
+		and wallet.contains("Trap Scanner 2"))
+	var pivots: Array = player.combat._pivots
+	_check("left-handed: the primary weapon (X) is drawn on the left side (x %.1f), the off hand on the right" % pivots[CombatController.PRIMARY].position.x,
+		c.left_handed and player.combat.left_handed and pivots[CombatController.PRIMARY].position.x < 0.0
+		and pivots[CombatController.OFF_HAND].position.x > 0.0 and player.combat.button_for(CombatController.PRIMARY) == "X")
 	var names := player.save.inventory.weapons.map(func(w: WeaponData) -> String: return w.display_name)
 	_check("starter kit: a Sword, a Pistol and a Wand to carry (%s), and 2 Trap Scanners" % [names],
 		names == ["Sword", "Pistol", "Wand"] and player.save.inventory.count(&"trap_scanner") == 2)
@@ -135,6 +145,14 @@ func _run() -> void:
 	menu.save_on_close = false
 	menu.open()
 	await _frames(3)
+	var header_row: Array = []
+	for child in menu._slot_buttons[0][CombatController.PRIMARY].get_parent().get_children().slice(0, 4):
+		header_row.append((child as Label).text if child is Label else "")
+	_check("the Loadouts tab reads Primary (X) first, then Off hand (Y) (%s)" % [header_row],
+		header_row[1] == "Primary (X)" and header_row[2] == "Off hand (Y)"
+		and menu._slot_buttons[0][CombatController.PRIMARY].get_index() < menu._slot_buttons[0][CombatController.OFF_HAND].get_index())
+	_check("and the primary slot of loadout 1 shows the Pistol (%s)" % menu._slot_buttons[0][CombatController.PRIMARY].text,
+		menu._slot_buttons[0][CombatController.PRIMARY].text.contains("Pistol"))
 	root.gui_release_focus()
 	await _pad(JOY_BUTTON_A)
 	_check("the pause menu refocuses after a lost focus too", root.gui_get_focus_owner() != null and menu.is_ancestor_of(root.gui_get_focus_owner()))

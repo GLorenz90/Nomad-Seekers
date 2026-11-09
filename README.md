@@ -13,7 +13,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Input map** (`scripts/autoload/input_setup.gd`): the full North Star control map, registered in code.
 
 ## Part 2: combat
-- **Hand buttons** (`scripts/combat/combat_controller.gd`): X is your right hand and Y your left (`x_is_left` swaps them). Tap for a Normal attack, hold for a Hard attack.
+- **Hand buttons** (`scripts/combat/combat_controller.gd`): X is your **primary hand** and Y your **off hand** (Part 8: menus list the primary hand first; a character's handedness, picked at creation, only decides which side the primary weapon is drawn on). Tap for a Normal attack, hold for a Hard attack.
 - **Timing combos**: 3 steps per chain, using PSO's windows. The chain window opens when the swing ends (PSO's "combo" frame, just after the hit) and closes when the recovery ends; chaining cancels the rest of the recovery. Timing is judged when the button goes down, so a Hard hold that starts in the window still chains. `early_tolerance` (0.15 s) is an input buffer: a press slightly before the window counts and fires the moment the window opens, never cutting the swing short. Earlier than that breaks the combo; too late starts a new chain. Any attack from either hand can fill the next step.
 - **Weapon steps**: each weapon counts its own consecutive uses. Sword, Sword, Sword plays Slash, Return Slash, Cleave with bonus damage. Sword, Pistol, Sword plays the sword's Slash both times.
 - **PSO timing**: the starter weapons use PSO Blue Burst's frame data for hit frames, attack length and window length (30 fps) from the [Ephinea wiki](https://wiki.pioneer2.net/w/Game_mechanics/Frame_data): saber timings for the Sword, handgun for the Pistol, and Foie's cast time for spells. `tools/build_starter_weapons.gd` lists the source frame numbers next to each attack.
@@ -37,8 +37,8 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
   - With a shield you can attack without dropping the block; those attacks deal 66% damage. Other blocks drop while you attack.
 - **Powerstance**: a pair of the same weapon type (even different items, like Sword + Frost Sword) always attacks with both weapons, each at 75% (1.5x total), on either button. Twin attacks chain their own 3 steps. Twin casting items cast both spells at full power and full LP.
 - **RT + a hand's button** uses the special of the weapon in that hand (`WeaponData.special_attack`); with a powerstanced pair, the other hand swings normally at the same time. No weapon has a special until Part 5, so for now RT + a button is a normal attack (or the second spell on a casting item).
-- **Two-handed weapons are one item**, held in the right hand and used by both buttons.
-- **Target markers** (PSU-style, `scripts/ui/target_markers.gd`): rings on every enemy each hand's next attack would hit, shown for both hands at once: **blue** for the right hand (X), **yellow** for the left hand (Y), **green** when both would hit the same enemy. You can see a Great Sword sweep catching two enemies, or a piercing Frost Lance lining up a row. The locked-on enemy also gets a larger red ring, dimmed when neither hand would reach it. Predictions include the attack's lunge and update while you hold RT (specials and second spells).
+- **Two-handed weapons are one item**, held in the primary hand and used by both buttons.
+- **Target markers** (PSU-style, `scripts/ui/target_markers.gd`): rings on every enemy each hand's next attack would hit, shown for both hands at once: **blue** for the primary hand (X), **yellow** for the off hand (Y), **green** when both would hit the same enemy. You can see a Great Sword sweep catching two enemies, or a piercing Frost Lance lining up a row. The locked-on enemy also gets a larger red ring, dimmed when neither hand would reach it. Predictions include the attack's lunge and update while you hold RT (specials and second spells).
 - **Sword hitbox narrowed** to match PSO's single-target saber; the Great Sword is the wide sweep.
 - **Shield hand button**: Shield **Deflect** opens a parry window; Heavy Shield **Shove** knocks enemies back.
 - **Dodge**: hits during the dash's i-frames are dodged.
@@ -173,6 +173,11 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Title screen** (gamepad: A or Start accepts, B goes back): **Continue** (your last character), **Character select**, Quit.
 - **Every menu recovers focus for the controller:** if nothing is focused (say, after clicking the window to bring it forward), the first A or d-pad press focuses the menu's default button instead of doing nothing. Character creation starts on Race, so the d-pad isn't caught in the name box.
 - **4 character slots**, like PSO. Each slot is a whole save (character, loadouts, inventory, spells, armor, SyncAIDa) in `user://characters/slot_N.tres`. X on a slot asks, and a second X deletes it. Your Part 5-7 save moves into slot 1 the first time.
+- **Primary and off hand:** loadouts read primary hand (X) first, then off hand (Y), everywhere. Creation asks for the **primary hand** (right or left): a left-handed Seeker holds the primary weapon on the left side, still on X. The Character tab can change it for testing.
+
+![Loadouts read Primary (X) first](docs/screenshots/loadouts_primary.png)
+![A left-handed Seeker: Sword (X) on the left, Shield (Y) on the right](docs/screenshots/left_handed.png)
+
 - **Starter kit:** every new character carries a Sword, a Pistol and a Wand, plus 2 Trap Scanners; only loadout 1 is filled (X Pistol, Y Sword).
 - **Lock-on:** when the locked target dies, the lock moves to the next closest one.
 - **Character creation:** name (type it, or "New name" on a gamepad), race, gender, job and starter SyncAIDa, with a preview of the race and job rules and the emblem the choices make. Goluman can't pick Invoker. Creating saves the slot and drops you into Nomad-2.
@@ -272,7 +277,7 @@ godot --headless --path . --script res://tests/flow_test.gd
 
 - `loadout_test.gd`: one-Heavy and two-handed rules, the augment, cycling past empty and invalid loadouts, LT mode per loadout, shield / arms-up / two-handed block percentages, parry and stagger, no block from behind, Deflect, dash dodge, Heavy Shield shove, blocking a real Shooter bolt, powerstance twin hits and twin combos, twin pistols, the powerstance option, and the menu opening and pausing.
 
-- `targeting_test.gd`: default buttons (X = right hand); Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; blue / yellow / green per hand, and using one hand doesn't hide the other hand's marker; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release, and the lock moving to the next closest target when the locked one dies.
+- `targeting_test.gd`: default buttons (X = primary hand); Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; blue / yellow / green per hand, and using one hand doesn't hide the other hand's marker; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release, and the lock moving to the next closest target when the locked one dies.
 
 - `enemy_test.gd` (in the arena): all six monster types, DEF / RES math, hit chance (ATA vs EVA, combo steps, Hard openers, the streak, statuses lowering EVA, spells never missing), every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard hits pushing and flinching (light hits never interrupting), a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open), and PSO doors (the exit locked until the room is cleared).
 

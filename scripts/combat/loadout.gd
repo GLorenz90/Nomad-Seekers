@@ -17,11 +17,13 @@ enum LTMode { NONE, SHIELD, TWO_HAND, ARMS_UP }
 ## Arms-up block: "slightly weaker than a 2h block".
 const ARMS_UP_BLOCK := 0.25
 
+## The off hand (Y) and the primary hand (X). Stored as left / right so saves
+## from before Part 8 still load; players only see "primary" and "off hand".
 @export var left: WeaponData
 @export var right: WeaponData
 ## Spells (or Goluman traps) on each hand's casting item (Part 6), by slot:
 ## slot 0 = the hand's button, 1 = RT + it; a two-handed casting item (in the
-## right hand) has 4: X, Y, RT + X, RT + Y. "" = empty.
+## primary hand) has 4: X, Y, RT + X, RT + Y. "" = empty.
 @export var left_spells: PackedStringArray = PackedStringArray()
 @export var right_spells: PackedStringArray = PackedStringArray()
 

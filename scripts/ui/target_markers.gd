@@ -3,8 +3,8 @@ extends Node3D
 ## PSU-style target cursors, one color per hand.
 ##
 ## Small rings sit on every enemy each hand's next attack would hit (from
-## CombatController.predict_targets): blue for the right hand, yellow for the
-## left hand, green when both hands would hit the same enemy. So you can see a
+## CombatController.predict_targets): blue for the primary hand, yellow for the
+## off hand, green when both hands would hit the same enemy. So you can see a
 ## Great Sword sweep catching two enemies, or a piercing spell lining up three.
 ## The locked-on enemy also gets a larger red ring, dimmed when neither hand's
 ## next attack would reach it.

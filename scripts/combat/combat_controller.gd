@@ -3,8 +3,13 @@ extends Node3D
 ## The Seeker's hands: input, loadouts, timing combos, blocking, powerstance,
 ## LP and attack execution (North Star §4, §5).
 ##
-## Input: each face button is one hand. By default X is the right hand and Y the
-## left (x_is_left swaps them). Tap = Normal
+## Input: each face button is one hand. X is the **primary hand** and Y the
+## **off hand** (Grayson, 2026-11-09). In code the primary hand is still
+## Hand.RIGHT and the off hand Hand.LEFT (and Loadout.right / .left), so old
+## saves load unchanged; players only ever see "primary" and "off hand".
+## Which side of the body the primary hand is on comes from the character's
+## handedness (left_handed); it only changes where weapons are drawn.
+## (x_is_left swaps the buttons; only older tests use it.) Tap = Normal
 ## attack (fires on release), hold past hold_threshold = Hard attack. Holding
 ## Shift (RT) uses that hand's special (WeaponData.special_attack; none exist
 ## until Part 5, so it's a normal attack) or, on a casting item, its second spell.
@@ -95,16 +100,35 @@ const STAT_FOR_CLASS := {
   WeaponData.WeaponClass.MAGIC: &"soul",
 }
 const WEAPON_DIR := "res://data/weapons/"
-## Default loadouts as [left hand, right hand]; "" is empty. Two-handed weapons
-## go in the right hand, and both buttons use them.
+## Default loadouts as [off hand, primary hand]; "" is empty. Two-handed
+## weapons go in the primary hand, and both buttons use them.
 const DEFAULT_LOADOUTS := [
   ["sword", "pistol"], ["shield", "sword"], ["sword", "frost_sword"], ["pistol", "pistol"],
   ["wand", "sword"], ["", "great_sword"], ["", "dervish_blades"], ["", ""]]
 
 @export var stats: Stats
 ## North Star: the player chooses which face button is which hand.
-## Default: X = right hand, Y = left hand.
+## Default: X = primary hand, Y = off hand.
 @export var x_is_left := false
+## Left-handed characters hold the primary weapon on their left side.
+var left_handed := false
+
+const PRIMARY := 1  # Hand.RIGHT
+const OFF_HAND := 0  # Hand.LEFT
+
+
+## "Primary" / "Off hand" for menus and messages.
+static func hand_name(hand: int) -> String:
+  return "Primary" if hand == PRIMARY else "Off hand"
+
+
+## Puts the primary hand on the character's left or right (visual only).
+func set_left_handed(on: bool) -> void:
+  left_handed = on
+  if _pivots.size() == 2:
+    var side := -1.0 if on else 1.0
+    _pivots[Hand.RIGHT].position.x = 0.5 * side
+    _pivots[Hand.LEFT].position.x = -0.5 * side
 @export var hold_threshold := 0.22
 @export var soft_aim_angle_deg := 25.0
 @export var soft_aim_range := 25.0
@@ -241,7 +265,7 @@ static func make_default_loadouts() -> LoadoutSet:
   for pair in DEFAULT_LOADOUTS:
     defaults.loadouts.append(Loadout.make(load_weapon(pair[0]), load_weapon(pair[1])))
   defaults.ensure_slots()
-  # The starter Wand (loadout 5, left hand) holds a new Seeker's first spells.
+  # The starter Wand (loadout 5, off hand) holds a new Seeker's first spells.
   defaults.loadouts[4].set_spell(0, 0, &"fajro")
   defaults.loadouts[4].set_spell(0, 1, &"glacio")
   return defaults
@@ -522,7 +546,7 @@ func get_debug_text() -> String:
       if w and w.casting:
         label += " [%s / Shift: %s]" % [spell_name_in(hand, spell_slot(w, hand, false)),
           spell_name_in(hand, spell_slot(w, hand, true))]
-      lines.append("%s (%s hand): %s" % [button_for(hand), "left" if hand == Hand.LEFT else "right", label])
+      lines.append("%s (%s): %s" % [button_for(hand), hand_name(hand).to_lower(), label])
   lines.append(get_lt_text() + ("  [BLOCKING]" if _blocking else ""))
   if _current:
     lines.append("Attack: %s%s%s  %.2fs  window %.2f-%.2f" % [
@@ -1374,7 +1398,7 @@ func _build_hand(shoulder: Vector3) -> void:
 
 
 ## The hand that visibly holds the weapon used by this button. A two-handed
-## weapon is one item, always held in the right hand; both buttons use it.
+## weapon is one item, always held in the primary hand; both buttons use it.
 func _holding_hand(hand: int) -> int:
   var l := get_loadout()
   if l and l.two_handed_weapon():
@@ -1382,7 +1406,7 @@ func _holding_hand(hand: int) -> int:
   return hand
 
 
-## What each hand visibly holds (a two-handed weapon shows in the right hand only).
+## What each hand visibly holds (a two-handed weapon shows in the primary hand only).
 func _held_weapon(hand: int) -> WeaponData:
   var l := get_loadout()
   if l == null:

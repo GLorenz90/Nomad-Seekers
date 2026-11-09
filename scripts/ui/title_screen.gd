@@ -31,6 +31,7 @@ var _create_slot := -1
 var _name: LineEdit
 var _race: OptionButton
 var _gender: OptionButton
+var _hand: OptionButton
 var _job: OptionButton
 var _starter: OptionButton
 var _preview: Label
@@ -198,8 +199,9 @@ func _build_select(column: VBoxContainer) -> VBoxContainer:
 func _slot_text(data: SaveData) -> String:
 	var c := data.character
 	var sync := data.paired_syncaida()
-	return "%s   %s %s %s   %s emblem   EXP %d%s" % [c.seeker_name, c.race_name(),
-		"F" if c.gender == CharacterData.Gender.FEMALE else "M", c.job_name(), c.emblem_name(), c.experience,
+	return "%s   %s %s %s%s   %s emblem   EXP %d%s" % [c.seeker_name, c.race_name(),
+		"F" if c.gender == CharacterData.Gender.FEMALE else "M", c.job_name(), " (left-handed)" if c.left_handed else "",
+		c.emblem_name(), c.experience,
 		"   SyncAIDa: %s Lv %d" % [sync.display_name, sync.level()] if sync else ""]
 
 
@@ -271,6 +273,7 @@ func _build_create(column: VBoxContainer) -> VBoxContainer:
 	grid.add_child(name_row)
 	_race = _option(grid, "Race", CharacterData.Race.keys())
 	_gender = _option(grid, "Gender", CharacterData.Gender.keys())
+	_hand = _option(grid, "Primary hand", ["Right", "Left"])
 	_job = _option(grid, "Job", CharacterData.Job.keys())
 	_starter = _option(grid, "SyncAIDa", [])
 	for i in SyncAIDaData.STARTERS.size():
@@ -302,6 +305,7 @@ func _reset_creation() -> void:
 	_name.text = LoadoutMenu.NAMES[randi() % LoadoutMenu.NAMES.size()]
 	_race.select(CharacterData.Race.HUMAN)
 	_gender.select(CharacterData.Gender.MALE)
+	_hand.select(0)
 	_job.select(CharacterData.Job.STRIKER)
 	_starter.select(0)
 	_update_preview()
@@ -320,6 +324,7 @@ func _draft() -> CharacterData:
 	c.race = _race.selected as CharacterData.Race
 	c.gender = _gender.selected as CharacterData.Gender
 	c.job = _job.selected as CharacterData.Job
+	c.left_handed = _hand.selected == 1
 	return c
 
 
@@ -333,8 +338,9 @@ func _update_preview() -> void:
 		_job.select(CharacterData.Job.RANGER)
 	var c := _draft()
 	var favored: Array = Loot.FAVORED[c.emblem_index()]
-	_preview.text = "%s\n%s\nEmblem: %s (favors %s)%s\n%s" % [
-		RACE_NOTES[c.race], JOB_NOTES[c.job], c.emblem_name(),
+	_preview.text = "%s\n%s\n%s: primary weapon (X) in the %s hand, off hand (Y) in the %s.\nEmblem: %s (favors %s)%s\n%s" % [
+		RACE_NOTES[c.race], JOB_NOTES[c.job], c.handedness_name(), "left" if c.left_handed else "right",
+		"right" if c.left_handed else "left", c.emblem_name(),
 		", ".join(favored.map(func(id: StringName) -> String: return String(id).replace("_", " ").capitalize())),
 		"  ·  finds armor twice as often" if c.emblem_index() == Loot.ARMOR_EMBLEM else "",
 		"The job is fixed once created. The emblem comes from name, race, gender and job."]
@@ -352,6 +358,7 @@ func _create() -> void:
 		_message.text = "Goluman can't be Invokers."
 		return
 	var data := SaveData.create(c.seeker_name, c.race, c.gender, c.job, _starter.selected)
+	data.character.left_handed = c.left_handed
 	if Session.write_slot(_create_slot, data) != OK:
 		_message.text = "Couldn't save the character."
 		return

@@ -55,6 +55,7 @@ var _character_info: Label
 var _name_edit: LineEdit
 var _race: OptionButton
 var _gender: OptionButton
+var _hand: OptionButton
 var _job: OptionButton
 var _sync_owned: VBoxContainer
 var _spells_tab: SpellsTab
@@ -188,7 +189,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func equip(index: int, hand: int, weapon: WeaponData) -> String:
 	var l := _set.loadouts[index]
 	if weapon and weapon.two_handed:
-		# A two-handed weapon is one item, held in the right hand.
+		# A two-handed weapon is one item, held in the primary hand.
 		l.right = weapon
 		l.left = null
 		return l.validate(_set.double_heavy_augment)
@@ -201,8 +202,8 @@ func equip(index: int, hand: int, weapon: WeaponData) -> String:
 
 func _on_slot_pressed(index: int, hand: int) -> void:
 	_editing = Vector2i(index, hand)
-	_picker_title.text = "Loadout %d, %s hand (%s)" % [
-		index + 1, "left" if hand == 0 else "right", combat.button_for(hand)]
+	_picker_title.text = "Loadout %d, %s (%s)" % [
+		index + 1, CombatController.hand_name(hand).to_lower(), combat.button_for(hand)]
 	_picker.visible = true
 	(_picker_list.get_child(0) as Button).grab_focus()
 
@@ -372,18 +373,19 @@ func _build() -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 6)
 	left.add_child(grid)
-	for header in ["", "Left hand", "Right hand", "LT"]:
+	# Primary hand first (X), then the off hand (Y): the order players read.
+	for header in ["", "Primary (X)", "Off hand (Y)", "LT"]:
 		grid.add_child(_label(header, 14))
 	for i in LoadoutSet.SLOT_COUNT:
 		grid.add_child(_label(str(i + 1), 18))
-		var pair := []
-		for hand in 2:
+		var pair := [null, null]  # indexed by hand
+		for hand in [CombatController.PRIMARY, CombatController.OFF_HAND]:
 			var b := Button.new()
 			b.custom_minimum_size = Vector2(270.0, 34.0)
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			b.pressed.connect(_on_slot_pressed.bind(i, hand))
 			grid.add_child(b)
-			pair.append(b)
+			pair[hand] = b
 		_slot_buttons.append(pair)
 		var status := _label("", 14)
 		status.custom_minimum_size.x = 170.0
@@ -552,6 +554,7 @@ func _build_character_tab() -> void:
 	grid.add_child(name_row)
 	_race = _option(grid, "Race", CharacterData.Race.keys())
 	_gender = _option(grid, "Gender", CharacterData.Gender.keys())
+	_hand = _option(grid, "Primary hand", ["Right", "Left"])
 	_job = _option(grid, "Job", CharacterData.Job.keys())
 	# Chosen at character creation and fixed afterwards (debug: Levels tab).
 	_job.disabled = true
@@ -603,6 +606,7 @@ func _load_character() -> void:
 	_name_edit.text = c.seeker_name
 	_race.select(c.race)
 	_gender.select(c.gender)
+	_hand.select(1 if c.left_handed else 0)
 	_job.select(c.job)
 
 
@@ -619,6 +623,8 @@ func _apply_character() -> void:
 	elif new_race != c.race:
 		c.race = new_race
 	c.gender = _gender.selected as CharacterData.Gender
+	c.left_handed = _hand.selected == 1
+	seeker.combat.set_left_handed(c.left_handed)
 	var removed := ArmorBook.strip_unwearable(seeker.save)
 	if not removed.is_empty():
 		_character_message.text = "Took off %s (can't wear it now)." % ", ".join(removed)
@@ -919,7 +925,7 @@ func _focus_tab() -> void:
 	if page == null:
 		return
 	if page.name == "Loadouts" and combat:
-		(_slot_buttons[combat.loadout_index][0] as Button).grab_focus()
+		(_slot_buttons[combat.loadout_index][CombatController.PRIMARY] as Button).grab_focus()
 		return
 	if page.name == "SyncAIDa" and _focus_paired():
 		return
@@ -1211,7 +1217,7 @@ func _clear_focused_slot(whole: bool) -> void:
 					l.right = null  # a two-handed weapon fills both hands
 				else:
 					l.set_hand(hand, null)
-				_message.text = "Loadout %d, %s hand unequipped." % [i + 1, "left" if hand == 0 else "right"]
+				_message.text = "Loadout %d, %s unequipped." % [i + 1, CombatController.hand_name(hand).to_lower()]
 			_refresh()
 			return
 

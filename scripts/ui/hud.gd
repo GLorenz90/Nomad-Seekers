@@ -116,7 +116,7 @@ func _process(_delta: float) -> void:
 		_wallet.text = "%s  %s  (%s emblem)\nEXP %d\nOro %d\nLumidium carried %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d   Trap Scanner %d" % [
 			c.seeker_name, c.job_name(), c.emblem_name(), c.experience, inv.oro,
 			player.carried_lumidium_total(), inv.lumidium_total(),
-			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt")]
+			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt"), inv.count(&"trap_scanner")]
 		_wallet.modulate = c.emblem_text_color()
 	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE
 	if _panel.visible:

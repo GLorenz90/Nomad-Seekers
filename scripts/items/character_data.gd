@@ -29,6 +29,9 @@ const JOB_CODES := ["S", "R", "I"]
 @export var spells: Dictionary = {}
 ## Materials used: id -> count (PSO materials, see Materials).
 @export var materials: Dictionary = {}
+## Handedness (Grayson, 2026-11-09): which side the primary hand is on. It
+## only changes where weapons are drawn; X is always the primary hand.
+@export var left_handed := false
 ## Armor worn (Part 7): one set per character, like PSO and PSU.
 @export var head: ArmorData
 @export var torso: ArmorData
@@ -86,6 +89,10 @@ const FULL_SPELL_LEVEL := 30
 
 ## Max level for ordinary spells (Grayson, 2026-11-08): 15, +5 Lumera,
 ## -5 Coresian. Invokers reach 30 whatever their race.
+func handedness_name() -> String:
+	return "Left-handed" if left_handed else "Right-handed"
+
+
 func spell_level_cap() -> int:
 	if job == Job.INVOKER:
 		return FULL_SPELL_LEVEL
