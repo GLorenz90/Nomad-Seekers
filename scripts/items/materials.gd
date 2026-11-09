@@ -9,7 +9,7 @@ extends RefCounted
 ##   raised by 25 for the new materials. Goluman stay at 150: they can't use
 ##   Mind (SOL), like PSO's androids couldn't use MST materials.
 ## - HP and LP materials have their own limit of 125 each, outside the shared
-##   one. Goluman can use LP materials, but only half as many (62).
+##   one. Goluman can use LP materials, but only 75.
 ##
 ## Used counts live on CharacterData.materials (id -> count); the items
 ## themselves sit in Inventory.consumables like any other item.
@@ -18,7 +18,7 @@ const PER_USE := 2.0
 const EXTRA_LIMIT := 25  # Grayson: compensates for Dex and Accuracy materials
 const HP_LP_LIMIT := 125
 const GOLUMAN_STAT_LIMIT := 150
-const GOLUMAN_LP_LIMIT := 62  # half of 125, rounded down
+const GOLUMAN_LP_LIMIT := 75  # Grayson: a round 75
 
 ## id -> [display name, Stats property, short stat name, pool]
 ## pool: &"stat" counts toward the shared limit, &"hp" / &"lp" have their own.

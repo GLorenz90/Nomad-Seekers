@@ -43,12 +43,12 @@ func _run() -> void:
 	_check("shared stat limit: Human 250 + 25, Lumera / Coresian 150 + 25, Goluman 150 (%s)" % [limits], limits == [275, 175, 175, 150])
 	_check("HP and LP materials have their own 125 each", Materials.pool_limit(c, &"hp") == 125 and Materials.pool_limit(c, &"lp") == 125)
 	c.race = CharacterData.Race.GOLUMAN
-	_check("Goluman can't use Mind, can use HP, and LP up to half as many (62)",
+	_check("Goluman can't use Mind, can use HP, and LP up to 75",
 		Materials.use_error(c, &"mind_material") != "" and Materials.use_error(c, &"lp_material") == ""
-		and Materials.use_error(c, &"hp_material") == "" and Materials.pool_limit(c, &"lp") == 62
+		and Materials.use_error(c, &"hp_material") == "" and Materials.pool_limit(c, &"lp") == 75
 		and Materials.pool_limit(c, &"hp") == 125)
-	c.materials[&"lp_material"] = 62
-	_check("the 63rd LP Material is refused for a Goluman", Materials.use_error(c, &"lp_material") != "")
+	c.materials[&"lp_material"] = 75
+	_check("the 76th LP Material is refused for a Goluman", Materials.use_error(c, &"lp_material") != "")
 	c.materials.clear()
 	c.race = CharacterData.Race.HUMAN
 
