@@ -39,6 +39,10 @@ func _run() -> void:
 	# Never depend on (or overwrite) the player's saved loadouts.
 	# A fresh save (Striker, default loadouts) that is never written to disk.
 	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	# The expected numbers here use base stats: take the Human race bonus back off.
+	var race_bonus := _player.save.character.race_bonuses()
+	for stat in race_bonus:
+		_combat.stats.set(stat, float(_combat.stats.get(stat)) - float(race_bonus[stat]))
 	_player.autosave = false
 	_dummy = _main.get_node("Dummies/DummyA")
 	_combat.hit_landed.connect(func(_t, _i, amount): _hits.append(amount))

@@ -41,6 +41,10 @@ func _run() -> void:
 	_combat.x_is_left = true  # these checks were written with X = left hand
 	# A fresh save (Striker, default loadouts) that is never written to disk.
 	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	# The expected numbers here use base stats: take the Human race bonus back off.
+	var race_bonus := _player.save.character.race_bonuses()
+	for stat in race_bonus:
+		_combat.stats.set(stat, float(_combat.stats.get(stat)) - float(race_bonus[stat]))
 	_player.autosave = false
 	_dummy = _main.get_node("Dummies/DummyA")
 	_swinger = _main.get_node("Dummies/Swinger")

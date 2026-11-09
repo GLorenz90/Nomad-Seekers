@@ -115,11 +115,19 @@ static func job_allowed(for_race: Race, for_job: Job) -> bool:
 	return not (for_race == Race.GOLUMAN and for_job == Job.INVOKER)
 
 
-## Flat stat bonuses from race: Stats property -> amount.
+## Flat stat bonuses from race (Grayson, 2026-11-08): Goluman +10 DEX,
+## Coresian +10 STR, Lumera +10 SOL, Humans +5 to all three.
+const RACE_BONUSES := {
+	Race.HUMAN: {&"strength": 5.0, &"dexterity": 5.0, &"soul": 5.0},
+	Race.GOLUMAN: {&"dexterity": GOLUMAN_DEX_BONUS},
+	Race.LUMERA: {&"soul": 10.0},
+	Race.CORESIAN: {&"strength": 10.0},
+}
+
+
+## Stats property -> amount.
 func race_bonuses() -> Dictionary:
-	if race == Race.GOLUMAN:
-		return {&"dexterity": GOLUMAN_DEX_BONUS}
-	return {}
+	return RACE_BONUSES.get(race, {}).duplicate()
 
 
 func hp_regen_fraction() -> float:

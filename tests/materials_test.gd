@@ -161,9 +161,11 @@ func _run() -> void:
 	# --- Race perks through the Character tab -----------------------------------------
 	c.job = CharacterData.Job.RANGER
 	var dex_human := s.dexterity
+	var str_human := s.strength
 	_menu._race.select(CharacterData.Race.GOLUMAN)
 	_menu._apply_character()
-	_check("switching to Goluman adds +10 DEX (%.0f -> %.0f)" % [dex_human, s.dexterity], s.dexterity == dex_human + 10.0)
+	_check("Human -> Goluman: DEX +5 more, STR -5 (DEX %.0f -> %.0f)" % [dex_human, s.dexterity],
+		s.dexterity == dex_human + 5.0 and s.strength == str_human - 5.0)
 	_player.health.hp = 100.0
 	await _frames(120)  # 2 s at 0.5% of max HP a second = 3 HP
 	_check("Goluman slowly regenerate HP (100 -> %.1f)" % _player.health.hp,
@@ -172,7 +174,7 @@ func _run() -> void:
 	_menu._apply_character()
 	_player.health.hp = 100.0
 	await _frames(60)
-	_check("and back to Human removes both (DEX %.0f, HP %.0f)" % [s.dexterity, _player.health.hp],
+	_check("and back to Human restores the stats and stops regen (DEX %.0f, HP %.0f)" % [s.dexterity, _player.health.hp],
 		s.dexterity == dex_human and _player.health.hp == 100.0)
 	c.job = CharacterData.Job.INVOKER
 	_menu._race.select(CharacterData.Race.GOLUMAN)

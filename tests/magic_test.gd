@@ -103,7 +103,13 @@ func _run() -> void:
 	_check("Goluman get +10 DEX and HP regen; others don't",
 		c.race_bonuses().get(&"dexterity", 0.0) == 10.0 and c.hp_regen_fraction() > 0.0)
 	c.race = R.HUMAN
-	_check("humans get neither", c.race_bonuses().is_empty() and c.hp_regen_fraction() == 0.0)
+	_check("humans: +5 STR / DEX / SOL, no regen",
+		c.race_bonuses() == {&"strength": 5.0, &"dexterity": 5.0, &"soul": 5.0} and c.hp_regen_fraction() == 0.0)
+	c.race = R.CORESIAN
+	var cor := c.race_bonuses()
+	c.race = R.LUMERA
+	_check("Coresian +10 STR, Lumera +10 SOL", cor == {&"strength": 10.0} and c.race_bonuses() == {&"soul": 10.0})
+	c.race = R.HUMAN
 	c.race = CharacterData.Race.HUMAN
 	_check("learning checks SOL (Lumo 1 at SOL 79: %s)" % c.learn_error(lumo, 1, 79), c.learn_error(lumo, 1, 79).begins_with("Needs 80"))
 
@@ -131,7 +137,7 @@ func _run() -> void:
 	SpellCaster.clear_cache()
 
 	var expected := SpellCaster.damage_amount(_combat, load("res://data/weapons/staff.tres"), fajro, 10, false)
-	_check("damage is PSO's: (SOL 40 + 560) / 5 x Staff 1.1 = 132 (%.1f)" % expected, is_equal_approx(expected, 132.0))
+	_check("damage is PSO's: (SOL 45 [40 + Human 5] + 560) / 5 x Staff 1.1 = 133.1 (%.1f)" % expected, is_equal_approx(expected, 133.1))
 	# Enemies spread wide (orbs / areas), in a column (lines) or a tight
 	# wedge (cones), so each shape is judged on the targets it should reach.
 	var wide := [Vector3(-1.6, 0, -2.5), Vector3(0, 0, -3.5), Vector3(1.6, 0, -2.5)]
