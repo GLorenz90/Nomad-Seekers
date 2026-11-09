@@ -45,7 +45,9 @@ func _ready() -> void:
 	for room in get_tree().get_nodes_in_group("wave_rooms"):
 		room.wave_started.connect(func(r: WaveRoom, index: int, total: int):
 			hud.show_banner("%s — Wave %d / %d" % [r.room_name, index + 1, total]))
-		room.room_cleared.connect(func(r: WaveRoom): hud.show_banner("%s clear" % r.room_name))
+		room.room_cleared.connect(func(r: WaveRoom):
+			hud.show_banner("%s clear" % r.room_name)
+			_check_all_rooms_cleared())
 	for pad in get_tree().get_nodes_in_group("teleporters"):
 		pad.deposited.connect(func(_s: Player, amount: int):
 			hud.show_banner("Deposited %d Lumidium" % amount))
@@ -72,11 +74,26 @@ func _physics_process(_delta: float) -> void:
 ## Called by every Enemy as it dies (group "loot_spawner").
 func on_enemy_defeated(enemy: Enemy) -> void:
 	player.gain_exp(enemy.data.exp_value())
+	if QuestBook.record(player.save, "defeat", enemy.data.resource_path.get_file().get_basename()):
+		quest_done()
 	var emblem := player.save.character.emblem_index() if player.save else 0
 	var traps := player.save != null and player.save.character.can_use_traps()
 	var drop := Loot.roll_drop(enemy.data, emblem, rng, traps)
 	if not drop.is_empty():
 		spawn_drop(drop, enemy.global_position)
+
+
+## Guild quests (Part 10): every wave room cleared in one trip.
+func _check_all_rooms_cleared() -> void:
+	for room in get_tree().get_nodes_in_group("wave_rooms"):
+		if (room as WaveRoom).state != WaveRoom.RoomState.CLEARED:
+			return
+	if QuestBook.record(player.save, "clear", scene_file_path):
+		quest_done()
+
+
+func quest_done() -> void:
+	hud.show_banner("Quest complete: report to the Guild")
 
 
 func spawn_drop(drop: Dictionary, at: Vector3) -> ItemPickup:

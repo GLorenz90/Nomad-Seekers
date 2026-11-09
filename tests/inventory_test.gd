@@ -175,7 +175,7 @@ func _run() -> void:
 	_check("d-pad down from Use reaches + (%s)" % _focused_text(), _focused_text() == "+")
 	await _pad(JOY_BUTTON_A)
 	await _pad(JOY_BUTTON_A)
-	_check("the amount goes up with + (%s)" % _tab._amount_label.text, _tab._amount_label.text == "3")
+	_check("the amount goes up with + (%s)" % _tab._picker.label_text(), _tab._picker.label_text() == "3")
 	await _pad(JOY_BUTTON_DPAD_LEFT)
 	_check("d-pad left along the row reaches - (%s)" % _focused_text(), _focused_text() == "-")
 	await _pad(JOY_BUTTON_DPAD_RIGHT)
@@ -225,8 +225,8 @@ func _run() -> void:
 	await _frames(2)
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)
-	_check("Oro opens straight on Drop with 100 picked (%s, %s)" % [_focused_text(), _tab._amount_label.text],
-		_focused_text() == "Drop this many" and _tab._amount_label.text == "100")
+	_check("Oro opens straight on Drop with 100 picked (%s, %s)" % [_focused_text(), _tab._picker.label_text()],
+		_focused_text() == "Drop this many" and _tab._picker.label_text() == "100")
 	before = _pickups().size()
 	await _pad(JOY_BUTTON_A)
 	await _frames(3)

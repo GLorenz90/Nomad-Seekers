@@ -17,6 +17,19 @@ const OLD_LOADOUTS_PATH := "user://loadouts.tres"
 ## Every SyncAIDa the Seeker owns; `paired` is the one in the field.
 @export var syncaida: Array[SyncAIDaData] = []
 @export var paired := 0
+## The bank (Part 10, PSO's Check Room): BANK_SLOTS items and up to
+## BANK_ORO_MAX Oro (bank.oro). Banked Lumidium stays in inventory.lumidium.
+@export var bank: Inventory
+## The Guild quest in progress: {"id": String, "progress": int}, or {}.
+@export var quest: Dictionary = {}
+## Quest id -> times completed.
+@export var quests_cleared: Dictionary = {}
+
+## PSO's bank: 200 items and up to 999,999,999 Meseta (Ephinea's numbers).
+const BANK_SLOTS := 200
+const BANK_ORO_MAX := 999999999
+## A bank stack holds up to this many of one item (Claude's pick).
+const BANK_STACK := 99
 
 
 static func fresh(default_loadouts: LoadoutSet) -> SaveData:
@@ -24,6 +37,7 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 	s.character = CharacterData.new()
 	s.loadouts = default_loadouts
 	s.inventory = Inventory.new()
+	s.bank = Inventory.new()
 	s.inventory.add_consumable(&"hp_gel", 3)
 	s.inventory.add_consumable(&"lp_cell", 2)
 	s.inventory.add_consumable(&"cure_salt", 1)
@@ -121,6 +135,8 @@ func _fill_missing(default_loadouts: LoadoutSet) -> void:
 		loadouts = default_loadouts
 	if inventory == null:
 		inventory = Inventory.new()
+	if bank == null:
+		bank = Inventory.new()
 	loadouts.ensure_slots()
 	give_starter_armor()
 	pack_palette_weapons()
@@ -188,6 +204,34 @@ func take_disc(disc: Dictionary) -> bool:
 	return true
 
 
+## Every pack slot, in PSO-ish order: weapons, worn then spare armor,
+## augments, discs, stacks. Each: {"kind": ..., plus what it refers to}.
+func pack_entries() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	var inv := inventory
+	for w in inv.weapons:
+		list.append({"kind": "weapon", "weapon": w})
+	for a in ArmorBook.equipped(character):
+		list.append({"kind": "armor", "armor": a, "worn": true})
+	for a in inv.armors:
+		list.append({"kind": "armor", "armor": a, "worn": false})
+	var unit_ids := inv.units.keys()
+	unit_ids.sort()
+	for id in unit_ids:
+		for i in inv.unit_count(id):
+			list.append({"kind": "unit", "unit": id})
+	for i in inv.discs.size():
+		list.append({"kind": "disc", "index": i})
+	for id in Inventory.CONSUMABLES.keys() + Materials.ALL.keys():
+		if inv.count(id) > 0:
+			list.append({"kind": "stack", "id": id})
+	# Anything else stacked (older saves): keep it visible so it can be dropped.
+	for id in inv.consumables:
+		if inv.count(id) > 0 and not Inventory.CONSUMABLES.has(id) and not Materials.ALL.has(id):
+			list.append({"kind": "stack", "id": id})
+	return list
+
+
 ## Palettes (PSU-style loadouts) hold weapons from the pack. Older saves and
 ## tests could hold weapons that never went in it: those are added now.
 func pack_palette_weapons() -> void:
@@ -216,3 +260,120 @@ func unequip_weapon(w: WeaponData) -> void:
 			l.primary = null
 		if l.off_hand == w:
 			l.off_hand = null
+
+
+# --- The bank (Part 10) ------------------------------------------------------------
+
+func bank_used() -> int:
+	return bank.pack_items()
+
+
+func bank_free() -> int:
+	return maxi(BANK_SLOTS - bank_used(), 0)
+
+
+## Puts `count` of a pack entry (InventoryTab.entries() format) in the bank.
+## Returns "" or why not.
+func deposit(entry: Dictionary, count: int = 1) -> String:
+	match entry.kind:
+		"weapon":
+			var w: WeaponData = entry.weapon
+			if not palettes_with(w).is_empty():
+				return "%s is on a palette: take it off first." % w.display_name
+			if bank_free() <= 0:
+				return "The bank is full."
+			inventory.weapons.erase(w)
+			bank.weapons.append(w)
+		"armor":
+			if entry.get("worn", false):
+				return "You're wearing it: take it off first."
+			if bank_free() <= 0:
+				return "The bank is full."
+			inventory.armors.erase(entry.armor)
+			bank.armors.append(entry.armor)
+		"unit":
+			if bank_free() <= 0:
+				return "The bank is full."
+			inventory.take_unit(entry.unit)
+			bank.add_unit(entry.unit)
+		"disc":
+			if bank_free() <= 0:
+				return "The bank is full."
+			bank.discs.append(inventory.discs[entry.index])
+			inventory.discs.remove_at(entry.index)
+		"stack":
+			var id: StringName = entry.id
+			var room := BANK_STACK - bank.count(id) if bank.count(id) > 0 else (BANK_STACK if bank_free() > 0 else 0)
+			var n := mini(mini(count, inventory.count(id)), room)
+			if n <= 0:
+				return "The bank can't hold more %s." % Inventory.item_name(id)
+			inventory.remove_consumable(id, n)
+			bank.add_consumable(id, n)
+	return ""
+
+
+## Takes `count` of a bank entry (bank_entries() format) into the pack.
+## Returns "" or why not.
+func withdraw(entry: Dictionary, count: int = 1) -> String:
+	match entry.kind:
+		"weapon":
+			if not take_weapon(entry.weapon):
+				return "Your pack is full."
+			bank.weapons.erase(entry.weapon)
+		"armor":
+			if not take_armor(entry.armor):
+				return "Your pack is full."
+			bank.armors.erase(entry.armor)
+		"unit":
+			if not take_unit(entry.unit):
+				return "Your pack is full."
+			bank.take_unit(entry.unit)
+		"disc":
+			var d: Dictionary = bank.discs[entry.index]
+			if not take_disc(d):
+				return "Your pack is full."
+			bank.discs.remove_at(entry.index)
+		"stack":
+			var id: StringName = entry.id
+			var n := take_stack(id, mini(count, bank.count(id)))
+			if n <= 0:
+				return "No room for %s (%d per stack)." % [Inventory.item_name(id), Inventory.STACK_MAX]
+			bank.remove_consumable(id, n)
+	return ""
+
+
+## The bank's items, in the pack's order.
+func bank_entries() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for w in bank.weapons:
+		list.append({"kind": "weapon", "weapon": w})
+	for a in bank.armors:
+		list.append({"kind": "armor", "armor": a, "worn": false})
+	var unit_ids := bank.units.keys()
+	unit_ids.sort()
+	for id in unit_ids:
+		for i in bank.unit_count(id):
+			list.append({"kind": "unit", "unit": id})
+	for i in bank.discs.size():
+		list.append({"kind": "disc", "index": i})
+	var ids := bank.consumables.keys()
+	ids.sort()
+	for id in ids:
+		if bank.count(id) > 0:
+			list.append({"kind": "stack", "id": id})
+	return list
+
+
+## Oro between the satchel and the bank. Return how much moved.
+func deposit_oro(amount: int) -> int:
+	var n := clampi(amount, 0, mini(inventory.oro, BANK_ORO_MAX - bank.oro))
+	inventory.oro -= n
+	bank.oro += n
+	return n
+
+
+func withdraw_oro(amount: int) -> int:
+	var n := clampi(amount, 0, mini(bank.oro, Inventory.ORO_MAX - inventory.oro))
+	bank.oro -= n
+	inventory.oro += n
+	return n

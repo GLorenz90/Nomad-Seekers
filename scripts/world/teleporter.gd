@@ -166,12 +166,20 @@ func _on_body_exited(body: Node) -> void:
 func _open_picker(seeker: Player) -> void:
 	if picker:
 		return
+	var names := destination_names.duplicate()
+	var scenes := destinations.duplicate()
+	# Guild quest (Part 10): its destination comes first, like PSO's quest
+	# ramp. Shown until the quest is done.
+	var quest := QuestBook.active(seeker.save)
+	if not quest.is_empty() and not QuestBook.is_complete(seeker.save):
+		names.insert(0, "Quest: %s (%s)" % [quest.title, String(quest.place).to_lower()])
+		scenes.insert(0, String(quest.scene))
 	picker = DestinationPicker.new()
 	get_tree().root.add_child(picker)
-	picker.open(destination_names, func(index: int):
+	picker.open(names, func(index: int):
 		picker = null
-		if index >= 0 and index < destinations.size():
-			destination = destinations[index]
+		if index >= 0 and index < scenes.size():
+			destination = scenes[index]
 			travel(seeker))
 
 
