@@ -2,7 +2,7 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 6, magic and combat finalization**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 7, armor**.
 
 Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` has two wave rooms full of real enemies (open it and press F6).
 
@@ -145,6 +145,27 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 ![The Spells tab](docs/screenshots/magic_spells_tab.png)
 ![Hazards seen by a Goluman](docs/screenshots/magic_hazards.png)
 
+## Part 7: armor
+![The Armor tab](docs/screenshots/armor_tab.png)
+
+- **One set per character** (like PSO and PSU): **Head**, **Torso** and **Legs**. Head and Legs take the place of PSO's barrier.
+- **Light and Heavy** pieces. **Invokers wear Light only**; Strikers and Rangers wear either.
+  - Light: Field, Weave, Lumen and Aether sets (Frame / Hood / Treads).
+  - Heavy: Plate, Bastion, Core and Titan sets (Armor / Helm / Greaves).
+  - Heavy pieces give more DEF; Light pieces give more EVA and RES. Head and Legs are about 40% of a Torso.
+  - **Job-locked sets:** Core is Ranger-only, Titan Striker-only, Aether Invoker-only.
+- **Drops roll like PSO frames:** a DEF / EVA bonus within the piece's range, and **augment slots**: a Torso has 0-4, a Head or Legs piece 0-1.
+- **Augments** (PSO's units) are items that go in and out of slots freely:
+  - Stat augments I / II / III: STR, DEX, SOL, DEF, RES, EVA, ATA, LCK (+5 / 10 / 15), HP (+20 / 40 / 60), LP (+10 / 20 / 30).
+  - Element Wards I / II: 10% / 20% less damage of that element.
+  - Monster Guards: 15% less damage from one enemy type (Beast, Mutated, Synthetic, Dark, Alchemic, Light).
+  - **Double-Heavy augment** (rare): any slot, and two Heavy one-handed items are allowed. It replaces Part 3's menu toggle.
+  - Resistances stack up to 75%.
+- **Rares** break the usual rules: Ironclad Shell (Goluman only), Veil of the Nomad (Invoker, +10 SOL, Light / Dark resist), Huntress Treads (female only, +8 DEX), Warden's Crown (Striker, +10 STR, **2 slots**), Pathfinder Treads (+5 ATA, **2 slots**).
+- **Drops:** armor from about 5% of kills (the **Blue emblem** finds it twice as often), augments about 2.4%. 4% of armor drops are rare.
+- Every Seeker starts in a **Field Frame** with one slot (old saves get one too). Armor you can no longer wear after a race, gender or job change comes off.
+- **Dash cooldown:** 5 s between dashes (shown next to the chain pips on the HUD).
+
 ## Travel
 The gym (`scenes/main.tscn`) has a teleporter to the arena. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to the gym. Every trip loads the arena fresh. Teleporters save first and bank carried Lumidium.
 
@@ -153,12 +174,13 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 
 | Tab | What's there |
 |---|---|
-| Loadouts | 8 loadouts (X / Delete unequips the highlighted hand, Y / Shift+Delete clears that loadout, plus a Clear all button for testing), weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy augment |
+| Loadouts | 8 loadouts (X / Delete unequips the highlighted hand, Y / Shift+Delete clears that loadout, plus a Clear all button for testing), weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy status |
+| Armor | Head / Torso / Legs and their augment slots → armor or augments you own (A wears or slots, X takes off or empties, B goes back), totals and resists |
 | Spells | Casting items in your loadouts → their slots → your learned spells (A picks, X clears a slot, B goes back). Also lists stored discs to read |
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
 | Character | Name (New name button for gamepads), race, gender, emblem and drop pool, materials (A uses one), Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
-| Levels | Prototype only: level select, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
+| Levels | Prototype only: level select, one of every armor piece and 3 of each augment, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |
 
 Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Levels tab turns it on.
@@ -169,7 +191,7 @@ Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on th
 | Move | Left stick | WASD |
 | Camera | Right stick | Mouse / arrows |
 | Jump | A | Space |
-| Dash / dodge | B | Shift |
+| Dash / dodge (5 s cooldown) | B | Shift |
 | Lock on / recenter | R3 | Q / middle mouse |
 | Switch target | Flick right stick | Sweep mouse |
 | Hand attacks (tap / hold) | X / Y | Left / right click |
@@ -223,7 +245,7 @@ godot --headless --path . --script res://tests/magic_test.gd
 godot --headless --path . --script res://tests/materials_test.gd
 ```
 
-- `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
+- `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
 - `combat_test.gd`: tap and hold, 3-step rhythm combos, PSO pistol cadence, rooted vs mobile attacks, Dervish Blades combo and spin, step damage bonuses, too-early and too-late presses, mixed-weapon steps, LP, projectiles, spells and Shift, elemental weakness, dash cancel, death and respawn, navmesh bake, chase and patrol pathing.
 
 - `loadout_test.gd`: one-Heavy and two-handed rules, the augment, cycling past empty and invalid loadouts, LT mode per loadout, shield / arms-up / two-handed block percentages, parry and stagger, no block from behind, Deflect, dash dodge, Heavy Shield shove, blocking a real Shooter bolt, powerstance twin hits and twin combos, twin pistols, the powerstance option, and the menu opening and pausing.
@@ -245,3 +267,5 @@ The tests always use a fresh save and never write yours.
 - `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
 
 - `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.
+
+- `armor_test.gd` (in the arena): the armor book (24 tiered pieces, 5 rares, slot rules, job-locked sets), drop rolls (0-4 / 0-1 slots, DEF / EVA bonus), the starter Field Frame, who can wear what (Invokers Light only, job, race and gender locks), swapping pieces with their augments, stat augments, Fire Wards and a Beast Guard in real hits, Double-Heavy from an augment, unwearable armor coming off after a race change, drop rates (Blue emblem 2x), pickups, the save, old saves, and the Armor tab with a gamepad.

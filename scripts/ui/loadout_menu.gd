@@ -45,7 +45,7 @@ var _picker: VBoxContainer
 var _picker_title: Label
 var _picker_list: VBoxContainer
 var _message: Label
-var _augment: CheckButton
+var _augment: Label
 var _editing := Vector2i(-1, -1)  # (loadout index, hand)
 var _root: Control
 var _tabs: TabContainer
@@ -57,6 +57,7 @@ var _gender: OptionButton
 var _job: OptionButton
 var _sync_owned: VBoxContainer
 var _spells_tab: SpellsTab
+var _armor_tab: ArmorTab
 var _learn_pick: OptionButton
 var _learn_level := 1
 var _learn_level_label: Label
@@ -152,6 +153,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Spells" and event.is_action_pressed("ui_cancel") and _spells_tab.back():
 		get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Armor" and _clear_input(event) == 1:
+		if _armor_tab.clear_focused():
+			get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Armor" and event.is_action_pressed("ui_cancel") and _armor_tab.back():
+		get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Loadouts" and not _picker.visible and _clear_input(event) != 0:
 		_clear_focused_slot(_clear_input(event) == 2)
 		get_viewport().set_input_as_handled()
@@ -238,13 +244,16 @@ func _refresh() -> void:
 		else:
 			status.text = _lt_short(l)
 			status.modulate = Color(0.6, 1.0, 0.6)
-	_augment.set_pressed_no_signal(_set.double_heavy_augment)
+	_augment.text = "Double-Heavy augment: %s" % ("worn (two Heavy one-handed items allowed)" \
+		if _set.double_heavy_augment else "not worn (slot one into your armor in the Armor tab)")
 	_refresh_inventory()
 	_refresh_character()
 	_refresh_syncaida()
 	_refresh_levels()
 	if _spells_tab:
 		_spells_tab.refresh()
+	if _armor_tab:
+		_armor_tab.refresh()
 
 
 func _lt_short(l: Loadout) -> String:
@@ -333,6 +342,8 @@ func _build() -> void:
 	_tabs.add_child(columns)
 	_spells_tab = SpellsTab.new(self)
 	_tabs.add_child(_spells_tab)
+	_armor_tab = ArmorTab.new(self)
+	_tabs.add_child(_armor_tab)
 	_build_inventory_tab()
 	_build_character_tab()
 	_build_syncaida_tab()
@@ -374,11 +385,8 @@ func _build() -> void:
 	clear_all.pressed.connect(_clear_all_loadouts)
 	clear_all.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	left.add_child(clear_all)
-	_augment = CheckButton.new()
-	_augment.text = "Double-Heavy augment (two Heavy one-handed items)"
-	_augment.toggled.connect(func(on: bool):
-		_set.double_heavy_augment = on
-		_refresh())
+	_augment = _label("", 14)
+	_augment.modulate = Color(0.75, 0.85, 1.0)
 	left.add_child(_augment)
 	left.add_child(_label("A pair of the same weapon type is powerstanced: every attack uses both. RT + a hand uses that hand's special.", 13))
 	_message = _label("", 16)
@@ -492,6 +500,9 @@ func _refresh_inventory() -> void:
 		if inv.count(id) > 0:
 			mats.append("%s x%d" % [Materials.display_name(id), inv.count(id)])
 	lines.append("[b]Materials[/b]  " + ("   ".join(mats) if not mats.is_empty() else "none (use them in the Character tab)"))
+	lines.append("[b]Armor[/b] %d spare piece%s, %d augment%s (wear and slot them in the Armor tab)" % [
+		inv.armors.size(), "" if inv.armors.size() == 1 else "s",
+		inv.units.values().reduce(func(t, n): return t + int(n), 0), "" if inv.units.size() == 1 else "s"])
 	lines.append("")
 	lines.append("[b]Found weapons[/b] (%d)" % inv.weapons.size())
 	if inv.weapons.is_empty():
@@ -597,8 +608,11 @@ func _apply_character() -> void:
 		_character_message.text = "Goluman can't be Invokers."
 	elif new_race != c.race:
 		c.race = new_race
-		seeker.apply_materials()  # race stat bonuses (Goluman DEX)
 	c.gender = _gender.selected as CharacterData.Gender
+	var removed := ArmorBook.strip_unwearable(seeker.save)
+	if not removed.is_empty():
+		_character_message.text = "Took off %s (can't wear it now)." % ", ".join(removed)
+	seeker.apply_bonuses()  # race stat bonuses, armor
 	_refresh_character()
 
 
@@ -611,6 +625,8 @@ func _tool_cycle_job() -> void:
 		c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
 	combat.job_code = c.job_code()
 	_job.select(c.job)
+	ArmorBook.strip_unwearable(seeker.save)
+	seeker.apply_bonuses()
 	_rebuild_picker()
 	_refresh()
 	_level_message.text = "Job is now %s (emblem %s)." % [c.job_name(), c.emblem_name()]
@@ -900,6 +916,9 @@ func _focus_tab() -> void:
 	if page == _spells_tab:
 		_spells_tab.focus_default()
 		return
+	if page == _armor_tab:
+		_armor_tab.focus_default()
+		return
 	var first := page if page.focus_mode == Control.FOCUS_ALL else _first_focusable(page)
 	if first:
 		first.grab_focus()
@@ -980,6 +999,7 @@ func _build_levels_tab() -> void:
 	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
 			["+1000 Oro", _tool_oro], ["+5 of each consumable", _tool_items],
 			["+10 of each material", _tool_materials],
+			["One of every armor piece, 3 of every augment", _tool_armor],
 			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn],
 			["Change job (debug; fixed at creation)", _tool_cycle_job],
 			["Learn every spell or trap your race can use, at your max level", _tool_learn_all],
@@ -1089,6 +1109,16 @@ func _tool_items() -> void:
 	for id in Inventory.CONSUMABLES:
 		_player().save.inventory.add_consumable(id, 5)
 	_level_message.text = "+5 of each consumable."
+
+
+func _tool_armor() -> void:
+	var inv := _player().save.inventory
+	for id in ArmorBook.all():
+		inv.armors.append(ArmorBook.make(id))
+	for id in UnitBook.ids():
+		inv.add_unit(id, 3)
+	_level_message.text = "Added %d armor pieces (max slots) and 3 of each augment (Armor tab)." % ArmorBook.all().size()
+	_refresh()
 
 
 func _tool_materials() -> void:

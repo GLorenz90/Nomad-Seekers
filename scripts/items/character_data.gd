@@ -29,6 +29,12 @@ const JOB_CODES := ["S", "R", "I"]
 @export var spells: Dictionary = {}
 ## Materials used: id -> count (PSO materials, see Materials).
 @export var materials: Dictionary = {}
+## Armor worn (Part 7): one set per character, like PSO and PSU.
+@export var head: ArmorData
+@export var torso: ArmorData
+@export var legs: ArmorData
+## Set once the starter armor has been handed out (old saves get it on load).
+@export var armor_granted := false
 
 
 ## PSO-style: the name's character codes plus race, gender and job, mod 12.

@@ -62,6 +62,13 @@ func _run() -> void:
 	await _frames(20)
 	var dashed := _flat(_player.global_position - start)
 	_check("dash covers ~4.5 m (got %.2f)" % dashed, dashed > 4.0 and dashed < 6.5)
+	start = _player.global_position
+	await _tap("dash")
+	await _frames(20)
+	_check("a second dash right away is refused: 5 s between dashes (moved %.2f, %.1fs left)" % [
+		_flat(_player.global_position - start), _player.dash_cooldown_left()],
+		_flat(_player.global_position - start) < 0.5 and _player.dash_cooldown_left() > 4.0)
+	_player._dash_cooldown_timer = 0.0  # don't wait 5 s in the test
 
 	# --- Lock-on ---
 	_player.global_position = Vector3(0, 0.1, 0)
