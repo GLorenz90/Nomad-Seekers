@@ -168,6 +168,8 @@ var _last_weapon: WeaponData
 var _weapon_streak := 0
 var _time := 0.0
 var _lp_regen_delay := 0.0
+## Testing (Levels tab): LP never runs out.
+var infinite_lp := false
 var _held: Array[float] = [-1.0, -1.0]
 var _hard_fired: Array[bool] = [false, false]
 ## Whether each hand's current press landed in the chain window (judged at press).
@@ -1341,6 +1343,9 @@ func _apply_tag_effect(target: Node, info: DamageInfo, amount: float) -> void:
 
 
 func _regen_lp(delta: float) -> void:
+  if infinite_lp:
+    lp = stats.max_lp
+    return
   if _lp_regen_delay > 0.0:
     _lp_regen_delay -= delta
     return

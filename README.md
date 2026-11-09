@@ -121,9 +121,16 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
   - **Shapes:** single target (Fajro, Glacio's piercing line, Fulmo, Arbo's ground thorns, Lumo, Malbo), small bursts (ring, spear fan, chain, 30° and 60° cones, rolling gravity ball), large areas (Granfajro and friends; Granmalbo pulls enemies to the center), sustained channels (hold to keep casting), buffs (+STR / DEF / DEX / SOL / ATA / EVA), debuffs on enemies around you, and auras that pulse damage near you.
   - Single-target spells and Fire / Ice / Lightning / Nature / Light auras don't inflict status; everything else can. Pasmalbo can.
   - **Cure** clears one more status per level in order of annoyance (Slow, Burn, Poison, Blind, Drain, Shock, Paralyze, Freeze); level 9 also clears debuffs. **Teleportal** opens a pad to the ship (the gym for now). **Revive** waits for co-op.
-- **Learning.** Each spell needs SOL to learn: its base, +20 a level for the first half, +40 after (Cure +25, Revive +30 / +60). Max spell level: 20, +5 Invoker, +5 Lumera, −5 Striker, −5 Coresian. New Seekers know Fajro, Glacio and Fulmo.
+- **Learning.** Each spell needs SOL to learn: its base, +20 a level for the first half, +40 after (Cure +25, Revive +30 / +60). Max spell level: **15**, Lumera 20, Coresian 10. **Invokers reach 30 in everything**, whatever their race. Strikers reach 5 levels less in buff spells, Rangers 5 less in debuff spells (a Human Ranger tops out at 10 in debuffs). Cure, Revive and Teleportal always reach their own max. New Seekers know Fajro, Glacio and Fulmo.
+
+  | Max level | Striker (buffs) | Ranger (debuffs) | Invoker |
+  |---|---|---|---|
+  | Human | 15 (10) | 15 (10) | 30 |
+  | Lumera | 20 (15) | 20 (15) | 30 |
+  | Coresian | 10 (5) | 10 (5) | 30 |
+  | Goluman (traps) | 15 | 15 | can't be Invokers |
 - **Spell discs** drop from enemies (about 6% of kills). A disc you can read is learned; one you can't yet is stored (read it from the Spells tab later); one you already know is sold for Oro.
-- **Goluman** can't cast. They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
+- **Goluman** can't cast and can't be Invokers. In return they start with **+10 DEX** and **slowly regenerate HP** (0.5% of max HP a second). They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
 - **Level hazards.** Six hidden traps sit in the arena. Only Goluman can see them; anyone else finds out by stepping on one (each springs once).
 - **Paralyze** is a new status: 2.5 s, no moving or acting.
 - **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Res (RES, new), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them in the **Character** tab.
@@ -150,7 +157,7 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
 | Character | Name (New name button for gamepads), race, gender, emblem and drop pool, materials (A uses one), Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
-| Levels | Prototype only: level select, learn every spell or one spell at a level, forget all, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
+| Levels | Prototype only: level select, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |
 
 Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Levels tab turns it on.
@@ -234,6 +241,6 @@ The tests always use a fresh save and never write yours.
 
 `tools/build_starter_weapons.gd`, `tools/build_enemies.gd` and `tools/build_arena.gd` regenerate the weapons, enemies and arena with their default values (this overwrites any edits).
 
-- `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job, Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
+- `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
 
-- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.
+- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.

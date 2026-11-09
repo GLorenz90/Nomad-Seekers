@@ -121,8 +121,16 @@ var _material_applied := {}
 ## SyncAIDa bonus, only the difference is applied).
 func apply_materials() -> void:
 	var target := Materials.bonuses(save.character) if save else {}
+	if save:  # race bonuses ride along with materials (Goluman DEX)
+		var race_bonus := save.character.race_bonuses()
+		for stat in race_bonus:
+			target[stat] = float(target.get(stat, 0.0)) + float(race_bonus[stat])
 	var s := combat.stats
-	for stat in Materials.ALL.values().map(func(m: Array) -> StringName: return m[1]):
+	var stats_touched: Array = Materials.ALL.values().map(func(m: Array) -> StringName: return m[1])
+	for stat in _material_applied:
+		if not stat in stats_touched:
+			stats_touched.append(stat)
+	for stat in stats_touched:
 		var delta := float(target.get(stat, 0.0)) - float(_material_applied.get(stat, 0.0))
 		if delta != 0.0:
 			s.set(stat, float(s.get(stat)) + delta)
@@ -132,6 +140,15 @@ func apply_materials() -> void:
 		health.max_hp = s.max_hp
 		health.hp = clampf(health.hp + maxf(gained, 0.0), 0.0, health.max_hp)
 	combat.lp = minf(combat.lp, s.max_lp)
+
+
+## Goluman slowly regenerate HP (quietly: no heal numbers every frame).
+func _regen_hp(delta: float) -> void:
+	if save == null or health.is_dead() or health.hp >= health.max_hp:
+		return
+	var rate := save.character.hp_regen_fraction()
+	if rate > 0.0:
+		health.hp = minf(health.hp + health.max_hp * rate * delta, health.max_hp)
 
 
 ## Uses one material from the inventory. Returns the message to show.
@@ -287,6 +304,7 @@ func use_consumable(id: StringName) -> bool:
 func _physics_process(delta: float) -> void:
 	_recalculate_jump()
 	_tick_timers(delta)
+	_regen_hp(delta)
 
 	if Input.is_action_just_pressed("jump"):
 		_jump_buffer = jump_buffer_time

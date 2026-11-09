@@ -87,10 +87,10 @@ func refresh() -> void:
 	var c := _character()
 	if player == null or c == null or menu._set == null:
 		return
-	_info.text = "%s %d (with SyncAIDa)\nMax spell level: %d (%s %s)%s" % [
+	_info.text = "%s %d (with SyncAIDa)\n%s: %s %s%s" % [
 		"DEX" if c.can_use_traps() else "SOL",
 		roundi(player.combat.stats.dexterity if c.can_use_traps() else player.combat.stats.soul),
-		c.spell_level_cap(), c.race_name(), c.job_name(),
+		c.spell_cap_text(), c.race_name(), c.job_name(),
 		"\nGoluman can't cast spells: slots hold traps." if c.can_use_traps() else ""]
 	_rebuild_hands()
 	_rebuild_slots()

@@ -70,19 +70,60 @@ func race_name() -> String:
 ## Highest spell level this Seeker can learn (Grayson, 2026-11-08): 20, +5 for an
 ## Invoker, +5 for a Lumera, -5 for a Striker, -5 for a Coresian. Goluman can't
 ## use magic at all (0); their traps use the same cap from Goluman's base.
+## Goluman perks (Grayson, 2026-11-08): more DEX to start, and slow HP regen.
+const GOLUMAN_DEX_BONUS := 10.0
+const GOLUMAN_HP_REGEN := 0.005  # of max HP per second
+## Spells that level to 30 follow the caps below; the rest (Cure, Revive,
+## Teleportal) always reach their own max.
+const FULL_SPELL_LEVEL := 30
+
+
+## Max level for ordinary spells (Grayson, 2026-11-08): 15, +5 Lumera,
+## -5 Coresian. Invokers reach 30 whatever their race.
 func spell_level_cap() -> int:
-	var cap := 20
-	match job:
-		Job.INVOKER:
-			cap += 5
-		Job.STRIKER:
-			cap -= 5
+	if job == Job.INVOKER:
+		return FULL_SPELL_LEVEL
 	match race:
 		Race.LUMERA:
-			cap += 5
+			return 20
 		Race.CORESIAN:
-			cap -= 5
-	return cap
+			return 10
+	return 15
+
+
+## Strikers reach 5 levels less in buff spells, Rangers in debuff spells.
+func buff_level_cap() -> int:
+	return spell_level_cap() - (5 if job == Job.STRIKER else 0)
+
+
+func debuff_level_cap() -> int:
+	return spell_level_cap() - (5 if job == Job.RANGER else 0)
+
+
+## "Max spell level 15 (buffs 10)" and the like, for menus.
+func spell_cap_text() -> String:
+	var text := "Max spell level %d" % spell_level_cap()
+	if buff_level_cap() != spell_level_cap():
+		text += " (buffs %d)" % buff_level_cap()
+	if debuff_level_cap() != spell_level_cap():
+		text += " (debuffs %d)" % debuff_level_cap()
+	return text
+
+
+## Goluman can't be Invokers.
+static func job_allowed(for_race: Race, for_job: Job) -> bool:
+	return not (for_race == Race.GOLUMAN and for_job == Job.INVOKER)
+
+
+## Flat stat bonuses from race: Stats property -> amount.
+func race_bonuses() -> Dictionary:
+	if race == Race.GOLUMAN:
+		return {&"dexterity": GOLUMAN_DEX_BONUS}
+	return {}
+
+
+func hp_regen_fraction() -> float:
+	return GOLUMAN_HP_REGEN if race == Race.GOLUMAN else 0.0
 
 
 func can_use_magic() -> bool:
@@ -99,7 +140,14 @@ func level_cap_for(spell: SpellDef) -> int:
 		return 0
 	if not spell.is_trap() and not can_use_magic():
 		return 0
-	return mini(spell.max_level, spell_level_cap())
+	if spell.max_level < FULL_SPELL_LEVEL:
+		return spell.max_level
+	var cap := spell_level_cap()
+	if spell.kind == SpellDef.Kind.BUFF:
+		cap = buff_level_cap()
+	elif spell.kind == SpellDef.Kind.DEBUFF:
+		cap = debuff_level_cap()
+	return clampi(cap, 0, spell.max_level)
 
 
 func spell_level(id: StringName) -> int:

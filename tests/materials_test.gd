@@ -156,7 +156,44 @@ func _run() -> void:
 	_check("A with none left explains why (%s)" % _menu._character_message.text, _menu._character_message.text.begins_with("No Mind"))
 	_menu._reset_character()
 	_check("Reset character forgets materials used (SOL back to %.0f)" % s.soul, c.materials.is_empty() and s.soul == sol_before)
-	_menu.close()
+	_menu.close()  # the menu pauses the game; regen and LP need it running
+
+	# --- Race perks through the Character tab -----------------------------------------
+	c.job = CharacterData.Job.RANGER
+	var dex_human := s.dexterity
+	_menu._race.select(CharacterData.Race.GOLUMAN)
+	_menu._apply_character()
+	_check("switching to Goluman adds +10 DEX (%.0f -> %.0f)" % [dex_human, s.dexterity], s.dexterity == dex_human + 10.0)
+	_player.health.hp = 100.0
+	await _frames(120)  # 2 s at 0.5% of max HP a second = 3 HP
+	_check("Goluman slowly regenerate HP (100 -> %.1f)" % _player.health.hp,
+		_player.health.hp > 102.0 and _player.health.hp < 104.0)
+	_menu._race.select(CharacterData.Race.HUMAN)
+	_menu._apply_character()
+	_player.health.hp = 100.0
+	await _frames(60)
+	_check("and back to Human removes both (DEX %.0f, HP %.0f)" % [s.dexterity, _player.health.hp],
+		s.dexterity == dex_human and _player.health.hp == 100.0)
+	c.job = CharacterData.Job.INVOKER
+	_menu._race.select(CharacterData.Race.GOLUMAN)
+	_menu._apply_character()
+	_check("an Invoker can't become Goluman (%s)" % _menu._character_message.text, c.race == CharacterData.Race.HUMAN)
+	c.job = CharacterData.Job.STRIKER
+
+	# --- Testing tools ---------------------------------------------------------------------
+	_menu._tool_learn_all_level_1()
+	var all_one := not c.spells.is_empty()
+	for id in c.spells:
+		all_one = all_one and int(c.spells[id]) == 1
+	_check("Learn everything at level 1 (%d spells, all level 1)" % c.spells.size(), all_one and c.spells.size() == 46)
+	_menu._infinite_lp.button_pressed = true
+	_player.combat.lp = 3.0
+	await _frames(2)
+	_check("Infinite LP keeps LP full", _player.combat.infinite_lp and _player.combat.lp == s.max_lp)
+	_menu._infinite_lp.button_pressed = false
+	_player.combat.lp = 3.0
+	await _frames(2)
+	_check("and turns off", not _player.combat.infinite_lp and _player.combat.lp < 10.0)
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)

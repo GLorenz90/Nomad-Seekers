@@ -69,6 +69,7 @@ var _sync_feeds: GridContainer
 var _sync_burst: OptionButton
 var _sync_message: Label
 var _character_message: Label
+var _infinite_lp: CheckButton
 var _material_buttons := {}  # id -> Button
 var _material_info: Label
 ## Debug: feeding doesn't use up items (for trying evolutions quickly).
@@ -590,7 +591,13 @@ func _apply_character() -> void:
 		return
 	var c := seeker.save.character
 	c.seeker_name = _name_edit.text if _name_edit.text.strip_edges() != "" else "Seeker"
-	c.race = _race.selected as CharacterData.Race
+	var new_race := _race.selected as CharacterData.Race
+	if not CharacterData.job_allowed(new_race, c.job):
+		_race.select(c.race)
+		_character_message.text = "Goluman can't be Invokers."
+	elif new_race != c.race:
+		c.race = new_race
+		seeker.apply_materials()  # race stat bonuses (Goluman DEX)
 	c.gender = _gender.selected as CharacterData.Gender
 	_refresh_character()
 
@@ -600,6 +607,8 @@ func _tool_cycle_job() -> void:
 	var seeker := _player()
 	var c := seeker.save.character
 	c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
+	if not CharacterData.job_allowed(c.race, c.job):  # Goluman skip Invoker
+		c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
 	combat.job_code = c.job_code()
 	_job.select(c.job)
 	_rebuild_picker()
@@ -974,6 +983,7 @@ func _build_levels_tab() -> void:
 			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn],
 			["Change job (debug; fixed at creation)", _tool_cycle_job],
 			["Learn every spell or trap your race can use, at your max level", _tool_learn_all],
+			["Learn every spell or trap your race can use, at level 1", _tool_learn_all_level_1],
 			["Forget every spell and trap", _tool_forget_all],
 			["+50 SOL and +50 DEX (until you leave the level)", _tool_stats_up]]:
 		var b := Button.new()
@@ -981,6 +991,10 @@ func _build_levels_tab() -> void:
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.pressed.connect(spec[1])
 		right.add_child(b)
+	_infinite_lp = CheckButton.new()
+	_infinite_lp.text = "Infinite LP (until you leave the level)"
+	_infinite_lp.toggled.connect(_toggle_infinite_lp)
+	right.add_child(_infinite_lp)
 	# Learn one spell or trap at any level, ignoring requirements (testing).
 	var learn_row := HBoxContainer.new()
 	_learn_pick = OptionButton.new()
@@ -1030,6 +1044,8 @@ func _hud() -> DebugHud:
 func _refresh_levels() -> void:
 	if _debug_toggle == null:
 		return
+	if _infinite_lp and _player():
+		_infinite_lp.set_pressed_no_signal(_player().combat.infinite_lp)
 	var current := get_tree().current_scene.scene_file_path if get_tree().current_scene else ""
 	for b in _level_buttons:
 		var here: bool = b.get_meta("scene") == current
@@ -1204,8 +1220,25 @@ func _tool_learn_all() -> void:
 			c.spells[spell.id] = cap
 			n += 1
 	SpellCaster.clear_cache()
-	_level_message.text = "Learned %d at your max level (%d)." % [n, c.spell_level_cap()]
+	_level_message.text = "Learned %d at your max level (%s)." % [n, c.spell_cap_text()]
 	_refresh()
+
+
+func _tool_learn_all_level_1() -> void:
+	var c := _player().save.character
+	var n := 0
+	for spell in SpellBook.all():
+		if c.level_cap_for(spell) > 0:
+			c.spells[spell.id] = 1
+			n += 1
+	SpellCaster.clear_cache()
+	_level_message.text = "Learned %d at level 1 (requirements ignored)." % n
+	_refresh()
+
+
+func _toggle_infinite_lp(on: bool) -> void:
+	_player().combat.infinite_lp = on
+	_level_message.text = "Infinite LP %s." % ("on" if on else "off")
 
 
 func _tool_forget_all() -> void:

@@ -71,18 +71,39 @@ func _run() -> void:
 
 	# --- Level caps ----------------------------------------------------------------
 	var c := CharacterData.new()
-	var caps := []
-	for spec in [[CharacterData.Race.HUMAN, CharacterData.Job.RANGER], [CharacterData.Race.HUMAN, CharacterData.Job.INVOKER],
-			[CharacterData.Race.LUMERA, CharacterData.Job.INVOKER], [CharacterData.Race.HUMAN, CharacterData.Job.STRIKER],
-			[CharacterData.Race.CORESIAN, CharacterData.Job.STRIKER]]:
-		c.race = spec[0]
-		c.job = spec[1]
-		caps.append(c.spell_level_cap())
-	_check("max spell level 20, +5 Invoker, +5 Lumera, -5 Striker, -5 Coresian (%s)" % [caps], caps == [20, 25, 30, 15, 10])
-	c.race = CharacterData.Race.GOLUMAN
-	c.job = CharacterData.Job.RANGER
-	_check("Goluman can't learn spells, only traps",
-		c.level_cap_for(fajro) == 0 and c.level_cap_for(traps[0]) == 20 and c.learn_error(fajro, 1, 999) != "")
+	var bona := SpellBook.get_spell(&"bonafajro")
+	var mala := SpellBook.get_spell(&"malafajro")
+	var R := CharacterData.Race
+	var J := CharacterData.Job
+	# [race, job] -> [ordinary, buff, debuff]
+	var expect := [
+		[R.HUMAN, J.STRIKER, [15, 10, 15]], [R.HUMAN, J.RANGER, [15, 15, 10]], [R.HUMAN, J.INVOKER, [30, 30, 30]],
+		[R.LUMERA, J.STRIKER, [20, 15, 20]], [R.LUMERA, J.RANGER, [20, 20, 15]], [R.LUMERA, J.INVOKER, [30, 30, 30]],
+		[R.CORESIAN, J.STRIKER, [10, 5, 10]], [R.CORESIAN, J.RANGER, [10, 10, 5]], [R.CORESIAN, J.INVOKER, [30, 30, 30]],
+	]
+	var cap_wrong := []
+	for e in expect:
+		c.race = e[0]
+		c.job = e[1]
+		var got := [c.level_cap_for(fajro), c.level_cap_for(bona), c.level_cap_for(mala)]
+		if got != e[2]:
+			cap_wrong.append("%s %s %s" % [c.race_name(), c.job_name(), got])
+	_check("spell caps: 15, Lumera +5, Coresian -5, Invokers 30; Strikers -5 on buffs, Rangers -5 on debuffs (%s)" % [cap_wrong],
+		cap_wrong.is_empty())
+	c.race = R.CORESIAN
+	c.job = J.STRIKER
+	_check("Cure, Revive and Teleportal always reach their own max (9 / 10 / 1)",
+		c.level_cap_for(cure) == 9 and c.level_cap_for(revive) == 10 and c.level_cap_for(SpellBook.get_spell(&"teleportal")) == 1)
+	c.race = R.GOLUMAN
+	c.job = J.RANGER
+	_check("Goluman can't learn spells, only traps (to level 15)",
+		c.level_cap_for(fajro) == 0 and c.level_cap_for(traps[0]) == 15 and c.learn_error(fajro, 1, 999) != "")
+	_check("Goluman can't be Invokers", not CharacterData.job_allowed(R.GOLUMAN, J.INVOKER)
+		and CharacterData.job_allowed(R.LUMERA, J.INVOKER))
+	_check("Goluman get +10 DEX and HP regen; others don't",
+		c.race_bonuses().get(&"dexterity", 0.0) == 10.0 and c.hp_regen_fraction() > 0.0)
+	c.race = R.HUMAN
+	_check("humans get neither", c.race_bonuses().is_empty() and c.hp_regen_fraction() == 0.0)
 	c.race = CharacterData.Race.HUMAN
 	_check("learning checks SOL (Lumo 1 at SOL 79: %s)" % c.learn_error(lumo, 1, 79), c.learn_error(lumo, 1, 79).begins_with("Needs 80"))
 
