@@ -2,9 +2,9 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 7, armor**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 8, title screen, characters and Nomad-2**.
 
-Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` has two wave rooms full of real enemies (open it and press F6).
+F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-2 (`scenes/hub.tscn`), whose teleporter goes to the gym test room (`scenes/main.tscn`) and the test arena (`scenes/arena.tscn`, two wave rooms of real enemies). Any level can still be opened and run on its own with F6; it plays your last character.
 
 ## Part 1: movement
 - **Seeker controller** (`scripts/player/player.gd`): camera-relative movement with snappy acceleration, a variable-height jump with coyote time and an input buffer, and a dash/dodge with i-frames, one air dash, and dash-jump (jump during a ground dash to keep momentum).
@@ -166,8 +166,21 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - Every Seeker starts in a **Field Frame** with one slot (old saves get one too). Armor you can no longer wear after a race, gender or job change comes off.
 - **Dash cooldown:** 5 s between dashes (shown next to the chain pips on the HUD).
 
+## Part 8: title screen, characters and Nomad-2
+![Character select](docs/screenshots/title_select.png)
+
+- **Title screen** (gamepad: A accepts, B goes back): **Continue** (your last character), **Character select**, Quit.
+- **4 character slots**, like PSO. Each slot is a whole save (character, loadouts, inventory, spells, armor, SyncAIDa) in `user://characters/slot_N.tres`. X on a slot asks, and a second X deletes it. Your Part 5-7 save moves into slot 1 the first time.
+- **Character creation:** name (type it, or "New name" on a gamepad), race, gender, job and starter SyncAIDa, with a preview of the race and job rules and the emblem the choices make. Goluman can't pick Invoker. Creating saves the slot and drops you into Nomad-2.
+- **Nomad-2** (`scenes/hub.tscn`, built by `tools/build_hub.gd`): the lobby. Its counters (guild, bank, shops, armorer) are placeholders. Its **teleporter asks where to go**: the gym or the test arena (B or "Stay here" cancels; step off and back on to ask again).
+- The gym has a pad back to Nomad-2, and the arena's exit now returns there too. Teleportal opens a pad to Nomad-2.
+- **Saving:** every teleport, closing the menu, quitting to the title (Levels tab) and closing the window save the character's slot.
+
+![Creating a character](docs/screenshots/title_create.png)
+![The Nomad-2 teleporter](docs/screenshots/hub_teleporter.png)
+
 ## Travel
-The gym (`scenes/main.tscn`) has a teleporter to the arena. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to the gym. Every trip loads the arena fresh. Teleporters save first and bank carried Lumidium.
+Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. Teleporters save first and bank carried Lumidium.
 
 ## Menu (Start / Tab)
 Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goes back (closes the weapon picker, then the menu), **LB / RB** switch tabs, Start closes.
@@ -180,7 +193,7 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
 | Character | Name (New name button for gamepads), race, gender, emblem and drop pool, materials (A uses one), Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
-| Levels | Prototype only: level select, one of every armor piece and 3 of each augment, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
+| Levels | Prototype only: level select (Nomad-2, gym, arena), save and quit to the title screen, one of every armor piece and 3 of each augment, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |
 
 Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Levels tab turns it on.
@@ -243,6 +256,8 @@ godot --headless --path . --script res://tests/syncaida_test.gd
 godot --headless --path . --script res://tests/menu_test.gd
 godot --headless --path . --script res://tests/magic_test.gd
 godot --headless --path . --script res://tests/materials_test.gd
+godot --headless --path . --script res://tests/armor_test.gd
+godot --headless --path . --script res://tests/flow_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
@@ -269,3 +284,5 @@ The tests always use a fresh save and never write yours.
 - `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.
 
 - `armor_test.gd` (in the arena): the armor book (24 tiered pieces, 5 rares, slot rules, job-locked sets), drop rolls (0-4 / 0-1 slots, DEF / EVA bonus), the starter Field Frame, who can wear what (Invokers Light only, job, race and gender locks), swapping pieces with their augments, stat augments, Fire Wards and a Beast Guard in real hits, Double-Heavy from an augment, unwearable armor coming off after a race change, drop rates (Blue emblem 2x), pickups, the save, old saves, and the Armor tab with a gamepad.
+
+- `flow_test.gd`: the old single save moving into slot 1, the title screen with a gamepad (main menu, character select, B back), creation (Goluman can't be Invokers, the preview), the new character saved to its slot with its SyncAIDa and Field Frame, Nomad-2's teleporter (pauses, lists the gym, arena and stay; B cancels), travel to the gym and back and to the arena with saves on the way, quitting to the title, Continue, deleting with a double X, and full slots. It uses its own folder, so real characters are never touched.

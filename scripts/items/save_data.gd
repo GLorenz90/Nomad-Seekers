@@ -49,6 +49,19 @@ func give_starter_armor() -> void:
 const STARTING_SPELLS: Array[StringName] = [&"fajro", &"glacio", &"fulmo"]
 
 
+## Character creation (Part 8): a new Seeker with the choices made on the
+## creation screen, their starter SyncAIDa paired, and the starter armor.
+static func create(seeker_name: String, race: CharacterData.Race, gender: CharacterData.Gender,
+		job: CharacterData.Job, starter: int) -> SaveData:
+	var s := fresh(CombatController.make_default_loadouts())
+	s.character.seeker_name = seeker_name.strip_edges() if seeker_name.strip_edges() != "" else "Seeker"
+	s.character.race = race
+	s.character.gender = gender
+	s.character.job = job
+	s.choose_starter(starter)
+	return s
+
+
 ## Gives the Seeker their starting SyncAIDa (SyncAIDaData.STARTERS index).
 ## Until one is chosen, they have none; the menu's SyncAIDa tab offers the four.
 func choose_starter(index: int) -> SyncAIDaData:
@@ -79,8 +92,14 @@ static func load_or_new(default_loadouts: LoadoutSet) -> SaveData:
 	return s
 
 
+## Where save() writes: a character slot (Session) or, before Part 8, the
+## single save file.
+var save_path := SAVE_PATH
+
+
 func save() -> void:
-	ResourceSaver.save(self, SAVE_PATH)
+	DirAccess.make_dir_recursive_absolute(save_path.get_base_dir())
+	ResourceSaver.save(self, save_path)
 
 
 func _fill_missing(default_loadouts: LoadoutSet) -> void:

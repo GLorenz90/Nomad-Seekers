@@ -25,6 +25,7 @@ signal closed
 const WEAPON_DIR := "res://data/weapons/"
 ## Level select (prototype): [label, scene].
 const LEVELS := [
+	["Nomad-2 (hub)", "res://scenes/hub.tscn"],
 	["Test room", "res://scenes/main.tscn"],
 	["Arena (wave rooms, Lumidium, teleporters)", "res://scenes/arena.tscn"],
 ]
@@ -519,7 +520,7 @@ func _build_character_tab() -> void:
 	box.name = "Character"
 	box.add_theme_constant_override("separation", 10)
 	_tabs.add_child(box)
-	box.add_child(_label("Character (placeholder until character creation)", 22))
+	box.add_child(_label("Character (set at creation; edits here are for testing)", 22))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 16)
@@ -987,6 +988,11 @@ func _build_levels_tab() -> void:
 		left.add_child(b)
 		_level_buttons.append(b)
 	left.add_child(_label("Switching saves first. Carried Lumidium is banked on the way.", 13))
+	var to_title := Button.new()
+	to_title.text = "Save and quit to the title screen"
+	to_title.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	to_title.pressed.connect(_quit_to_title)
+	left.add_child(to_title)
 	_level_message = _label("", 16)
 	_level_message.modulate = Color(1.0, 0.85, 0.5)
 	left.add_child(_level_message)
@@ -1084,6 +1090,15 @@ func _on_level(scene: String) -> void:
 	save_on_close = false  # already saved
 	close()
 	get_tree().change_scene_to_file(scene)
+
+
+func _quit_to_title() -> void:
+	var seeker := _player()
+	if seeker:
+		seeker.deposit_lumidium()
+	save_on_close = false
+	close()
+	Session.quit_to_title()
 
 
 func _tool_refill() -> void:

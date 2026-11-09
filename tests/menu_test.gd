@@ -166,16 +166,11 @@ func _run() -> void:
 		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
 	await _frames(3)
 	var oro := _player.save.inventory.oro
-	while not _focused_text().begins_with("+1000 Oro"):
-		await _pad(JOY_BUTTON_DPAD_DOWN)
-		if _focused() is CheckButton:
+	await _pad(JOY_BUTTON_DPAD_RIGHT)  # the testing tools column
+	for i in 12:
+		if _focused_text().begins_with("+1000 Oro"):
 			break
-	if not _focused_text().begins_with("+1000 Oro"):
-		await _pad(JOY_BUTTON_DPAD_RIGHT)
-		for i in 6:
-			if _focused_text().begins_with("+1000 Oro"):
-				break
-			await _pad(JOY_BUTTON_DPAD_DOWN)
+		await _pad(JOY_BUTTON_DPAD_DOWN)
 	await _pad(JOY_BUTTON_A)
 	_check("Levels tab: +1000 Oro with A (%d -> %d)" % [oro, _player.save.inventory.oro], _player.save.inventory.oro == oro + 1000)
 	_menu._debug_toggle.button_pressed = true
@@ -220,8 +215,8 @@ func _run() -> void:
 	await _frames(5)
 	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
 	await _frames(30)
-	_check("once cleared it returns to the gym (%s)" % current_scene.scene_file_path,
-		current_scene.scene_file_path == "res://scenes/main.tscn")
+	_check("once cleared it returns to Nomad-2 (%s)" % current_scene.scene_file_path,
+		current_scene.scene_file_path == "res://scenes/hub.tscn")
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)

@@ -96,7 +96,7 @@ func _ready() -> void:
 	syncaida.setup(self)
 	var defaults := CombatController.make_default_loadouts()
 	if combat.use_saved_loadouts:
-		use_save(SaveData.load_or_new(defaults))
+		use_save(Session.current_save(defaults))
 	else:
 		use_save(SaveData.fresh(defaults))
 		autosave = false
@@ -250,6 +250,12 @@ func revive(fraction: float) -> void:
 
 func grant_invulnerability(seconds: float) -> void:
 	_invuln_timer = maxf(_invuln_timer, seconds)
+
+
+## Closing the game window saves (Part 8).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_game()
 
 
 func save_game() -> void:

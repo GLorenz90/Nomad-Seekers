@@ -115,12 +115,12 @@ func _initialize() -> void:
 		hazard.position = spec[2]
 		_add(hazards, hazard)
 
-	# The end of the arena: back to the gym once every room is cleared.
+	# The end of the arena: back to Nomad-2 once every room is cleared.
 	var exit := Area3D.new()
 	exit.name = "TeleporterExit"
 	exit.set_script(load("res://scripts/world/teleporter.gd"))
-	exit.set("destination", "res://scenes/main.tscn")
-	exit.set("destination_name", "Back to the gym")
+	exit.set("destination", "res://scenes/hub.tscn")
+	exit.set("destination_name", "Back to Nomad-2")
 	exit.set("requires_rooms_cleared", true)
 	exit.position = Vector3(0, 0, -37)
 	_add(gather, exit)

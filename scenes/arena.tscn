@@ -346,8 +346,8 @@ script = ExtResource("16_6dm5u")
 [node name="TeleporterExit" type="Area3D" parent="Gathering" unique_id=719872291]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -37)
 script = ExtResource("16_6dm5u")
-destination = "res://scenes/main.tscn"
-destination_name = "Back to the gym"
+destination = "res://scenes/hub.tscn"
+destination_name = "Back to Nomad-2"
 requires_rooms_cleared = true
 
 [node name="Hazards" type="Node3D" parent="." unique_id=1884567289]
