@@ -368,8 +368,7 @@ func _run() -> void:
 	_menu._set = _combat.loadout_set
 	_combat.loadout_set.loadouts[7] = Loadout.make(null, load("res://data/weapons/wand.tres"))
 	_menu.open()
-	while _menu._tab_name() != "Spells":
-		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
+	_menu.show_tab("Spells")
 	await _frames(3)
 	_check("the Spells tab lists casting items, and one is focused (%s)" % _focused_text(),
 		_focused_text().contains("Wand"))

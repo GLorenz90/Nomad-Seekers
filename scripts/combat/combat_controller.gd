@@ -1047,12 +1047,13 @@ func _predict_projectile(attack: AttackData, target: Node3D, dir: Vector3) -> Ar
 
 
 ## PSO-shotgun targeting: the aimed target first, then the nearest other enemies
-## within MULTI_TARGET_CONE degrees of the aim and in range with a clear line,
+## within the attack's cone (MULTI_TARGET_CONE each side by default) of the aim and in range with a clear line,
 ## up to attack.multi_target. Each gets its own projectile.
 func _multi_targets(attack: AttackData, first: Node3D, dir: Vector3) -> Array[Node3D]:
   var origin := _player.global_position + Vector3.UP * 1.1
   var space := get_world_3d().direct_space_state
   var pool: Array[Node3D] = []
+  var half_cone := attack.multi_target_cone * 0.5 if attack.multi_target_cone > 0.0 else MULTI_TARGET_CONE
   for node in get_tree().get_nodes_in_group("lockable"):
     var n := node as Node3D
     if n == null or not n.is_visible_in_tree() or n == first:
@@ -1061,7 +1062,7 @@ func _multi_targets(attack: AttackData, first: Node3D, dir: Vector3) -> Array[No
     to.y = 0.0
     if to.length() > attack.projectile_range or to.length() < 0.01:
       continue
-    if rad_to_deg(dir.angle_to(to.normalized())) > MULTI_TARGET_CONE:
+    if rad_to_deg(dir.angle_to(to.normalized())) > half_cone:
       continue
     var los := PhysicsRayQueryParameters3D.create(origin, CameraRig.get_lock_point(n), 1, [_player.get_rid()])
     if not space.intersect_ray(los).is_empty():
@@ -1085,6 +1086,7 @@ func _multi_targets(attack: AttackData, first: Node3D, dir: Vector3) -> Array[No
 func _lock_chain(attack: AttackData, first: Node3D, dir: Vector3) -> Array[Node3D]:
   var chain: Array[Node3D] = []
   var pool: Array[Node3D] = []
+  var half_cone := attack.multi_target_cone * 0.5 if attack.multi_target_cone > 0.0 else MULTI_TARGET_CONE
   for node in get_tree().get_nodes_in_group("lockable"):
     var n := node as Node3D
     if n and n.is_visible_in_tree() \
@@ -1270,7 +1272,7 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
         dir = aim.rotated(Vector3.UP, deg_to_rad(offset))
       var p := Projectile.spawn(_player.get_parent(), muzzle, dir, attack, info, color, _player, self)
       if attack.projectile_gravity > 0.0:
-        p.velocity = _lob_velocity(muzzle, dir, target if i == count / 2 else null, attack)
+        p.velocity = _lob_velocity(muzzle, dir, target, attack)  # a fan lands as far out as the target
       if not chain.is_empty():
         p.chain = chain.duplicate()
 

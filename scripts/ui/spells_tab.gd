@@ -1,7 +1,7 @@
 class_name SpellsTab
 extends HBoxContainer
 ## Menu tab (Part 6): put learned spells (or a Goluman's traps) into the slots
-## of each casting item in your loadouts, and read stored spell discs.
+## of each casting item on your palettes, and read stored spell discs.
 ##
 ## Gamepad: pick a casting hand (A), then one of its slots (A), then a spell
 ## (A assigns it). X clears the highlighted slot. B steps back a column.
@@ -25,7 +25,7 @@ func _init(owner_menu: LoadoutMenu) -> void:
 
 func _ready() -> void:
 	var left := _column(300.0)
-	left.add_child(_label("Casting items in your loadouts", 18))
+	left.add_child(_label("Casting items on your palettes", 18))
 	_hands = VBoxContainer.new()
 	left.add_child(_hands)
 	_info = _label("", 14)
@@ -121,7 +121,7 @@ func _rebuild_hands() -> void:
 			b.pressed.connect(_pick_hand.bind(i, hand))
 			_hands.add_child(b)
 	if not any:
-		_hands.add_child(_label("No casting items equipped.\nPut a Wand, Cane, Staff, Talisman\nor Totem in a loadout first.", 15))
+		_hands.add_child(_label("No casting items equipped.\nPut a Wand, Cane, Staff, Talisman\nor Totem on a palette first.", 15))
 
 
 func _slot_names(loadout: Loadout, hand: int) -> Array[String]:
@@ -143,7 +143,7 @@ func _rebuild_slots() -> void:
 		_hand = Vector2i(-1, -1)
 		_rebuild_slots()
 		return
-	_slot_title.text = "Slots: loadout %d, %s" % [_hand.x + 1, l.get_hand(_hand.y).display_name]
+	_slot_title.text = "Slots: palette %d, %s" % [_hand.x + 1, l.get_hand(_hand.y).display_name]
 	var names := _slot_names(l, _hand.y)
 	for s in count:
 		var b := Button.new()
@@ -178,7 +178,7 @@ func _rebuild_spells() -> void:
 		if c.spell_level(spell.id) > 0:
 			known.append(spell)
 	if known.is_empty():
-		_spells.add_child(_label("Nothing learned yet. Spell discs drop from enemies\n(Levels tab can teach any spell for testing).", 15))
+		_spells.add_child(_label("Nothing learned yet. Spell discs drop from enemies\n(the Debug tab can teach any spell).", 15))
 	var group := ""
 	for spell in known:
 		if spell.element_name() != group:

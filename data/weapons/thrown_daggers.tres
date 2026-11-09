@@ -20,6 +20,7 @@ projectile_speed = 30.0
 projectile_radius = 0.16
 projectile_range = 22.0
 multi_target = 1
+multi_target_cone = 40.0
 
 [sub_resource type="Resource" id="Resource_w30xp"]
 script = ExtResource("1_24l2n")
@@ -37,6 +38,7 @@ projectile_speed = 30.0
 projectile_radius = 0.16
 projectile_range = 22.0
 multi_target = 3
+multi_target_cone = 40.0
 
 [sub_resource type="Resource" id="Resource_lrayw"]
 script = ExtResource("1_24l2n")
@@ -54,6 +56,7 @@ projectile_speed = 30.0
 projectile_radius = 0.16
 projectile_range = 22.0
 multi_target = 5
+multi_target_cone = 40.0
 
 [sub_resource type="Resource" id="Resource_sfd20"]
 script = ExtResource("1_24l2n")
@@ -70,6 +73,7 @@ is_projectile = true
 projectile_speed = 30.0
 projectile_range = 22.0
 multi_target = 1
+multi_target_cone = 40.0
 
 [sub_resource type="Resource" id="Resource_v81bo"]
 script = ExtResource("1_24l2n")
@@ -87,6 +91,7 @@ is_projectile = true
 projectile_speed = 30.0
 projectile_range = 22.0
 multi_target = 3
+multi_target_cone = 40.0
 
 [sub_resource type="Resource" id="Resource_oiem6"]
 script = ExtResource("1_24l2n")
@@ -104,6 +109,7 @@ is_projectile = true
 projectile_speed = 30.0
 projectile_range = 22.0
 multi_target = 5
+multi_target_cone = 40.0
 
 [resource]
 script = ExtResource("2_dxcp7")

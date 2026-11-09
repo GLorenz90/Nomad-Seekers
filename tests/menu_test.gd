@@ -1,8 +1,9 @@
 extends SceneTree
 ## Automated test: every menu tab works with a gamepad alone (A accepts, B goes
-## back or closes, d-pad moves, LB / RB switch tabs, Start opens and closes),
-## pairing an already-paired SyncAIDa doesn't error, and the Levels tab's
-## tools and level switch work. Sends real joypad button events.
+## back or closes, d-pad moves, LB / RB switch tabs, LT / RT switch the Equip
+## sections, Start opens and closes), pairing an already-paired SyncAIDa
+## doesn't error, and the Debug tab's tools and level switch work. Sends real
+## joypad button and trigger events.
 ##
 ## Run from the project folder:
 ##   godot --headless --path . --script res://tests/menu_test.gd
@@ -60,14 +61,18 @@ func _run() -> void:
 	_check("d-pad reaches the feed buttons and A feeds (HP Gel %d -> %d)" % [gels, _player.save.inventory.count(&"hp_gel")],
 		_player.save.inventory.count(&"hp_gel") == gels - 1)
 
-	# Loadouts: RB from SyncAIDa wraps to Levels, Controls, then Loadouts.
+	# Equip > Palette: RB from SyncAIDa wraps round to Equip, which opens on
+	# the Palette section. The picker lists the weapons in the pack.
+	_player.save.take_weapon(load("res://data/weapons/arbalest.tres").duplicate())  # Ranger only
+	_player.save.take_weapon(load("res://data/weapons/dagger.tres").duplicate())
 	for i in 10:
-		if _tab() == "Loadouts":
+		if _tab() == "Equip":
 			break
 		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
 	await _frames(3)
-	_check("RB switches tabs and focus follows (Loadouts, %s)" % _focus_name(), _tab() == "Loadouts" and _focused() is Button)
-	_check("focus starts on loadout 1's primary hand, the first column", _focused() == _menu._slot_buttons[0][CombatController.Hand.PRIMARY])
+	_check("RB switches tabs and focus follows (Equip, %s)" % _focus_name(), _tab() == "Equip" and _focused() is Button)
+	_check("Equip opens on the Palette section", _menu._tab_name() == "Palette")
+	_check("focus starts on palette 1's primary hand, the first column", _focused() == _menu._slot_buttons[0][CombatController.Hand.PRIMARY])
 	await _pad(JOY_BUTTON_A)
 	_check("A on a hand opens the weapon picker", _menu._picker.visible and _menu._picker_list.is_ancestor_of(_focused()))
 	await _pad(JOY_BUTTON_B)
@@ -77,8 +82,16 @@ func _run() -> void:
 	for child in _menu._picker_list.get_children():
 		if child is Button:
 			listed.append((child as Button).text.get_slice("  (", 0))
-	_check("the picker lists all 41 weapons, Gunblade and Burstbow included (%d)" % (listed.size() - 1),
-		listed.size() - 1 == 41 and "Burstbow" in listed and "Gunblade" in listed)
+	listed.erase("(Empty)")
+	var off_hand := _menu._set.loadouts[0].off_hand
+	var pack_names := []
+	for w in _player.save.inventory.weapons:
+		if w != off_hand:
+			pack_names.append(w.display_name)
+	pack_names.sort()
+	listed.sort()
+	_check("the picker lists the pack's weapons, minus the off hand's (%s)" % ", ".join(listed),
+		listed == pack_names and not "Burstbow" in listed)
 	for i in 30:
 		if _focused_text().begins_with("Arbalest"):  # Ranger only
 			break
@@ -101,35 +114,50 @@ func _run() -> void:
 	_check("d-pad + A equips a weapon (%s)" % picked, right != null and picked.begins_with(right.display_name)
 		and not _menu._picker.visible)
 
-	# Testing helpers: X unequips the focused hand, Y the whole loadout.
+	# X unequips the focused hand, Y the whole palette.
 	_menu._set.loadouts[0].off_hand = load("res://data/weapons/sword.tres")
 	_menu._refresh()
 	_menu._slot_buttons[0][1].grab_focus()
 	await _pad(JOY_BUTTON_X)
 	_check("X unequips the focused hand only", _menu._set.loadouts[0].primary == null and _menu._set.loadouts[0].off_hand != null)
 	await _pad(JOY_BUTTON_Y)
-	_check("Y clears the whole loadout", _menu._set.loadouts[0].is_empty())
-	_menu._clear_all_loadouts()
+	_check("Y clears the whole palette", _menu._set.loadouts[0].is_empty())
+	_menu.debug_tab._clear_all_loadouts()
 	var all_empty := true
 	for l in _menu._set.loadouts:
 		all_empty = all_empty and l.is_empty()
-	_check("Clear all loadouts empties every slot", all_empty)
+	_check("Clear all palettes (Debug) empties every slot", all_empty)
 	_menu._set = CombatController.make_default_loadouts()
 	_menu._refresh()
 
-	# Every other tab gets focus.
-	for name in ["Inventory", "Character", "SyncAIDa", "Levels"]:
+	# LT / RT switch the Equip tab's sections, and focus follows.
+	await _trigger(JOY_AXIS_TRIGGER_RIGHT)
+	await _frames(3)
+	_check("RT: Spells section (%s)" % _focus_name(), _menu._tab_name() == "Spells" and _focused() != null)
+	await _trigger(JOY_AXIS_TRIGGER_RIGHT)
+	await _frames(3)
+	_check("RT: Armor section, focus on the worn list (%s)" % _focused_text(), _menu._tab_name() == "Armor" and _focused_text().begins_with("Head"))
+	await _trigger(JOY_AXIS_TRIGGER_LEFT)
+	await _trigger(JOY_AXIS_TRIGGER_LEFT)
+	await _frames(3)
+	_check("LT twice: back to Palette", _menu._tab_name() == "Palette" and _focused() == _menu._slot_buttons[_player.combat.loadout_index][CombatController.Hand.PRIMARY])
+
+	# Every tab gets focus.
+	for name in ["Status", "SyncAIDa", "Options", "Debug", "Inventory", "Equip"]:
 		while _tab() != name:
 			await _pad(JOY_BUTTON_RIGHT_SHOULDER)
 		await _frames(3)
 		_check("%s tab: something is focused (%s)" % [name, _focus_name()], _focused() != null and (_menu._tabs.get_current_tab_control() == _focused()
 			or _menu._tabs.get_current_tab_control().is_ancestor_of(_focused())))
+	_check("the tabs are Inventory, Equip, Status, SyncAIDa, Options, Debug",
+		range(_menu._tabs.get_tab_count()).map(func(t: int) -> String: return String(_menu._tabs.get_tab_control(t).name))
+		== ["Inventory", "Equip", "Status", "SyncAIDa", "Options", "Debug"])
 	await _pad(JOY_BUTTON_LEFT_SHOULDER)
 	await _pad(JOY_BUTTON_LEFT_SHOULDER)
 	await _frames(3)
-	_check("LB goes back (Character)", _tab() == "Character")
+	_check("LB goes back (Debug)", _tab() == "Debug")
 	var old_name := _player.save.character.seeker_name
-	_check("Character tab starts on the New name button (%s)" % _focused_text(), _focused_text() == "New name")
+	_check("Debug tab starts on the New name button (%s)" % _focused_text(), _focused_text() == "New name")
 	await _pad(JOY_BUTTON_A)
 	_check("New name changes the name with A (%s -> %s)" % [old_name, _player.save.character.seeker_name],
 		_player.save.character.seeker_name != old_name)
@@ -144,38 +172,39 @@ func _run() -> void:
 	_check("d-pad + A picks from it (race %s)" % CharacterData.Race.keys()[_player.save.character.race],
 		_player.save.character.race != CharacterData.Race.HUMAN and not popup.visible)
 
-	# Character reset (testing).
+	# Character reset (Debug).
 	_player.save.character.experience = 750
-	_menu._reset_character()
+	_menu.debug_tab._reset_character()
 	_check("Reset character to level 1 sets EXP back to 0", _player.save.character.experience == 0)
 
-	# SyncAIDa reset (testing): Kindle back to STR Lv 5 and nothing else.
+	# SyncAIDa reset (Debug): Kindle back to STR Lv 5 and nothing else.
 	var kindle := _player.syncaida.data
 	for i in 40:
 		_player.syncaida.feed(&"ice", true)
 	var str_before := _player.combat.stats.strength
 	var dex_before := _player.combat.stats.dexterity
-	_menu._reset_syncaida()
+	_menu.debug_tab._reset_syncaida()
 	_check("Reset to base stats: STR Lv 5 only, form Mote, no bursts (Lv %d %s)" % [kindle.level(), kindle.form],
 		kindle.level() == 5 and kindle.stat_level(&"str") == 5 and kindle.form == "Mote" and kindle.bursts.is_empty())
 	_check("and the Seeker loses the bonus it had gained (DEX %+.0f, STR %+.0f)" % [_player.combat.stats.dexterity - dex_before, _player.combat.stats.strength - str_before],
 		_player.combat.stats.dexterity < dex_before)
 
-	# Levels tab tools.
-	while _tab() != "Levels":
-		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
-	await _frames(3)
+	# Debug tools with A.
 	var oro := _player.save.inventory.oro
-	await _pad(JOY_BUTTON_DPAD_RIGHT)  # the testing tools column
-	for i in 12:
-		if _focused_text().begins_with("+1000 Oro"):
-			break
-		await _pad(JOY_BUTTON_DPAD_DOWN)
+	var oro_button := _find_button(_menu.debug_tab, "+1000 Oro")
+	oro_button.grab_focus()
+	await _frames(2)
 	await _pad(JOY_BUTTON_A)
-	_check("Levels tab: +1000 Oro with A (%d -> %d)" % [oro, _player.save.inventory.oro], _player.save.inventory.oro == oro + 1000)
-	_menu._debug_toggle.button_pressed = true
+	_check("Debug tab: +1000 Oro with A (%d -> %d)" % [oro, _player.save.inventory.oro], _player.save.inventory.oro == oro + 1000)
+	_menu.debug_tab._debug_toggle.button_pressed = true
 	_check("the debug readout toggle shows the HUD panel", _main.hud.is_debug_visible())
-	_menu._debug_toggle.button_pressed = false
+	_menu.debug_tab._debug_toggle.button_pressed = false
+
+	# Options: the controls and Save and quit.
+	while _tab() != "Options":
+		await _pad(JOY_BUTTON_LEFT_SHOULDER)
+	await _frames(3)
+	_check("Options starts on Save and quit (%s)" % _focused_text(), _focused_text().begins_with("Save and quit"))
 
 	# B closes the menu.
 	await _pad(JOY_BUTTON_B)
@@ -184,7 +213,7 @@ func _run() -> void:
 
 	# Level switch: back to the test room.
 	await _pad(JOY_BUTTON_START)
-	_menu._on_level("res://scenes/main.tscn")
+	_menu.debug_tab._on_level("res://scenes/main.tscn")
 	await _frames(20)
 	_check("level select loads the test room (%s)" % current_scene.scene_file_path,
 		current_scene != null and current_scene.scene_file_path == "res://scenes/main.tscn" and not paused)
@@ -263,6 +292,28 @@ func _pad(button: JoyButton) -> void:
 		Input.parse_input_event(e)
 		await process_frame
 		await process_frame
+
+
+## A real trigger pull and release.
+func _trigger(axis: JoyAxis) -> void:
+	for value in [1.0, 0.0]:
+		var e := InputEventJoypadMotion.new()
+		e.axis = axis
+		e.axis_value = value
+		e.device = 0
+		Input.parse_input_event(e)
+		await process_frame
+		await process_frame
+
+
+func _find_button(node: Node, prefix: String) -> Button:
+	for child in node.get_children():
+		if child is Button and (child as Button).text.begins_with(prefix):
+			return child
+		var inner := _find_button(child, prefix)
+		if inner:
+			return inner
+	return null
 
 
 func _check(label: String, ok: bool) -> void:

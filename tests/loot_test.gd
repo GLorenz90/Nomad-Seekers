@@ -77,7 +77,7 @@ func _run() -> void:
 	_check("12 emblems, and the job changes the emblem (Striker / Ranger / Invoker: %s)" % [emblems],
 		CharacterData.EMBLEMS.size() == 12 and Loot.FAVORED.size() == 12
 		and emblems[0] != emblems[1] and emblems[1] != emblems[2] and emblems[0] != emblems[2])
-	_check("the job can't be changed in the Character tab", (_main.loadout_menu as LoadoutMenu)._job.disabled)
+	_check("the job can only be changed from the Debug tab", (_main.loadout_menu as LoadoutMenu).get("_job") == null)
 	var ember := _rare("Emberfang")
 	_check("Emberfang: rare, Burning (Heat tier 4), Fire, +30%% base",
 		ember != null and ember.rare and ember.tag.line_name == "Heat" and ember.tag_tier == 3
@@ -266,8 +266,9 @@ func _run() -> void:
 
 	# PSO-shotgun targeting: one projectile per enemy, each enemy hit once.
 	var crowd: Array[Enemy] = []
-	for x in [-4.0, -2.0, 0.0, 2.0, 4.0, 6.0]:
-		var e := _spawn("grub_hound", ARENA + Vector3(x, 0, -9))
+	# Inside Cards / Thrown Daggers' 40° cone (Grayson, 2026-11-09).
+	for x in [-2.4, -1.44, -0.48, 0.48, 1.44, 2.4]:
+		var e := _spawn("grub_hound", ARENA + Vector3(x, 0, -12))
 		e.health.max_hp = 9000.0
 		e.health.hp = 9000.0
 		crowd.append(e)
@@ -298,6 +299,22 @@ func _run() -> void:
 		await _idle()
 	for e in crowd:
 		e.queue_free()
+	await _frames(5)
+
+	# The cone: an enemy 35° off the aim is outside Cards / Thrown Daggers' 40°
+	# cone, but inside the Burstbow's (PSO shotgun, 50° each side).
+	var aimed := _spawn("grub_hound", ARENA + Vector3(0, 0, -6))
+	var wide := _spawn("grub_hound", ARENA + Vector3(-3.5, 0, -5))
+	await _place(ARENA)
+	var ahead := Vector3(0, 0, -1)
+	var picks := {}
+	for type in ["thrown_daggers", "cards", "burstbow"]:
+		picks[type] = _combat._multi_targets(_w(type).normal_attacks[2], aimed, ahead)
+	_check("an enemy 35° off is outside the 40° Cards / Thrown Daggers cone, inside the Burstbow's",
+		aimed in picks.thrown_daggers and not wide in picks.thrown_daggers and not wide in picks.cards
+		and wide in picks.burstbow)
+	aimed.queue_free()
+	wide.queue_free()
 	await _frames(5)
 
 	# A targeted knife flies past enemies that aren't its target.

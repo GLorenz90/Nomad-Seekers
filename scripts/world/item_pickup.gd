@@ -1,18 +1,27 @@
 class_name ItemPickup
 extends Area3D
 ## A dropped item. Oro and Lumidium are picked up by walking over them (and
-## drift to a Seeker close by); everything else waits for A, since items will
-## count against an inventory limit (Grayson, 2026-11-09). Drops are instanced
-## per player (North Star §7.2), so this one is only for the Seeker that
-## rolled it.
+## drift to a Seeker close by); everything else waits for A, since the pack
+## has a limit (Grayson, 2026-11-09). Drops are instanced per player (North
+## Star §7.2), so this one is only for the Seeker that rolled it.
+##
+## Stacks (Part 9): consumables, materials and Lumidium can lie in a stack
+## ("count"); picking one up takes only as many as fit and leaves the rest.
+## Items a Seeker drops (for trading or to make room) always wait for A, Oro
+## and Lumidium included, so walking over them doesn't take them back.
 
 const PLAYER_MASK := 2
 ## Spiral Knights-style magnet: pickups drift to a Seeker this close.
 const MAGNET_RANGE := 3.0
 const MAGNET_SPEED := 9.0
 
-## {"oro": int} / {"consumable": StringName} / {"weapon": WeaponData} / {"lumidium": StringName}
+## {"oro": int} / {"consumable": StringName, "count": int} / {"material": ...}
+## / {"weapon": WeaponData} / {"armor": ArmorData} / {"unit": StringName}
+## / {"lumidium": StringName, "count": int} / {"disc": {"id", "level"}}
 var contents: Dictionary = {}
+## Dropped from a Seeker's pack or satchel: never collected on touch.
+var dropped := false
+var _label: Label3D
 var _spin: Node3D
 var _age := 0.0
 
@@ -63,28 +72,72 @@ func _ready() -> void:
 	shape_mesh.material = mat
 	mesh.mesh = shape_mesh
 	_spin.add_child(mesh)
-	var label := Label3D.new()
-	label.text = describe()
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 26
-	label.outline_size = 8
-	label.modulate = color().lightened(0.3)
-	label.position.y = 1.3
-	add_child(label)
+	_label = Label3D.new()
+	_label.text = describe()
+	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_label.font_size = 26
+	_label.outline_size = 8
+	_label.modulate = color().lightened(0.3)
+	_label.position.y = 1.3
+	add_child(_label)
 	body_entered.connect(_on_body_entered)
 	if not is_automatic():
 		add_to_group("interactables")
 
 
-## Oro and Lumidium are collected on touch; other items need A.
+## Oro and Lumidium are collected on touch; other items (and anything a
+## Seeker dropped) need A.
 func is_automatic() -> bool:
-	return contents.has("oro") or contents.has("lumidium")
+	return not dropped and (contents.has("oro") or contents.has("lumidium"))
+
+
+## Puts a stack or item from a Seeker's pack or satchel on the ground in
+## front of them (PSO-style trading and making room).
+static func drop_from(seeker: Player, drop: Dictionary) -> ItemPickup:
+	var p := create(drop)
+	p.dropped = true
+	seeker.get_parent().add_child(p)
+	var ahead := -seeker.global_transform.basis.z
+	ahead.y = 0.0
+	var spot := seeker.global_position + ahead.normalized() * 1.3
+	spot += Vector3(randf_range(-0.3, 0.3), 0.0, randf_range(-0.3, 0.3))
+	p.global_position = spot
+	return p
+
+
+## How many are in this stack (1 for single items; Oro uses its own amount).
+func amount() -> int:
+	return int(contents.get("count", 1))
+
+
+## Stackable pickups: the consumable or material id ("" otherwise).
+func stack_id() -> StringName:
+	if contents.has("consumable"):
+		return StringName(contents.consumable)
+	if contents.has("material"):
+		return StringName(contents.material)
+	return &""
+
+
+## How many of this the Seeker could take right now.
+func room_for(seeker: Player) -> int:
+	if seeker.save == null:
+		return 0
+	if contents.has("oro"):
+		return mini(int(contents.oro), Inventory.ORO_MAX - seeker.save.inventory.oro)
+	if contents.has("lumidium"):
+		return mini(amount(), seeker.satchel_room())
+	if stack_id() != &"":
+		return mini(amount(), seeker.save.stack_room(stack_id()))
+	if contents.has("disc") and not seeker.disc_needs_slot(StringName(contents.disc.id), int(contents.disc.level)):
+		return 1  # learned or sold on the spot
+	return 1 if seeker.save.pack_free() > 0 else 0
 
 
 func _process(delta: float) -> void:
 	_age += delta
 	var seeker := get_tree().get_first_node_in_group("player") as Node3D
-	if seeker and _age > 0.4 and is_automatic():
+	if seeker and _age > 0.4 and is_automatic() and seeker is Player and room_for(seeker as Player) > 0:
 		var to := seeker.global_position - global_position
 		if to.length() < MAGNET_RANGE:
 			global_position += to.normalized() * minf(MAGNET_SPEED * delta, to.length())
@@ -95,10 +148,9 @@ func _process(delta: float) -> void:
 func describe() -> String:
 	if contents.has("oro"):
 		return "%d Oro" % int(contents.oro)
-	if contents.has("consumable"):
-		return String(Inventory.CONSUMABLES.get(contents.consumable, contents.consumable))
-	if contents.has("material"):
-		return Materials.display_name(StringName(contents.material))
+	if stack_id() != &"":
+		var n := Inventory.item_name(stack_id())
+		return n if amount() == 1 else "%s x%d" % [n, amount()]
 	if contents.has("weapon"):
 		return (contents.weapon as WeaponData).display_name
 	if contents.has("armor"):
@@ -106,7 +158,7 @@ func describe() -> String:
 	if contents.has("unit"):
 		return UnitBook.display_name(StringName(contents.unit))
 	if contents.has("lumidium"):
-		return "%s Lumidium" % String(contents.lumidium).capitalize()
+		return "%s%s Lumidium" % ["" if amount() == 1 else "%d " % amount(), String(contents.lumidium).capitalize()]
 	if contents.has("disc"):
 		var spell := SpellBook.get_spell(StringName(contents.disc.id))
 		return "Disc: %s %d" % [spell.display_name if spell else "?", int(contents.disc.level)]
@@ -159,42 +211,74 @@ func can_interact(seeker: Player) -> bool:
 
 
 func interact_prompt() -> String:
+	if room_for(seeker_in_reach()) <= 0:
+		return "Pick up %s (%s)" % [describe(), _no_room_reason(seeker_in_reach())]
 	return "Pick up %s" % describe()
+
+
+func seeker_in_reach() -> Player:
+	return get_tree().get_first_node_in_group("player") as Player
+
+
+func _no_room_reason(seeker: Player) -> String:
+	if seeker == null:
+		return ""
+	if contents.has("lumidium"):
+		return "satchel full"
+	if stack_id() != &"" and seeker.save and seeker.save.inventory.count(stack_id()) > 0:
+		return "%d max" % Inventory.STACK_MAX
+	if contents.has("oro"):
+		return "Oro full"
+	return "pack full"
 
 
 func interact(seeker: Player) -> void:
 	collect(seeker)
 
 
-## Gives the contents to the Seeker and removes the pickup.
+## Gives the contents to the Seeker, as much as fits: the pickup goes away
+## when all of it was taken, otherwise the rest stays on the ground.
 func collect(seeker: Player) -> void:
-	var inv := seeker.save.inventory
+	var save := seeker.save
+	var room := room_for(seeker)
+	if room <= 0:
+		seeker.item_collected.emit("Can't take %s: %s" % [describe(), _no_room_reason(seeker)])
+		return
 	var text := describe()
+	var taken := 1
 	if contents.has("oro"):
-		inv.oro += int(contents.oro)
-		text = "+" + text
-	elif contents.has("consumable"):
-		inv.add_consumable(contents.consumable)
-		text = "+1 " + text
-	elif contents.has("material"):
-		inv.add_consumable(StringName(contents.material))
-		text = "+1 " + text
+		taken = save.inventory.add_oro(int(contents.oro))
+		text = "+%d Oro" % taken
+		contents.oro = int(contents.oro) - taken
+		if int(contents.oro) > 0:
+			_label.text = describe()
+			seeker.item_collected.emit(text)
+			return
+	elif stack_id() != &"":
+		taken = save.take_stack(stack_id(), amount())
+		text = "+%d %s" % [taken, Inventory.item_name(stack_id())]
+	elif contents.has("lumidium"):
+		taken = seeker.add_lumidium(contents.lumidium, amount())  # emits its own message
+		text = ""
 	elif contents.has("weapon"):
 		var w := contents.weapon as WeaponData
-		inv.add_weapon(w)
+		save.take_weapon(w)
 		text = "Found %s%s" % [w.display_name, "  (RARE)" if w.rare else ""]
 	elif contents.has("armor"):
 		var a := contents.armor as ArmorData
-		inv.armors.append(a)
+		save.take_armor(a)
 		text = "Found %s (%d slot%s)%s" % [a.display_name, a.slots, "" if a.slots == 1 else "s", "  (RARE)" if a.rare else ""]
 	elif contents.has("unit"):
-		inv.add_unit(StringName(contents.unit))
+		save.take_unit(StringName(contents.unit))
 		text = "+1 " + text
-	elif contents.has("lumidium"):
-		seeker.add_lumidium(contents.lumidium)
-		queue_free()
-		return
 	elif contents.has("disc"):
 		text = seeker.read_disc(StringName(contents.disc.id), int(contents.disc.level), true)
-	seeker.item_collected.emit(text)
-	queue_free()
+	if taken < amount():
+		contents.count = amount() - taken
+		_label.text = describe()
+		if text != "":
+			text += "  (%d left: %s)" % [amount(), _no_room_reason(seeker)]
+	else:
+		queue_free()
+	if text != "":
+		seeker.item_collected.emit(text)

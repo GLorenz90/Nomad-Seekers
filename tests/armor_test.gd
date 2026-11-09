@@ -171,9 +171,9 @@ func _run() -> void:
 	inv.armors.append(shell)
 	_check("a Goluman wears the Ironclad Shell", ArmorBook.equip(save, shell) == "")
 	_player.apply_bonuses()
-	_menu._race.select(CharacterData.Race.HUMAN)
-	_menu._apply_character()
-	_check("switching to Human takes it off (%s)" % _menu._character_message.text,
+	_menu.debug_tab._race.select(CharacterData.Race.HUMAN)
+	_menu.debug_tab._apply_character()
+	_check("switching to Human takes it off (%s)" % _menu.debug_tab._character_message.text,
 		c.torso == null and shell in inv.armors and c.race == CharacterData.Race.HUMAN)
 	ArmorBook.equip(save, heavy)
 	_player.apply_bonuses()
@@ -222,8 +222,7 @@ func _run() -> void:
 
 	# --- Armor tab with a gamepad ----------------------------------------------------------------
 	_menu.open()
-	while _menu._tab_name() != "Armor":
-		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
+	_menu.show_tab("Armor")
 	await _frames(3)
 	_check("the Armor tab opens on the worn list (%s)" % _focused_text(), _focused_text().begins_with("Head"))
 	await _pad(JOY_BUTTON_A)

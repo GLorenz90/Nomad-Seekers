@@ -1,45 +1,32 @@
 class_name LoadoutMenu
 extends CanvasLayer
-## Loadout editor (Start / Tab). Pauses the game while open.
+## The pause menu (Start / Tab). Pauses the game while open. (Named for its
+## first job, editing loadouts; it holds every tab now.)
 ##
-## Pick a hand slot, then a weapon. Two-handed weapons clear the other hand.
-## Each loadout shows whether it breaks a rule (one Heavy item unless the
-## Double-Heavy augment is on). Broken or empty loadouts are skipped by LB/RB.
-## Closing saves everything to user://save.tres (SaveData).
+## Tabs (Part 9, Grayson 2026-11-09: PSO's menus with PSU's palettes), LB / RB
+## switch:
+## - Inventory (InventoryTab): the 30-slot pack and the satchel; equip, wear,
+##   use, read and drop from here.
+## - Equip (EquipTab): Palette (the 8 PSU-style palettes, built here), Spells
+##   (SpellsTab) and Armor (ArmorTab); LT / RT switch sections.
+## - Status: the character and their stats.
+## - SyncAIDa: pair one, feed it, pick its Sync Burst.
+## - Options: controls, save and quit to the title screen.
+## - Debug (DebugTab): every testing tool, removable in one line.
 ##
-## Tabs (LB/RB switch): Loadouts, Inventory (found weapons, consumables, Oro,
-## Lumidium) and Character (name, race, gender, job; the emblem follows from
-## them). The weapon picker lists every base weapon plus the weapons you've
-## found; weapons your job can't use are greyed out.
-## SyncAIDa tab (Part 6): pair one of your SyncAIDa, feed it consumables or
-## banked Lumidium, and pick its active Sync Burst.
-## Levels tab (prototype only): switch levels and testing tools (refills,
-## debug readout, hitboxes). Controls tab: the control reference.
-##
-## Fully usable by gamepad: d-pad / left stick move focus, A accepts, B goes
-## back (or closes), LB / RB switch tabs, Start closes. Every tab switch moves
-## focus into the new tab, and rebuilt lists put focus back on a real control.
+## Closing saves everything (SaveData). Fully usable by gamepad: d-pad / left
+## stick move focus, A accepts, B goes back (or closes), Start closes. Every
+## tab switch moves focus into the new tab, and rebuilt lists put focus back on
+## a real control.
 
 signal closed
 
-const WEAPON_DIR := "res://data/weapons/"
-## Level select (prototype): [label, scene].
-const LEVELS := [
-	["Nomad-2 (hub)", "res://scenes/hub.tscn"],
-	["Test room", "res://scenes/main.tscn"],
-	["Arena (wave rooms, Lumidium, teleporters)", "res://scenes/arena.tscn"],
-]
-## Names for the gamepad-friendly "New name" button.
-const NAMES := ["Seeker", "Ardent", "Brielle", "Cassian", "Dara", "Eamon", "Fenna", "Galen",
-	"Halcyon", "Iris", "Jory", "Kestra", "Lumen", "Maren", "Nolan", "Orrin", "Perrin", "Quill",
-	"Rook", "Sable", "Tamsin", "Ulric", "Vesper", "Wren"]
 
 var combat: CombatController
 ## Tests turn this off so they never overwrite the player's saved loadouts.
 var save_on_close := true
 
 var _set: LoadoutSet
-var _weapons: Array[WeaponData] = []
 var _slot_buttons: Array = []  # [[off-hand Button, primary Button], ...] (indexed by Hand)
 var _slot_status: Array[Label] = []
 var _picker: VBoxContainer
@@ -50,19 +37,13 @@ var _augment: Label
 var _editing := Vector2i(-1, -1)  # (loadout index, hand)
 var _root: Control
 var _tabs: TabContainer
-var _inventory_text: RichTextLabel
-var _character_info: Label
-var _name_edit: LineEdit
-var _race: OptionButton
-var _gender: OptionButton
-var _hand: OptionButton
-var _job: OptionButton
 var _sync_owned: VBoxContainer
+var _inventory_tab: InventoryTab
+var _equip_tab: EquipTab
 var _spells_tab: SpellsTab
 var _armor_tab: ArmorTab
-var _learn_pick: OptionButton
-var _learn_level := 1
-var _learn_level_label: Label
+var debug_tab: DebugTab
+var _status_text: RichTextLabel
 var _sync_starter_title: Label
 var _sync_starters: VBoxContainer
 var _sync_info: Label
@@ -71,24 +52,13 @@ var _sync_stat_rows := {}
 var _sync_feeds: GridContainer
 var _sync_burst: OptionButton
 var _sync_message: Label
-var _character_message: Label
-var _infinite_lp: CheckButton
-var _material_buttons := {}  # id -> Button
-var _material_info: Label
 ## Debug: feeding doesn't use up items (for trying evolutions quickly).
 var free_feeding := false
-var _free_feeding_toggle: CheckButton
-var _level_message: Label
-var _debug_toggle: CheckButton
-var _hitbox_toggle: CheckButton
-var _free_feeding_levels: CheckButton
-var _level_buttons: Array[Button] = []
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 10
-	_weapons = _scan_weapons()
 	_build()
 	visible = false
 
@@ -106,7 +76,8 @@ func open() -> void:
 		return
 	_set = combat.loadout_set
 	_rebuild_picker()
-	_load_character()
+	if debug_tab:
+		debug_tab.load_character()
 	_tabs.set_current_tab(0)
 	var seeker := _player()
 	if seeker and seeker.save and seeker.save.syncaida.is_empty():
@@ -159,6 +130,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_close_picker()
 		_tabs.current_tab = posmod(_tabs.current_tab + step, _tabs.get_tab_count())
 		get_viewport().set_input_as_handled()
+	elif visible and _tabs.get_current_tab_control() == _equip_tab and (event.is_action_pressed("block") or event.is_action_pressed("shift")):
+		_close_picker()
+		_equip_tab.step_section(1 if event.is_action_pressed("shift") else -1)
+		get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Inventory" and event.is_action_pressed("ui_cancel") and _inventory_tab.back():
+		get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Spells" and _clear_input(event) == 1:
 		if _spells_tab.clear_focused_slot():
 			get_viewport().set_input_as_handled()
@@ -169,7 +146,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Armor" and event.is_action_pressed("ui_cancel") and _armor_tab.back():
 		get_viewport().set_input_as_handled()
-	elif visible and _tab_name() == "Loadouts" and not _picker.visible and _clear_input(event) != 0:
+	elif visible and _tab_name() == "Palette" and not _picker.visible and _clear_input(event) != 0:
 		_clear_focused_slot(_clear_input(event) == 2)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
@@ -202,7 +179,8 @@ func equip(index: int, hand: int, weapon: WeaponData) -> String:
 
 func _on_slot_pressed(index: int, hand: int) -> void:
 	_editing = Vector2i(index, hand)
-	_picker_title.text = "Loadout %d, %s (%s)" % [
+	_rebuild_picker()
+	_picker_title.text = "Palette %d, %s (%s)" % [
 		index + 1, CombatController.hand_name(hand).to_lower(), combat.button_for(hand)]
 	_picker.visible = true
 	(_picker_list.get_child(0) as Button).grab_focus()
@@ -210,7 +188,7 @@ func _on_slot_pressed(index: int, hand: int) -> void:
 
 func _on_weapon_picked(weapon: WeaponData) -> void:
 	if weapon and combat and not weapon.can_be_used_by(combat.job_code):
-		_message.text = "%s needs %s (change job in the Character tab)." % [weapon.display_name, weapon.jobs_text()]
+		_message.text = "%s needs %s." % [weapon.display_name, weapon.jobs_text()]
 		return
 	var error := equip(_editing.x, _editing.y, weapon)
 	if error == "":
@@ -218,7 +196,7 @@ func _on_weapon_picked(weapon: WeaponData) -> void:
 	var back_to: Button = _slot_buttons[_editing.x][_editing.y]
 	_close_picker()
 	_refresh()
-	_message.text = error if error != "" else "Loadout %d updated." % (_editing.x + 1)
+	_message.text = error if error != "" else "Palette %d updated." % (_editing.x + 1)
 	back_to.grab_focus()
 
 
@@ -256,11 +234,13 @@ func _refresh() -> void:
 			status.text = _lt_short(l)
 			status.modulate = Color(0.6, 1.0, 0.6)
 	_augment.text = "Double-Heavy augment: %s" % ("worn (two Heavy one-handed items allowed)" \
-		if _set.double_heavy_augment else "not worn (slot one into your armor in the Armor tab)")
-	_refresh_inventory()
-	_refresh_character()
+		if _set.double_heavy_augment else "not worn (slot one into your armor: Equip > Armor)")
+	if _inventory_tab:
+		_inventory_tab.refresh()
+	_refresh_status()
 	_refresh_syncaida()
-	_refresh_levels()
+	if debug_tab:
+		debug_tab.refresh()
 	if _spells_tab:
 		_spells_tab.refresh()
 	if _armor_tab:
@@ -294,23 +274,6 @@ func _weapon_label(w: WeaponData) -> String:
 	if w.sustained:
 		tags.append("sustained")
 	return "%s  (%s)" % [w.display_name, ", ".join(tags)]
-
-
-func _scan_weapons() -> Array[WeaponData]:
-	var list: Array[WeaponData] = []
-	var dir := DirAccess.open(WEAPON_DIR)
-	if dir == null:
-		return list
-	var files := dir.get_files()
-	files.sort()
-	for file in files:
-		# Exported builds list text resources as *.tres.remap.
-		file = file.trim_suffix(".remap")
-		if file.ends_with(".tres"):
-			var w := load(WEAPON_DIR + file) as WeaponData
-			if w:
-				list.append(w)
-	return list
 
 
 # --- Layout -------------------------------------------------------------------
@@ -348,25 +311,27 @@ func _build() -> void:
 			_focus_tab.call_deferred())
 	panel.add_child(_tabs)
 	var columns := HBoxContainer.new()
-	columns.name = "Loadouts"
+	columns.name = "Palette"
 	columns.add_theme_constant_override("separation", 24)
-	_tabs.add_child(columns)
 	_spells_tab = SpellsTab.new(self)
-	_tabs.add_child(_spells_tab)
 	_armor_tab = ArmorTab.new(self)
-	_tabs.add_child(_armor_tab)
-	_build_inventory_tab()
-	_build_character_tab()
+	_inventory_tab = InventoryTab.new(self)
+	_tabs.add_child(_inventory_tab)
+	_equip_tab = EquipTab.new(self, columns, _spells_tab, _armor_tab)
+	_tabs.add_child(_equip_tab)
+	_build_status_tab()
 	_build_syncaida_tab()
-	_build_levels_tab()
-	_build_controls_tab()
+	_build_options_tab()
+	# Testing tools: remove this line (and debug_tab.gd) to drop the tab.
+	debug_tab = DebugTab.new(self)
+	_tabs.add_child(debug_tab)
 
 	var left := VBoxContainer.new()
 	left.add_theme_constant_override("separation", 8)
 	left.custom_minimum_size.x = 780.0
 	columns.add_child(left)
-	left.add_child(_label("Loadouts", 26))
-	left.add_child(_label("Pick a hand, then a weapon.  A/Enter: select   B/Esc: back   LB/RB: tabs   Start/Tab: close and save\nX/Delete: unequip that hand   Y/Shift+Delete: clear the whole loadout", 14))
+	left.add_child(_label("Palettes", 24))
+	left.add_child(_label("Pick a hand, then a weapon from your pack.  A/Enter: select   B/Esc: back   Start/Tab: close and save\nX/Delete: unequip that hand   Y/Shift+Delete: clear the whole palette   LB/RB: tabs   LT/RT: sections", 14))
 
 	var grid := GridContainer.new()
 	grid.columns = 4
@@ -392,11 +357,6 @@ func _build() -> void:
 		grid.add_child(status)
 		_slot_status.append(status)
 
-	var clear_all := Button.new()
-	clear_all.text = "Clear all loadouts (testing)"
-	clear_all.pressed.connect(_clear_all_loadouts)
-	clear_all.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	left.add_child(clear_all)
 	_augment = _label("", 14)
 	_augment.modulate = Color(0.75, 0.85, 1.0)
 	left.add_child(_augment)
@@ -414,7 +374,7 @@ func _build() -> void:
 	_picker_list = VBoxContainer.new()
 	_picker_list.add_theme_constant_override("separation", 2)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(330.0, 560.0)
+	scroll.custom_minimum_size = Vector2(330.0, 520.0)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
 	scroll.add_child(_picker_list)
@@ -430,9 +390,12 @@ func _label(text: String, size: int) -> Label:
 	return label
 
 
-# --- Picker, inventory and character tabs (Part 5) -----------------------------
+# --- Picker and Status tab -------------------------------------------------------
 
-## Base weapons, then found weapons (newest first). Job-locked ones are disabled.
+## The weapons in your pack (PSU: palettes are filled from the inventory),
+## grouped like the North Star's weapon table. The one already in the other
+## hand of this palette is left out (one item can't be in both hands).
+## Job-locked ones stay focusable but greyed.
 func _rebuild_picker() -> void:
 	if _picker_list == null:
 		return
@@ -444,33 +407,36 @@ func _rebuild_picker() -> void:
 	empty.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	empty.pressed.connect(_on_weapon_picked.bind(null))
 	_picker_list.add_child(empty)
-	var found: Array[WeaponData] = []
 	var seeker := _player()
-	if seeker and seeker.save:
-		found = seeker.save.inventory.weapons.duplicate()
-		found.reverse()
-	if not found.is_empty():
-		_picker_list.add_child(_label("Found", 14))
-	for w in found:
-		_picker_list.add_child(_weapon_button(w, true))
-	# Base weapons grouped like the North Star's weapon table, A-Z in each group.
+	if seeker == null or seeker.save == null:
+		return
+	var other: WeaponData = null
+	if _set and _editing.x >= 0:
+		other = _set.loadouts[_editing.x].get_hand(1 - _editing.y)
+	var any := false
 	for group in [["Melee", WeaponData.WeaponClass.MELEE, false], ["Ranged", WeaponData.WeaponClass.RANGED, false],
 			["Magic", WeaponData.WeaponClass.MAGIC, false], ["Shields", -1, true]]:
-		var header := _label(group[0], 14)
-		header.modulate = Color(0.7, 0.8, 1.0)
-		_picker_list.add_child(header)
-		for w in _weapons:
-			if w.is_shield == group[2] and (group[2] or w.weapon_class == group[1]):
-				_picker_list.add_child(_weapon_button(w, false))
+		var header_added := false
+		for w in seeker.save.inventory.weapons:
+			if w == other or w.is_shield != group[2] or not (group[2] or w.weapon_class == group[1]):
+				continue
+			if not header_added:
+				var header := _label(group[0], 14)
+				header.modulate = Color(0.7, 0.8, 1.0)
+				_picker_list.add_child(header)
+				header_added = true
+			_picker_list.add_child(_weapon_button(w))
+			any = true
+	if not any:
+		_picker_list.add_child(_label("No other weapons in your pack.", 14))
 
 
-func _weapon_button(w: WeaponData, found: bool) -> Button:
+func _weapon_button(w: WeaponData) -> Button:
 	var b := Button.new()
 	b.text = _weapon_label(w)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.tooltip_text = Loot.describe(w)
-	if found:
-		b.modulate = Color(1.0, 0.6, 1.0) if w.rare else Color(0.75, 0.9, 1.0)
+	b.modulate = Color(1.0, 0.6, 1.0) if w.rare else Color(0.85, 0.92, 1.0)
 	if combat and not w.can_be_used_by(combat.job_code):
 		# Still focusable (so the d-pad doesn't skip it); A explains the lock.
 		b.modulate = Color(0.55, 0.55, 0.6)
@@ -479,207 +445,50 @@ func _weapon_button(w: WeaponData, found: bool) -> Button:
 	return b
 
 
-func _build_inventory_tab() -> void:
-	_inventory_text = RichTextLabel.new()
-	_inventory_text.name = "Inventory"
-	_inventory_text.bbcode_enabled = true
-	_inventory_text.custom_minimum_size = Vector2(1100.0, 600.0)
-	_inventory_text.add_theme_font_size_override("normal_font_size", 17)
+func _build_status_tab() -> void:
+	_status_text = RichTextLabel.new()
+	_status_text.name = "Status"
+	_status_text.bbcode_enabled = true
+	_status_text.custom_minimum_size = Vector2(1100.0, 600.0)
+	_status_text.add_theme_font_size_override("normal_font_size", 18)
 	# Focusable so the d-pad / left stick scroll it.
-	_inventory_text.focus_mode = Control.FOCUS_ALL
-	_inventory_text.scroll_active = true
-	_tabs.add_child(_inventory_text)
+	_status_text.focus_mode = Control.FOCUS_ALL
+	_status_text.scroll_active = true
+	_tabs.add_child(_status_text)
 
 
-func _refresh_inventory() -> void:
+## PSO's Status screen: who you are and your stats with everything applied.
+func _refresh_status() -> void:
 	var seeker := _player()
-	if _inventory_text == null or seeker == null or seeker.save == null:
-		return
-	var inv := seeker.save.inventory
-	var lines := PackedStringArray()
-	lines.append("[b]Oro[/b] %d" % inv.oro)
-	var lum := PackedStringArray()
-	for color in Inventory.LUMIDIUM:
-		lum.append("%s %d" % [String(color).capitalize(), int(inv.lumidium.get(color, 0))])
-	lines.append("[b]Banked Lumidium[/b]  " + "   ".join(lum))
-	lines.append("[b]Carried Lumidium[/b] %d (lost on death until deposited)" % seeker.carried_lumidium_total())
-	var items := PackedStringArray()
-	for id in Inventory.CONSUMABLES:
-		items.append("%s x%d" % [Inventory.CONSUMABLES[id], inv.count(id)])
-	lines.append("[b]Consumables[/b]  " + "   ".join(items))
-	var mats := PackedStringArray()
-	for id in Materials.ALL:
-		if inv.count(id) > 0:
-			mats.append("%s x%d" % [Materials.display_name(id), inv.count(id)])
-	lines.append("[b]Materials[/b]  " + ("   ".join(mats) if not mats.is_empty() else "none (use them in the Character tab)"))
-	lines.append("[b]Armor[/b] %d spare piece%s, %d augment%s (wear and slot them in the Armor tab)" % [
-		inv.armors.size(), "" if inv.armors.size() == 1 else "s",
-		inv.units.values().reduce(func(t, n): return t + int(n), 0), "" if inv.units.size() == 1 else "s"])
-	lines.append("")
-	lines.append("[b]Found weapons[/b] (%d)" % inv.weapons.size())
-	if inv.weapons.is_empty():
-		lines.append("  none yet: enemies drop them from your emblem's pool")
-	for i in range(inv.weapons.size() - 1, -1, -1):
-		var w := inv.weapons[i]
-		var color := "#ff99ff" if w.rare else "#bfe0ff"
-		lines.append("  [color=%s]%s[/color]  [%s]  %s" % [color, w.display_name, w.jobs_text(), Loot.describe(w)])
-	_inventory_text.text = "\n".join(lines)
-
-
-func _build_character_tab() -> void:
-	var box := VBoxContainer.new()
-	box.name = "Character"
-	box.add_theme_constant_override("separation", 10)
-	_tabs.add_child(box)
-	box.add_child(_label("Character (set at creation; edits here are for testing)", 22))
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 16)
-	box.add_child(grid)
-	grid.add_child(_label("Name", 18))
-	_name_edit = LineEdit.new()
-	_name_edit.custom_minimum_size.x = 300.0
-	# Typing needs a keyboard: click to edit. Gamepads use "New name".
-	_name_edit.focus_mode = Control.FOCUS_CLICK
-	_name_edit.text_changed.connect(func(_t: String): _apply_character())
-	var name_row := HBoxContainer.new()
-	name_row.add_child(_name_edit)
-	var new_name := Button.new()
-	new_name.text = "New name"
-	new_name.pressed.connect(func():
-		var i := (NAMES.find(_name_edit.text) + 1) % NAMES.size()
-		_name_edit.text = NAMES[i]
-		_apply_character())
-	name_row.add_child(new_name)
-	grid.add_child(name_row)
-	_race = _option(grid, "Race", CharacterData.Race.keys())
-	_gender = _option(grid, "Gender", CharacterData.Gender.keys())
-	_hand = _option(grid, "Primary hand", ["Right", "Left"])
-	_job = _option(grid, "Job", CharacterData.Job.keys())
-	# Chosen at character creation and fixed afterwards (debug: Levels tab).
-	_job.disabled = true
-	_job.focus_mode = Control.FOCUS_NONE
-	_character_info = _label("", 18)
-	box.add_child(_character_info)
-	var reset := Button.new()
-	reset.text = "Reset character to level 1 (testing)"
-	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	reset.pressed.connect(_reset_character)
-	box.add_child(reset)
-	# PSO materials: each use raises a stat by 2, up to the race's limits.
-	box.add_child(_label("Materials", 20))
-	_material_info = _label("", 15)
-	box.add_child(_material_info)
-	var mats := GridContainer.new()
-	mats.columns = 3
-	mats.add_theme_constant_override("h_separation", 10)
-	mats.add_theme_constant_override("v_separation", 6)
-	box.add_child(mats)
-	for id in Materials.ALL:
-		var b := Button.new()
-		b.custom_minimum_size.x = 330.0
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.pressed.connect(_use_material.bind(id))
-		mats.add_child(b)
-		_material_buttons[id] = b
-	_character_message = _label("", 15)
-	_character_message.modulate = Color(1.0, 0.85, 0.5)
-	box.add_child(_character_message)
-	box.add_child(_label("The emblem comes from name, race, gender and job (like PSO section IDs). It picks the weapon\nfamilies and rares your drops favor. The job is set at character creation and can't change\n(Levels tab has a debug switch). Jobs lock weapons: S = Striker, R = Ranger, I = Invoker.", 14))
-
-
-func _option(parent: Node, caption: String, names: Array) -> OptionButton:
-	parent.add_child(_label(caption, 18))
-	var option := OptionButton.new()
-	for n in names:
-		option.add_item(String(n).capitalize())
-	option.item_selected.connect(func(_i: int): _apply_character())
-	parent.add_child(option)
-	return option
-
-
-func _load_character() -> void:
-	var seeker := _player()
-	if seeker == null or seeker.save == null or _name_edit == null:
+	if _status_text == null or seeker == null or seeker.save == null:
 		return
 	var c := seeker.save.character
-	_name_edit.text = c.seeker_name
-	_race.select(c.race)
-	_gender.select(c.gender)
-	_hand.select(1 if c.left_handed else 0)
-	_job.select(c.job)
-
-
-func _apply_character() -> void:
-	var seeker := _player()
-	if seeker == null or seeker.save == null:
-		return
-	var c := seeker.save.character
-	c.seeker_name = _name_edit.text if _name_edit.text.strip_edges() != "" else "Seeker"
-	var new_race := _race.selected as CharacterData.Race
-	if not CharacterData.job_allowed(new_race, c.job):
-		_race.select(c.race)
-		_character_message.text = "Goluman can't be Invokers."
-	elif new_race != c.race:
-		c.race = new_race
-	c.gender = _gender.selected as CharacterData.Gender
-	c.left_handed = _hand.selected == 1
-	seeker.combat.set_left_handed(c.left_handed)
-	var removed := ArmorBook.strip_unwearable(seeker.save)
-	if not removed.is_empty():
-		_character_message.text = "Took off %s (can't wear it now)." % ", ".join(removed)
-	seeker.apply_bonuses()  # race stat bonuses, armor
-	_refresh_character()
-
-
-## Debug only (Levels tab): the job is otherwise fixed at creation.
-func _tool_cycle_job() -> void:
-	var seeker := _player()
-	var c := seeker.save.character
-	c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
-	if not CharacterData.job_allowed(c.race, c.job):  # Goluman skip Invoker
-		c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
-	combat.job_code = c.job_code()
-	_job.select(c.job)
-	ArmorBook.strip_unwearable(seeker.save)
-	seeker.apply_bonuses()
-	_rebuild_picker()
-	_refresh()
-	_level_message.text = "Job is now %s (emblem %s)." % [c.job_name(), c.emblem_name()]
-
-
-func _refresh_character() -> void:
-	var seeker := _player()
-	if _character_info == null or seeker == null or seeker.save == null:
-		return
-	var c := seeker.save.character
+	var s := combat.stats
 	var favored: Array = Loot.FAVORED[c.emblem_index()]
 	var rares := PackedStringArray()
 	for w in Loot.rares_for(c.emblem_index()):
 		rares.append(w.display_name)
-	_character_info.text = "Emblem: %s    EXP: %d\nFavored drops: %s, %s\nRares in this pool: %s" % [
-		c.emblem_name(), c.experience, String(favored[0]).capitalize(), String(favored[1]).capitalize(),
-		", ".join(rares) if not rares.is_empty() else "none"]
-	_character_info.modulate = c.emblem_text_color()
-	if _material_info:
-		_material_info.text = "Used: stat materials %s   HP %s   LP %s   (A uses one: +%d to its stat, permanent)" % [
-			Materials.limit_text(c, &"stat"), Materials.limit_text(c, &"hp"), Materials.limit_text(c, &"lp"),
-			int(Materials.PER_USE)]
-		for id in _material_buttons:
-			var b: Button = _material_buttons[id]
-			var have := seeker.save.inventory.count(id)
-			b.text = "%s x%d  (%s +2, used %d)" % [Materials.display_name(id), have, Materials.stat_label(id),
-				int(c.materials.get(id, 0))]
-			# Greyed but still pressable, so A explains why it can't be used.
-			b.modulate = Color(1, 1, 1, 0.45) if have <= 0 or Materials.use_error(c, id) != "" else Color.WHITE
-
-
-func _use_material(id: StringName) -> void:
-	var seeker := _player()
-	if seeker == null:
-		return
-	_character_message.text = seeker.use_material(id)
-	_refresh_character()
+	var lines := PackedStringArray()
+	lines.append("[font_size=26]%s[/font_size]" % c.seeker_name)
+	lines.append("%s %s %s   %s-handed   Emblem [color=#%s]%s[/color]   EXP %d" % [
+		CharacterData.Race.keys()[c.race].capitalize(), CharacterData.Gender.keys()[c.gender].capitalize(),
+		c.job_name(), "Left" if c.left_handed else "Right", c.emblem_text_color().to_html(false),
+		c.emblem_name(), c.experience])
+	lines.append("")
+	lines.append("[b]HP[/b] %d / %d    [b]LP[/b] %d / %d" % [roundi(seeker.health.hp), roundi(s.max_hp),
+		roundi(combat.lp), roundi(s.max_lp)])
+	lines.append("[b]STR[/b] %d    [b]DEX[/b] %d    [b]SOL[/b] %d    [b]ATA[/b] %d    [b]LCK[/b] %d" % [
+		roundi(s.strength), roundi(s.dexterity), roundi(s.soul), roundi(s.accuracy), roundi(s.luck)])
+	lines.append("[b]DEF[/b] %d    [b]RES[/b] %d    [b]EVA[/b] %d" % [roundi(s.defense), roundi(s.resolve), roundi(s.evasion)])
+	lines.append("")
+	lines.append("[b]Materials used[/b]  stat %s   HP %s   LP %s   (use them from the Inventory)" % [
+		Materials.limit_text(c, &"stat"), Materials.limit_text(c, &"hp"), Materials.limit_text(c, &"lp")])
+	lines.append("[b]Spell levels[/b]  %s" % c.spell_cap_text())
+	lines.append("[b]Drops favor[/b]  %s, %s.   Rares in this pool: %s" % [String(favored[0]).capitalize(),
+		String(favored[1]).capitalize(), ", ".join(rares) if not rares.is_empty() else "none"])
+	lines.append("")
+	lines.append("[color=#9aa8c0]The emblem comes from name, race, gender and job (like PSO section IDs). Jobs lock weapons: S = Striker, R = Ranger, I = Invoker.[/color]")
+	_status_text.text = "\n".join(lines)
 
 
 # --- SyncAIDa tab (Part 6) -------------------------------------------------------
@@ -774,14 +583,7 @@ func _build_syncaida_tab() -> void:
 		_sync_feeds.add_child(b)
 		var effect := _label(_feed_text(item), 13)
 		_sync_feeds.add_child(effect)
-	var reset := Button.new()
-	reset.text = "Reset to base stats (testing)"
-	reset.pressed.connect(_reset_syncaida)
-	right.add_child(reset)
-	_free_feeding_toggle = CheckButton.new()
-	_free_feeding_toggle.text = "Free feeding (debug)"
-	_free_feeding_toggle.toggled.connect(_set_free_feeding)
-	right.add_child(_free_feeding_toggle)
+	right.add_child(_label("Consumables come from your pack,\nLumidium from the bank.", 13))
 	_sync_message = _label("", 16)
 	_sync_message.modulate = Color(1.0, 0.85, 0.5)
 	right.add_child(_sync_message)
@@ -924,16 +726,20 @@ func _focus_tab() -> void:
 	var page := _tabs.get_current_tab_control()
 	if page == null:
 		return
-	if page.name == "Loadouts" and combat:
-		(_slot_buttons[combat.loadout_index][CombatController.Hand.PRIMARY] as Button).grab_focus()
+	if page == _inventory_tab:
+		_inventory_tab.focus_default()
+		return
+	if page == _equip_tab:
+		match _equip_tab.section:
+			"Palette":
+				if combat:
+					(_slot_buttons[combat.loadout_index][CombatController.Hand.PRIMARY] as Button).grab_focus()
+			"Spells":
+				_spells_tab.focus_default()
+			"Armor":
+				_armor_tab.focus_default()
 		return
 	if page.name == "SyncAIDa" and _focus_paired():
-		return
-	if page == _spells_tab:
-		_spells_tab.focus_default()
-		return
-	if page == _armor_tab:
-		_armor_tab.focus_default()
 		return
 	var first := page if page.focus_mode == Control.FOCUS_ALL else _first_focusable(page)
 	if first:
@@ -971,140 +777,41 @@ func _focus_paired() -> bool:
 	return false
 
 
+## Debug tab switch: feeding doesn't use anything up.
 func _set_free_feeding(on: bool) -> void:
 	free_feeding = on
-	if _free_feeding_toggle:
-		_free_feeding_toggle.set_pressed_no_signal(on)
-	if _free_feeding_levels:
-		_free_feeding_levels.set_pressed_no_signal(on)
 	_refresh_syncaida()
 
 
-# --- Levels tab (prototype) -------------------------------------------------------
+# --- Options tab ---------------------------------------------------------------------
 
-func _build_levels_tab() -> void:
+func _build_options_tab() -> void:
 	var columns := HBoxContainer.new()
-	columns.name = "Levels"
+	columns.name = "Options"
 	columns.add_theme_constant_override("separation", 40)
 	_tabs.add_child(columns)
-
 	var left := VBoxContainer.new()
-	left.custom_minimum_size.x = 480.0
+	left.custom_minimum_size.x = 360.0
 	left.add_theme_constant_override("separation", 8)
 	columns.add_child(left)
-	left.add_child(_label("Level select (prototype)", 22))
-	for level in LEVELS:
-		var b := Button.new()
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size.y = 38.0
-		b.set_meta("scene", level[1])
-		b.set_meta("title", level[0])
-		b.pressed.connect(_on_level.bind(level[1]))
-		left.add_child(b)
-		_level_buttons.append(b)
-	left.add_child(_label("Switching saves first. Carried Lumidium is banked on the way.", 13))
+	left.add_child(_label("Options", 22))
 	var to_title := Button.new()
 	to_title.text = "Save and quit to the title screen"
 	to_title.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	to_title.pressed.connect(_quit_to_title)
 	left.add_child(to_title)
-	_level_message = _label("", 16)
-	_level_message.modulate = Color(1.0, 0.85, 0.5)
-	left.add_child(_level_message)
-
+	left.add_child(_label("Carried Lumidium is banked first.", 13))
+	left.add_child(_label("More settings will live here.", 13))
 	var right := VBoxContainer.new()
-	right.custom_minimum_size.x = 420.0
-	right.add_theme_constant_override("separation", 8)
 	columns.add_child(right)
-	right.add_child(_label("Testing tools", 22))
-	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
-			["+1000 Oro", _tool_oro], ["+5 of each consumable", _tool_items],
-			["+10 of each material", _tool_materials],
-			["One of every armor piece, 3 of every augment", _tool_armor],
-			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn],
-			["Change job (debug; fixed at creation)", _tool_cycle_job],
-			["Learn every spell or trap your race can use, at your max level", _tool_learn_all],
-			["Learn every spell or trap your race can use, at level 1", _tool_learn_all_level_1],
-			["Forget every spell and trap", _tool_forget_all],
-			["+50 SOL and +50 DEX (until you leave the level)", _tool_stats_up]]:
-		var b := Button.new()
-		b.text = spec[0]
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.pressed.connect(spec[1])
-		right.add_child(b)
-	_infinite_lp = CheckButton.new()
-	_infinite_lp.text = "Infinite LP (until you leave the level)"
-	_infinite_lp.toggled.connect(_toggle_infinite_lp)
-	right.add_child(_infinite_lp)
-	# Learn one spell or trap at any level, ignoring requirements (testing).
-	var learn_row := HBoxContainer.new()
-	_learn_pick = OptionButton.new()
-	for spell in SpellBook.all():
-		_learn_pick.add_item("%s (%s)" % [spell.display_name, spell.element_name()])
-	learn_row.add_child(_learn_pick)
-	var minus := Button.new()
-	minus.text = " - "
-	minus.pressed.connect(func(): _set_learn_level(_learn_level - 1))
-	learn_row.add_child(minus)
-	_learn_level_label = _label("Lv 1", 16)
-	learn_row.add_child(_learn_level_label)
-	var plus := Button.new()
-	plus.text = " + "
-	plus.pressed.connect(func(): _set_learn_level(_learn_level + 1))
-	learn_row.add_child(plus)
-	var learn := Button.new()
-	learn.text = "Learn"
-	learn.pressed.connect(_tool_learn_one)
-	learn_row.add_child(learn)
-	right.add_child(learn_row)
-	_debug_toggle = CheckButton.new()
-	_debug_toggle.text = "Debug readout (Select / F3)"
-	_debug_toggle.toggled.connect(func(on: bool):
-		var hud := _hud()
-		if hud:
-			hud.set_debug_visible(on))
-	right.add_child(_debug_toggle)
-	_hitbox_toggle = CheckButton.new()
-	_hitbox_toggle.text = "Show hitboxes (yours and enemies')"
-	_hitbox_toggle.toggled.connect(func(on: bool):
-		if combat:
-			combat.show_hitboxes = on)
-	right.add_child(_hitbox_toggle)
-	_free_feeding_levels = CheckButton.new()
-	_free_feeding_levels.text = "Free SyncAIDa feeding"
-	_free_feeding_levels.toggled.connect(_set_free_feeding)
-	right.add_child(_free_feeding_levels)
+	right.add_child(_label("Controls", 22))
+	right.add_child(_label(DebugHud.HELP, 16))
 
 
 func _hud() -> DebugHud:
 	for node in get_tree().get_nodes_in_group("hud"):
 		return node as DebugHud
 	return null
-
-
-func _refresh_levels() -> void:
-	if _debug_toggle == null:
-		return
-	if _infinite_lp and _player():
-		_infinite_lp.set_pressed_no_signal(_player().combat.infinite_lp)
-	var current := get_tree().current_scene.scene_file_path if get_tree().current_scene else ""
-	for b in _level_buttons:
-		var here: bool = b.get_meta("scene") == current
-		b.text = ("> " if here else "   ") + String(b.get_meta("title")) + ("  (here)" if here else "")
-	_free_feeding_levels.set_pressed_no_signal(free_feeding)
-	var hud := _hud()
-	_debug_toggle.set_pressed_no_signal(hud != null and hud.is_debug_visible())
-	_hitbox_toggle.set_pressed_no_signal(combat != null and combat.show_hitboxes)
-
-
-func _on_level(scene: String) -> void:
-	var seeker := _player()
-	if seeker:
-		seeker.deposit_lumidium()
-		seeker.save_game()
-	save_on_close = false  # already saved
-	close()
-	get_tree().change_scene_to_file(scene)
 
 
 func _quit_to_title() -> void:
@@ -1116,72 +823,23 @@ func _quit_to_title() -> void:
 	Session.quit_to_title()
 
 
-func _tool_refill() -> void:
-	var seeker := _player()
-	seeker.health.restore_full()
-	combat.lp = combat.stats.max_lp
-	if seeker.syncaida.data:
-		seeker.syncaida.data.gauge = SyncAIDaCompanion.GAUGE_MAX
-	_level_message.text = "HP, LP and Sync gauge refilled."
+# --- Palette helpers ----------------------------------------------------------------
 
-
-func _tool_cure() -> void:
-	_player().status.clear_all()
-	_level_message.text = "Statuses cleared."
-
-
-func _tool_oro() -> void:
-	_player().save.inventory.oro += 1000
-	_level_message.text = "+1000 Oro."
-
-
-func _tool_items() -> void:
-	for id in Inventory.CONSUMABLES:
-		_player().save.inventory.add_consumable(id, 5)
-	_level_message.text = "+5 of each consumable."
-
-
-func _tool_armor() -> void:
-	var inv := _player().save.inventory
-	for id in ArmorBook.all():
-		inv.armors.append(ArmorBook.make(id))
-	for id in UnitBook.ids():
-		inv.add_unit(id, 3)
-	_level_message.text = "Added %d armor pieces (max slots) and 3 of each augment (Armor tab)." % ArmorBook.all().size()
-	_refresh()
-
-
-func _tool_materials() -> void:
-	for id in Materials.ALL:
-		_player().save.inventory.add_consumable(id, 10)
-	_level_message.text = "+10 of each material (use them in the Character tab)."
-
-
-func _tool_lumidium() -> void:
-	var inv := _player().save.inventory
-	for color in Inventory.LUMIDIUM:
-		inv.lumidium[color] = int(inv.lumidium.get(color, 0)) + 10
-	_level_message.text = "+10 of each Lumidium in the bank."
-
-
-func _tool_respawn() -> void:
-	get_tree().call_group("respawner", "respawn_player")
-	_level_message.text = "Back at the start."
-
-
-# --- Controls tab -------------------------------------------------------------------
-
-func _build_controls_tab() -> void:
-	var help := _label(DebugHud.HELP, 18)
-	help.name = "Controls"
-	_tabs.add_child(help)
-
-
-# --- Testing helpers (Loadouts, SyncAIDa and Character tabs) ------------------
-
+## The current tab's name, or the Equip tab's section (Palette, Spells, Armor).
 func _tab_name() -> String:
 	var page := _tabs.get_current_tab_control()
+	if page == _equip_tab:
+		return _equip_tab.section
 	return String(page.name) if page else ""
+
+
+## Opens the menu's tab (or Equip section) by name (tests, shortcuts).
+func show_tab(tab: String) -> void:
+	if tab in EquipTab.SECTIONS:
+		_tabs.current_tab = _tab_index("Equip")
+		_equip_tab.show_section(tab)
+	else:
+		_tabs.current_tab = _tab_index(tab)
 
 
 ## 1 = clear the focused hand (gamepad X / Delete), 2 = clear the whole
@@ -1220,96 +878,3 @@ func _clear_focused_slot(whole: bool) -> void:
 				_message.text = "Loadout %d, %s unequipped." % [i + 1, CombatController.hand_name(hand).to_lower()]
 			_refresh()
 			return
-
-
-func _clear_all_loadouts() -> void:
-	for l in _set.loadouts:
-		l.off_hand = null
-		l.primary = null
-	_refresh()
-	_message.text = "All loadouts cleared (equip something before closing to fight)."
-
-
-func _reset_syncaida() -> void:
-	var seeker := _player()
-	if seeker == null or seeker.syncaida.data == null:
-		return
-	seeker.syncaida.reset_to_base()
-	_sync_message.text = "%s reset to its base stats." % seeker.syncaida.data.display_name
-	_refresh_syncaida()
-
-
-func _reset_character() -> void:
-	var seeker := _player()
-	if seeker == null or seeker.save == null:
-		return
-	seeker.save.character.experience = 0
-	seeker.reset_materials()
-	seeker.health.restore_full()
-	combat.lp = combat.stats.max_lp
-	_refresh_character()
-	_character_message.text = "Back to level 1 (EXP 0). Materials used are forgotten too. Character levels aren't in yet."
-
-
-# --- Spell testing tools (Levels tab) ------------------------------------------
-
-func _set_learn_level(level: int) -> void:
-	var spell: SpellDef = SpellBook.all()[maxi(_learn_pick.selected, 0)]
-	_learn_level = clampi(level, 1, spell.max_level)
-	_learn_level_label.text = "Lv %d" % _learn_level
-
-
-func _tool_learn_one() -> void:
-	var spell: SpellDef = SpellBook.all()[maxi(_learn_pick.selected, 0)]
-	_set_learn_level(_learn_level)
-	_player().save.character.spells[spell.id] = _learn_level
-	SpellCaster.clear_cache()
-	_level_message.text = "Learned %s %d (requirements ignored for testing)." % [spell.display_name, _learn_level]
-	if not _player().save.character.can_use_traps() and spell.is_trap() \
-			or _player().save.character.can_use_traps() and not spell.is_trap():
-		_level_message.text += " Your race can't use it, though."
-	_refresh()
-
-
-func _tool_learn_all() -> void:
-	var c := _player().save.character
-	var n := 0
-	for spell in SpellBook.all():
-		var cap := c.level_cap_for(spell)
-		if cap > 0:
-			c.spells[spell.id] = cap
-			n += 1
-	SpellCaster.clear_cache()
-	_level_message.text = "Learned %d at your max level (%s)." % [n, c.spell_cap_text()]
-	_refresh()
-
-
-func _tool_learn_all_level_1() -> void:
-	var c := _player().save.character
-	var n := 0
-	for spell in SpellBook.all():
-		if c.level_cap_for(spell) > 0:
-			c.spells[spell.id] = 1
-			n += 1
-	SpellCaster.clear_cache()
-	_level_message.text = "Learned %d at level 1 (requirements ignored)." % n
-	_refresh()
-
-
-func _toggle_infinite_lp(on: bool) -> void:
-	_player().combat.infinite_lp = on
-	_level_message.text = "Infinite LP %s." % ("on" if on else "off")
-
-
-func _tool_forget_all() -> void:
-	_player().save.character.spells.clear()
-	SpellCaster.clear_cache()
-	_level_message.text = "Every spell and trap forgotten."
-	_refresh()
-
-
-func _tool_stats_up() -> void:
-	combat.stats.soul += 50.0
-	combat.stats.dexterity += 50.0
-	_level_message.text = "SOL %d, DEX %d (resets when the level reloads)." % [roundi(combat.stats.soul), roundi(combat.stats.dexterity)]
-	_refresh()
