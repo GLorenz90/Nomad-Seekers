@@ -72,8 +72,8 @@ func is_open() -> bool:
 
 
 func open() -> void:
-	if combat == null:
-		return
+	if combat == null or not get_tree().get_nodes_in_group("modal_menus").is_empty():
+		return  # a counter or the teleporter's list is open
 	_set = combat.loadout_set
 	_rebuild_picker()
 	if debug_tab:

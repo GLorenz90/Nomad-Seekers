@@ -22,17 +22,10 @@ var _message: Label
 ## The entry whose actions are open ({} when none).
 var _open: Dictionary = {}
 ## Drop amount being picked (stacks, Oro, Lumidium).
-var _amount := 1
-var _amount_label: Label
+var _picker: AmountPicker
 ## Index into the pack list to refocus after a rebuild.
 var _focus_index := 0
 
-const USE_TEXT := {
-	&"hp_gel": "Restores 30% of your HP.",
-	&"lp_cell": "Restores 50% of your LP.",
-	&"cure_salt": "Clears every status effect.",
-	&"trap_scanner": "Reveals the traps in the room you're in (15 m outside rooms).",
-}
 
 
 func _init(owner_menu: LoadoutMenu) -> void:
@@ -103,35 +96,10 @@ func _save() -> SaveData:
 
 # --- Entries --------------------------------------------------------------------
 
-## Every pack slot, in PSO-ish order: weapons, armor, augments, discs, stacks.
-## Each entry: {"kind": ..., plus what it refers to}.
+## Every pack slot (SaveData.pack_entries).
 func entries() -> Array[Dictionary]:
-	var list: Array[Dictionary] = []
 	var save := _save()
-	if save == null:
-		return list
-	var inv := save.inventory
-	for w in inv.weapons:
-		list.append({"kind": "weapon", "weapon": w})
-	for a in ArmorBook.equipped(save.character):
-		list.append({"kind": "armor", "armor": a, "worn": true})
-	for a in inv.armors:
-		list.append({"kind": "armor", "armor": a, "worn": false})
-	var unit_ids := inv.units.keys()
-	unit_ids.sort()
-	for id in unit_ids:
-		for i in inv.unit_count(id):
-			list.append({"kind": "unit", "unit": id})
-	for i in inv.discs.size():
-		list.append({"kind": "disc", "index": i})
-	for id in Inventory.CONSUMABLES.keys() + Materials.ALL.keys():
-		if inv.count(id) > 0:
-			list.append({"kind": "stack", "id": id})
-	# Anything else stacked (older saves): keep it visible so it can be dropped.
-	for id in inv.consumables:
-		if inv.count(id) > 0 and not Inventory.CONSUMABLES.has(id) and not Materials.ALL.has(id):
-			list.append({"kind": "stack", "id": id})
-	return list
+	return save.pack_entries() if save else ([] as Array[Dictionary])
 
 
 func _satchel_entries() -> Array[Dictionary]:
@@ -147,96 +115,32 @@ func _satchel_entries() -> Array[Dictionary]:
 func entry_text(e: Dictionary) -> String:
 	var save := _save()
 	match e.kind:
-		"weapon":
-			var w: WeaponData = e.weapon
-			var on := save.palettes_with(w)
-			var tag := ""
-			if not on.is_empty():
-				tag = "  [P%s]" % ",".join(Array(on).map(func(n: int) -> String: return str(n)))
-			return "%s%s" % [w.display_name, tag]
-		"armor":
-			var a: ArmorData = e.armor
-			return "%s%s  (%s %s)" % ["[W] " if e.worn else "", a.display_name, ArmorData.SLOT_NAMES[a.slot], a.weight_name()]
-		"unit":
-			return "Augment: %s" % UnitBook.display_name(e.unit)
-		"disc":
-			var d: Dictionary = save.inventory.discs[e.index]
-			var spell := SpellBook.get_spell(StringName(d.id))
-			return "Disc: %s %d" % [spell.display_name if spell else String(d.id), int(d.level)]
-		"stack":
-			return "%s x%d" % [Inventory.item_name(e.id), save.inventory.count(e.id)]
 		"oro":
 			return "Oro  %d" % save.inventory.oro
 		"lumidium":
 			return "%s Lumidium x%d" % [String(e.color).capitalize(), int(_player().carried_lumidium.get(e.color, 0))]
-	return "?"
+	return ItemText.label(e, save, save.inventory)
 
 
 func _entry_color(e: Dictionary) -> Color:
 	match e.kind:
-		"weapon":
-			return Color(1.0, 0.65, 1.0) if (e.weapon as WeaponData).rare else Color(0.8, 0.9, 1.0)
-		"armor":
-			return Color(1.0, 0.65, 1.0) if (e.armor as ArmorData).rare else Color(0.85, 0.85, 0.95)
-		"unit":
-			return Color(0.95, 0.95, 0.6)
-		"disc":
-			return Color(0.6, 0.95, 1.0)
-		"stack":
-			return Color(1.0, 0.75, 0.45) if Materials.ALL.has(e.id) else Color(0.6, 1.0, 0.7)
 		"oro":
 			return Color(1.0, 0.85, 0.35)
 		"lumidium":
 			return Inventory.LUMIDIUM_COLORS.get(e.color, Color.WHITE)
-	return Color.WHITE
+	return ItemText.color(e)
 
 
 func describe(e: Dictionary) -> String:
 	var save := _save()
 	var p := _player()
 	match e.kind:
-		"weapon":
-			var w: WeaponData = e.weapon
-			var on := save.palettes_with(w)
-			var lines := PackedStringArray([w.display_name + ("  (RARE)" if w.rare else ""), Loot.describe(w),
-				"Jobs: %s   %s%s" % [w.jobs_text(), "Heavy" if w.is_heavy() else "Light", ", two-handed" if w.two_handed else ""]])
-			lines.append("On palette %s." % ", ".join(Array(on).map(func(n: int) -> String: return str(n))) if not on.is_empty() else "Not on a palette.")
-			if not w.can_be_used_by(menu.combat.job_code):
-				lines.append("Your job can't use it.")
-			return "\n".join(lines)
-		"armor":
-			var a: ArmorData = e.armor
-			var text := "%s%s\n%s" % [a.display_name, "  (RARE)" if a.rare else "", a.summary()]
-			if e.worn:
-				text += "\nWorn."
-			else:
-				var error := ArmorBook.equip_error(save.character, a)
-				if error != "":
-					text += "\nCan't wear: " + error
-			return text
-		"unit":
-			return "%s\n%s\nGoes in an augment slot of worn armor." % [UnitBook.display_name(e.unit), UnitBook.describe(e.unit)]
-		"disc":
-			var d: Dictionary = save.inventory.discs[e.index]
-			var spell := SpellBook.get_spell(StringName(d.id))
-			if spell == null:
-				return "Unknown disc"
-			var error := save.character.learn_error(spell, int(d.level), p.learning_stat(spell))
-			return "%s %d (%s)\n%s" % [spell.display_name, int(d.level), spell.element_name(),
-				"Can be read now." if error == "" else error]
-		"stack":
-			var id: StringName = e.id
-			var have := "You have %d (stacks of %d take one slot)." % [save.inventory.count(id), Inventory.STACK_MAX]
-			if Materials.ALL.has(id):
-				return "%s\n+%d %s, permanently. Used: %s.\n%s" % [Materials.display_name(id), int(Materials.PER_USE),
-					Materials.stat_label(id), Materials.limit_text(save.character, Materials.pool_of(id)), have]
-			return "%s\n%s\n%s" % [Inventory.item_name(id), USE_TEXT.get(id, ""), have]
 		"oro":
 			return "Oro: %d (up to %d). In the satchel: it never fills your pack." % [save.inventory.oro, Inventory.ORO_MAX]
 		"lumidium":
 			return "Carried Lumidium: %d / %d (all colors together), lost if you fall.\nTeleporters bank it. Banked: %d." % [
 				p.carried_lumidium_total(), Inventory.SATCHEL_LUMIDIUM, save.inventory.lumidium_total()]
-	return ""
+	return ItemText.detail(e, p, save.inventory)
 
 
 # --- Refresh ---------------------------------------------------------------------
@@ -349,7 +253,7 @@ func _open_actions(e: Dictionary, _from: Button) -> void:
 			if Materials.ALL.has(id):
 				_action("Use (+%d %s)" % [int(Materials.PER_USE), Materials.stat_label(id)], _use_material.bind(id),
 					Materials.use_error(save.character, id) == "")
-			elif USE_TEXT.has(id):
+			elif ItemText.USE_TEXT.has(id):
 				_action("Use", _use_item.bind(id))
 			_amount_actions(e, save.inventory.count(id))
 		"oro":
@@ -362,14 +266,11 @@ func _open_actions(e: Dictionary, _from: Button) -> void:
 		_focus_first(_actions)
 
 
-## Drop with an amount: - / + buttons (Oro also gets bigger steps), All, then
-## Drop. The row's focus neighbors are set by hand: the full-width buttons
-## above and below would otherwise catch d-pad left / right.
+## Drop with an amount (AmountPicker; Oro gets bigger steps), then Drop.
 func _amount_actions(e: Dictionary, have: int) -> void:
 	if have <= 0:
 		_action("Nothing to drop", func(): pass, false)
 		return
-	_amount = 1 if e.kind != "oro" else mini(have, 100)
 	if have == 1:
 		_action("Drop", _drop.bind(e, 1))
 		return
@@ -377,46 +278,10 @@ func _amount_actions(e: Dictionary, have: int) -> void:
 	for child in _actions.get_children():
 		if child is Button:
 			above = child
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	var steps := [-100, -10, -1, 1, 10, 100] if e.kind == "oro" else [-1, 1]
-	_amount_label = _label("", 18)
-	_amount_label.custom_minimum_size.x = 70.0
-	_amount_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var buttons: Array[Button] = []
-	for step in steps:
-		if step > 0 and _amount_label.get_parent() == null:
-			row.add_child(_amount_label)
-		var b := Button.new()
-		b.text = ("-" if step < 0 else "+") + (str(absi(step)) if absi(step) > 1 else "")
-		b.custom_minimum_size.x = 44.0
-		b.pressed.connect(func(): _set_amount(_amount + step, have))
-		row.add_child(b)
-		buttons.append(b)
-	var all := Button.new()
-	all.text = "All"
-	all.pressed.connect(func(): _set_amount(have, have))
-	row.add_child(all)
-	buttons.append(all)
-	_actions.add_child(row)
-	_set_amount(_amount, have)
-	var drop := _action("Drop this many", func(): _drop(e, _amount))
-	var plus: Button = buttons[steps.find(1)]
-	for i in buttons.size():
-		var b := buttons[i]
-		b.focus_neighbor_left = b.get_path_to(buttons[maxi(i - 1, 0)])
-		b.focus_neighbor_right = b.get_path_to(buttons[mini(i + 1, buttons.size() - 1)])
-		b.focus_neighbor_top = b.get_path_to(above if above else b)
-		b.focus_neighbor_bottom = b.get_path_to(drop)
-	drop.focus_neighbor_top = drop.get_path_to(plus)
-	if above:
-		above.focus_neighbor_bottom = above.get_path_to(plus)
-
-
-func _set_amount(value: int, have: int) -> void:
-	_amount = clampi(value, 1, have)
-	if _amount_label:
-		_amount_label.text = str(_amount)
+	_picker = AmountPicker.new().setup(have, 1 if e.kind != "oro" else mini(have, 100), e.kind == "oro")
+	_actions.add_child(_picker)
+	var drop := _action("Drop this many", func(): _drop(e, _picker.value))
+	_picker.wire(above, drop)
 
 
 ## B: closes the actions (back to the list). False when they weren't open.

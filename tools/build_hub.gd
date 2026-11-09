@@ -1,8 +1,9 @@
 extends SceneTree
 ## Builds scenes/hub.tscn: Nomad-2's lobby (Part 8), the hub every character
 ## enters from the title screen. No full levels yet: its teleporter goes to the
-## gym and the test arena. The service counters are placeholders for later
-## parts. After generating, edit the scene in the editor (rerunning this
+## gym and the test arena. Part 10: the counters work (ServiceCounter): the
+## Guild and the bank on the west wall, the weapons, armor and curatives shops
+## on the east wall. After generating, edit the scene in the editor (rerunning this
 ## overwrites it):
 ##   godot --headless --path . --script res://tools/build_hub.gd
 ##
@@ -122,22 +123,30 @@ func _build_level() -> void:
 	_box(_level, "WallSouth", Vector3(32, WALL_H, 1), Vector3(0, WALL_H / 2.0, 15.5), wall_mat)
 	_box(_level, "WallWest", Vector3(1, WALL_H, 30), Vector3(-16.5, WALL_H / 2.0, 0), wall_mat)
 	_box(_level, "WallEast", Vector3(1, WALL_H, 30), Vector3(16.5, WALL_H / 2.0, 0), wall_mat)
-	# Service counters (placeholders until the hub's services are built).
+	# Service counters (Part 10): [name, counter centre, ServiceCounter.Service].
 	var counters := Node3D.new()
 	counters.name = "Counters"
 	_add(_level, counters)
-	for spec in [["Guild counter", Vector3(-13, 0, -6)], ["Bank", Vector3(-13, 0, 2)],
-			["Weapon shops", Vector3(13, 0, -6)], ["Armorer & pharmacy", Vector3(13, 0, 2)]]:
-		var node_name := String(spec[0]).replace(" ", "").replace("&", "")
-		var counter := _box(counters, node_name, Vector3(3, 1.1, 5), spec[1] + Vector3(0, 0.55, 0), counter_mat)
+	for spec in [["Guild", Vector3(-13, 0, -6), 4], ["Bank", Vector3(-13, 0, 3), 3],
+			["Weapons", Vector3(13, 0, -8), 0], ["Armor", Vector3(13, 0, -1), 1], ["Curatives", Vector3(13, 0, 6), 2]]:
+		var at: Vector3 = spec[1]
+		var counter := _box(counters, "%sCounter" % spec[0], Vector3(3, 1.1, 5), at + Vector3(0, 0.55, 0), counter_mat)
 		var sign := Label3D.new()
 		sign.name = "Sign"
-		sign.text = "%s\n(coming later)" % spec[0]
+		sign.text = spec[0]
 		sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		sign.font_size = 40
+		sign.font_size = 48
 		sign.outline_size = 10
+		sign.modulate = Color(1.0, 0.9, 0.6)
 		sign.position = Vector3(0, 1.8, 0)
 		_add(counter, sign)
+		# The clerk's spot: just in front of the counter, facing the room.
+		var clerk := Node3D.new()
+		clerk.name = "%sClerk" % spec[0]
+		clerk.set_script(load("res://scripts/world/service_counter.gd"))
+		clerk.set("service", spec[2])
+		clerk.position = at + Vector3(-1.9 if at.x > 0 else 1.9, 0, 0)
+		_add(_root, clerk)
 	var title := Label3D.new()
 	title.name = "Title"
 	title.text = "NOMAD-2"

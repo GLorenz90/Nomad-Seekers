@@ -206,6 +206,27 @@ PSO's item pack with PSU's palettes (Grayson, 2026-11-09).
 ![Equip: Palette](docs/screenshots/equip_palette.png)
 ![Debug](docs/screenshots/debug_tab.png)
 
+## Part 10: shops, the bank and the Guild
+![The curatives shop](docs/screenshots/shop_curatives.png)
+
+Nomad-2's counters work (Grayson, 2026-11-09). Walk up to a counter and press **A**. Each counter pauses the game and works like PSO's: the clerk's commands on the left, the list in the middle, and the details and offer on the right. A picks (command → item → confirm), B steps back, Start leaves. Stacks get an amount (- / + / All).
+
+- **Shops** (east wall): **Weapons**, **Armor** (pieces and augments) and **Curatives**. 1 Oro = 1 Meseta.
+  - **Curatives use PSO's tool shop prices** for the matching item: HP Gel 50 (Monomate), LP Cell 100 (Monofluid), Cure Salt 300 (Sol Atomizer, cures everything), Trap Scanner 100 (Trap Vision).
+  - **Weapons and armor are priced on a PSO-like scale**, from the item's own numbers. PSO's exact shop formula isn't used. A weapon costs 200 + 25 × base damage (Pistol 500, Sword 700), ×1.3 if two-handed, with more for a special tag (+50% per tier) or a monster bonus. Torso armor costs 300 × tier², Heavy +20%, Head / Legs 40%, plus per slot and per bonus point. Augments cost 1,000 / 3,000 / 8,000 by grade.
+  - **Stock changes every time you arrive in Nomad-2**, as PSO's arms shop did each time you entered Pioneer 2. Every listing can be bought again and again. The Weapons shop has 10 common weapons, some with low-tier tags or monster bonuses. The Armor shop has 8 tier 1-2 pieces and 4 grade I augments. Never rares.
+  - **Any shop buys anything from your pack for 1/8 of its price** (my pick). Discs sell for 20 Oro per level and materials for 100 each. Palette weapons and worn armor have to come off first.
+- **Bank** (PSO's Check Room, west wall): **200 item slots and up to 999,999,999 Oro** per character, the numbers on the Ephinea PSO wiki. Deposit and withdraw items, and Oro in both directions. A bank stack holds up to 99 of one item (my pick; the pack's stacks hold 10). Banked Lumidium is shown here too.
+- **Guild** (west wall, PSO's Hunter's Guild): pick a quest and accept it. The hub teleporter then lists **"Quest: …"** first. Do it, come back and **Report** for the reward. You can take one quest at a time, and **Abandon quest** drops it. The quest and its progress stay in your save until you report or abandon it. There are three quests for now, all in the test arena:
+  - **Arena Trial:** clear every room in one trip. 600 Oro.
+  - **Hound Cull:** defeat 6 Grub Hounds. 300 Oro.
+  - **Crystal Survey:** bank 10 Lumidium at teleporters. 400 Oro.
+  - A banner says "Quest complete: report to the Guild" when it's done.
+- The pause menu doesn't open over a counter or the teleporter's list.
+
+![The bank](docs/screenshots/bank.png)
+![The Guild](docs/screenshots/guild.png)
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 
@@ -263,7 +284,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 ## Known limits (deliberate for now)
 - No animation: capsules, with weapons swung by simple tweens. Melee hitboxes show as red boxes (`show_hitboxes`).
 - Normal attacks fire when the button is released, so tap and hold can share one button.
-- Only the arena has Lumidium nodes. There's no bank to store items yet (Nomad-2's counter is a placeholder), so a full pack means dropping something.
+- Only the arena has Lumidium nodes, and every Guild quest happens there until real levels exist. Shop stock has no character-level tiers yet (armor stops at tier 2).
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
 - EXP is counted but there are no levels yet.
 - Revive has nothing to revive until co-op. Teleportal goes to the gym until the ship exists.
@@ -289,6 +310,7 @@ godot --headless --path . --script res://tests/materials_test.gd
 godot --headless --path . --script res://tests/armor_test.gd
 godot --headless --path . --script res://tests/flow_test.gd
 godot --headless --path . --script res://tests/inventory_test.gd
+godot --headless --path . --script res://tests/services_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
@@ -319,3 +341,5 @@ The tests always use a fresh save and never write yours.
 - `flow_test.gd`: the old single save moving into slot 1, the title screen with a gamepad (main menu, character select, B back, Start, focus surviving a background click and coming back after it's lost, in the title, the teleporter picker and the pause menu), creation (Goluman can't be Invokers, the preview), the new character's starter kit (Sword, Pistol, Wand; only loadout 1 filled), saved to its slot with its SyncAIDa and Field Frame, Nomad-2's teleporter (pauses, lists the gym, arena and stay; B cancels), travel to the gym and back and to the arena with saves on the way, quitting to the title, Continue, deleting with a double X, and full slots. It uses its own folder, so real characters are never touched.
 
 - `inventory_test.gd` (in the arena): a new Seeker's pack (Sword, Pistol, Wand; palette 1 holding the pack's own Pistol and Sword), worn armor and palette weapons taking slots, stacks of 10 in one slot, a stack pickup taking only what fits and leaving the rest, the 30-slot limit (items refused, Oro still taken, existing stacks still filling), the 15-Lumidium satchel, and the Inventory tab with a gamepad: equip to a palette, equipped and worn gear refusing to drop, use, wear, a material, dropping part of a stack, Oro and Lumidium as one pickup each, dropped Oro and Lumidium waiting for A, and the palette picker listing only the pack.
+
+- `services_test.gd` (in Nomad-2, then the arena): the five clerks and their prompts, PSO's curative prices, weapon prices, stock (sizes, no rares, armor tiers, rerolled per visit), buying stacks with an amount, gear, armor and augments with a gamepad, not enough Oro, a full pack, selling back at 1/8 (palette weapons refused, stacks by amount), Start leaving without the pause menu, B backing out, the bank (200 slots, items, stacks, Oro both ways, kept in the save), and the Guild (accept, one at a time, reporting early, the teleporter listing the quest first, defeats, room clears and banked Lumidium completing quests, the reward, abandoning).

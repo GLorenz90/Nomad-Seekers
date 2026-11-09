@@ -11,6 +11,7 @@ var _done: Callable
 func _init() -> void:
 	layer = 20
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("modal_menus")
 
 
 func open(names: PackedStringArray, on_done: Callable) -> void:

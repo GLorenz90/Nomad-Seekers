@@ -1,13 +1,14 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_hlsmc"]
-[ext_resource type="Shader" path="res://assets/shaders/blockout_grid.gdshader" id="2_3wyi3"]
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_441x5"]
-[ext_resource type="PackedScene" path="res://scenes/camera/camera_rig.tscn" id="4_2hkft"]
-[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_4oyfp"]
-[ext_resource type="Script" path="res://scripts/world/teleporter.gd" id="6_lcd1r"]
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_3wyi3"]
+[ext_resource type="Shader" path="res://assets/shaders/blockout_grid.gdshader" id="2_441x5"]
+[ext_resource type="Script" path="res://scripts/world/service_counter.gd" id="3_2hkft"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_4oyfp"]
+[ext_resource type="PackedScene" path="res://scenes/camera/camera_rig.tscn" id="5_lcd1r"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="6_s6eg2"]
+[ext_resource type="Script" path="res://scripts/world/teleporter.gd" id="7_glsmu"]
 
-[sub_resource type="Environment" id="Environment_s6eg2"]
+[sub_resource type="Environment" id="Environment_phvbg"]
 background_mode = 1
 background_color = Color(0.03, 0.04, 0.07, 1)
 ambient_light_source = 2
@@ -16,152 +17,190 @@ ambient_light_energy = 0.6
 tonemap_mode = 2
 ssao_enabled = true
 
-[sub_resource type="NavigationMesh" id="NavigationMesh_glsmu"]
+[sub_resource type="NavigationMesh" id="NavigationMesh_3q32m"]
 geometry_parsed_geometry_type = 1
 geometry_collision_mask = 1
 agent_height = 2.0
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_phvbg"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_8hrlh"]
 render_priority = 0
-shader = ExtResource("2_3wyi3")
+shader = ExtResource("2_441x5")
 shader_parameter/base_color = Color(0.32, 0.36, 0.42, 1)
 shader_parameter/line_color = Color(0.24, 0.28, 0.34, 1)
 shader_parameter/cell_size = null
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_3q32m"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5ox4q"]
 render_priority = 0
-shader = ExtResource("2_3wyi3")
+shader = ExtResource("2_441x5")
 shader_parameter/base_color = Color(0.22, 0.26, 0.36, 1)
 shader_parameter/line_color = Color(0.16, 0.19, 0.27, 1)
 shader_parameter/cell_size = null
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_8hrlh"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mw5nc"]
 render_priority = 0
-shader = ExtResource("2_3wyi3")
+shader = ExtResource("2_441x5")
 shader_parameter/base_color = Color(0.45, 0.4, 0.3, 1)
 shader_parameter/line_color = Color(0.35, 0.3, 0.22, 1)
 shader_parameter/cell_size = null
 
-[node name="Hub" type="Node3D" unique_id=1927687187]
-script = ExtResource("1_hlsmc")
+[node name="Hub" type="Node3D" unique_id=250001047]
+script = ExtResource("1_3wyi3")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1907969263]
-environment = SubResource("Environment_s6eg2")
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1067528919]
+environment = SubResource("Environment_phvbg")
 
-[node name="CeilingLight" type="DirectionalLight3D" parent="." unique_id=2099854186]
+[node name="CeilingLight" type="DirectionalLight3D" parent="." unique_id=1379404287]
 transform = Transform3D(0.9396926, -0.3213938, 0.11697777, 0, 0.34202015, 0.9396926, -0.34202012, -0.8830222, 0.32139382, 0, 0, 0)
 light_energy = 0.8
 shadow_enabled = true
 
-[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=962831527]
-navigation_mesh = SubResource("NavigationMesh_glsmu")
+[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=536834144]
+navigation_mesh = SubResource("NavigationMesh_3q32m")
 
-[node name="Level" type="Node3D" parent="Navigation" unique_id=1288983607]
+[node name="Level" type="Node3D" parent="Navigation" unique_id=1148372303]
 
-[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=1857303286]
+[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=1412582083]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 use_collision = true
 size = Vector3(32, 1, 30)
-material = SubResource("ShaderMaterial_phvbg")
+material = SubResource("ShaderMaterial_8hrlh")
 
-[node name="WallNorth" type="CSGBox3D" parent="Navigation/Level" unique_id=175463397]
+[node name="WallNorth" type="CSGBox3D" parent="Navigation/Level" unique_id=803287350]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -15.5)
 use_collision = true
 size = Vector3(32, 5, 1)
-material = SubResource("ShaderMaterial_3q32m")
+material = SubResource("ShaderMaterial_5ox4q")
 
-[node name="WallSouth" type="CSGBox3D" parent="Navigation/Level" unique_id=265985964]
+[node name="WallSouth" type="CSGBox3D" parent="Navigation/Level" unique_id=852237855]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 15.5)
 use_collision = true
 size = Vector3(32, 5, 1)
-material = SubResource("ShaderMaterial_3q32m")
+material = SubResource("ShaderMaterial_5ox4q")
 
-[node name="WallWest" type="CSGBox3D" parent="Navigation/Level" unique_id=1725751568]
+[node name="WallWest" type="CSGBox3D" parent="Navigation/Level" unique_id=1468753211]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 2.5, 0)
 use_collision = true
 size = Vector3(1, 5, 30)
-material = SubResource("ShaderMaterial_3q32m")
+material = SubResource("ShaderMaterial_5ox4q")
 
-[node name="WallEast" type="CSGBox3D" parent="Navigation/Level" unique_id=1320706766]
+[node name="WallEast" type="CSGBox3D" parent="Navigation/Level" unique_id=1818981136]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 2.5, 0)
 use_collision = true
 size = Vector3(1, 5, 30)
-material = SubResource("ShaderMaterial_3q32m")
+material = SubResource("ShaderMaterial_5ox4q")
 
-[node name="Counters" type="Node3D" parent="Navigation/Level" unique_id=268880794]
+[node name="Counters" type="Node3D" parent="Navigation/Level" unique_id=363799520]
 
-[node name="Guildcounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=305626449]
+[node name="GuildCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=2089469945]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.55, -6)
 use_collision = true
 size = Vector3(3, 1.1, 5)
-material = SubResource("ShaderMaterial_8hrlh")
+material = SubResource("ShaderMaterial_mw5nc")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/Guildcounter" unique_id=961801413]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/GuildCounter" unique_id=87817956]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
-text = "Guild counter
-(coming later)"
-font_size = 40
+modulate = Color(1, 0.9, 0.6, 1)
+text = "Guild"
+font_size = 48
 outline_size = 10
 
-[node name="Bank" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=2082415296]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.55, 2)
+[node name="BankCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=1725654626]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.55, 3)
 use_collision = true
 size = Vector3(3, 1.1, 5)
-material = SubResource("ShaderMaterial_8hrlh")
+material = SubResource("ShaderMaterial_mw5nc")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/Bank" unique_id=1600832412]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/BankCounter" unique_id=2131766038]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
-text = "Bank
-(coming later)"
-font_size = 40
+modulate = Color(1, 0.9, 0.6, 1)
+text = "Bank"
+font_size = 48
 outline_size = 10
 
-[node name="Weaponshops" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=644990630]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, -6)
+[node name="WeaponsCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=913738743]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, -8)
 use_collision = true
 size = Vector3(3, 1.1, 5)
-material = SubResource("ShaderMaterial_8hrlh")
+material = SubResource("ShaderMaterial_mw5nc")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/Weaponshops" unique_id=397002864]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/WeaponsCounter" unique_id=2117740999]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
-text = "Weapon shops
-(coming later)"
-font_size = 40
+modulate = Color(1, 0.9, 0.6, 1)
+text = "Weapons"
+font_size = 48
 outline_size = 10
 
-[node name="Armorerpharmacy" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=626823574]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, 2)
+[node name="ArmorCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=1364148177]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, -1)
 use_collision = true
 size = Vector3(3, 1.1, 5)
-material = SubResource("ShaderMaterial_8hrlh")
+material = SubResource("ShaderMaterial_mw5nc")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/Armorerpharmacy" unique_id=234331238]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/ArmorCounter" unique_id=1045147245]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
-text = "Armorer & pharmacy
-(coming later)"
-font_size = 40
+modulate = Color(1, 0.9, 0.6, 1)
+text = "Armor"
+font_size = 48
 outline_size = 10
 
-[node name="Title" type="Label3D" parent="Navigation/Level" unique_id=326488304]
+[node name="CurativesCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=1498827604]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, 6)
+use_collision = true
+size = Vector3(3, 1.1, 5)
+material = SubResource("ShaderMaterial_mw5nc")
+
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/CurativesCounter" unique_id=2130899584]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+billboard = 1
+modulate = Color(1, 0.9, 0.6, 1)
+text = "Curatives"
+font_size = 48
+outline_size = 10
+
+[node name="Title" type="Label3D" parent="Navigation/Level" unique_id=1551390629]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, -14.9)
 modulate = Color(0.7, 0.9, 1, 1)
 text = "NOMAD-2"
 font_size = 120
 outline_size = 16
 
-[node name="Player" parent="." unique_id=2007116932 instance=ExtResource("3_441x5")]
+[node name="GuildClerk" type="Node3D" parent="." unique_id=226272464]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.1, 0, -6)
+script = ExtResource("3_2hkft")
+service = 4
+
+[node name="BankClerk" type="Node3D" parent="." unique_id=1078760506]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.1, 0, 3)
+script = ExtResource("3_2hkft")
+service = 3
+
+[node name="WeaponsClerk" type="Node3D" parent="." unique_id=1003122143]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.1, 0, -8)
+script = ExtResource("3_2hkft")
+
+[node name="ArmorClerk" type="Node3D" parent="." unique_id=720461426]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.1, 0, -1)
+script = ExtResource("3_2hkft")
+service = 1
+
+[node name="CurativesClerk" type="Node3D" parent="." unique_id=2142338211]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.1, 0, 6)
+script = ExtResource("3_2hkft")
+service = 2
+
+[node name="Player" parent="." unique_id=490961323 instance=ExtResource("4_4oyfp")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 10)
 
-[node name="CameraRig" parent="." unique_id=94694617 instance=ExtResource("4_2hkft")]
+[node name="CameraRig" parent="." unique_id=19165004 instance=ExtResource("5_lcd1r")]
 
-[node name="HUD" parent="." unique_id=161087568 instance=ExtResource("5_4oyfp")]
+[node name="HUD" parent="." unique_id=521091343 instance=ExtResource("6_s6eg2")]
 
-[node name="Teleporter" type="Area3D" parent="." unique_id=391662456]
+[node name="Teleporter" type="Area3D" parent="." unique_id=1994661119]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
-script = ExtResource("6_lcd1r")
+script = ExtResource("7_glsmu")
 destinations = PackedStringArray("res://scenes/main.tscn", "res://scenes/arena.tscn")
 destination_names = PackedStringArray("The gym (test room)", "The test arena (wave rooms)")

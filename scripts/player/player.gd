@@ -358,6 +358,8 @@ func carried_lumidium_total() -> int:
 func deposit_lumidium() -> int:
 	var total := save.inventory.bank_lumidium(carried_lumidium)
 	carried_lumidium.clear()
+	if total > 0 and QuestBook.record(save, "bank_lumidium", "", total):
+		get_tree().call_group("loot_spawner", "quest_done")
 	if total > 0:
 		save_game()
 	return total
