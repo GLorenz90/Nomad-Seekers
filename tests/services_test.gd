@@ -137,6 +137,24 @@ func _run() -> void:
 		inv.weapons.size() == weapons_before + 1 and bought != stock_w and bought.display_name == stock_w.display_name
 		and inv.oro == 5000 - price)
 	_check("the stock can be bought again (still %d listed)" % weapons.stock_weapons.size(), weapons.stock_weapons.size() == Prices.WEAPON_STOCK)
+	# Gear you can't equip yet still sells (for other characters or later).
+	var heavy := (load("res://data/weapons/heavy_shield.tres") as WeaponData).duplicate() as WeaponData  # Striker only
+	var arbalest := (load("res://data/weapons/arbalest.tres") as WeaponData).duplicate() as WeaponData  # DEX 240
+	weapons.stock_weapons[0] = heavy
+	weapons.stock_weapons[1] = arbalest
+	menu.show_command("buy")
+	await _frames(2)
+	var marked := menu.list_buttons()[0].text.contains("can't equip yet") and menu.list_buttons()[1].text.contains("can't equip yet")
+	var count_before := inv.weapons.size()
+	for i in 2:
+		menu.list_buttons()[i].grab_focus()
+		await _frames(2)
+		await _pad(JOY_BUTTON_A)
+		await _pad(JOY_BUTTON_A)
+		await _frames(2)
+	_check("job-locked and too-demanding gear is marked but still buyable (%s)" % menu._message.text,
+		marked and inv.weapons.size() == count_before + 2 and inv.weapons[-2].display_name == "Heavy Shield"
+		and inv.weapons[-1].display_name == "Arbalest")
 	# Sell: the Wand (not on a palette) and the Pistol (on palette 1).
 	menu.show_command("sell")
 	await _frames(2)
