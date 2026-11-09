@@ -137,6 +137,13 @@ func _player() -> Player:
 	return combat.get_parent() as Player if combat else null
 
 
+## Gamepad safety net: a press with nothing in the menu focused refocuses the
+## current tab instead of being lost (see MenuFocus).
+func _input(event: InputEvent) -> void:
+	if visible:
+		MenuFocus.recover(self, event, _focus_tab)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("menu"):
 		if visible:

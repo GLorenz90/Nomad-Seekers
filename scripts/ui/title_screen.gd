@@ -45,9 +45,11 @@ func _ready() -> void:
 	var bg := ColorRect.new()
 	bg.color = Color(0.05, 0.07, 0.11)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE  # a click on it mustn't clear focus
 	add_child(bg)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	var column := VBoxContainer.new()
 	column.custom_minimum_size.x = 760.0
@@ -106,16 +108,36 @@ func show_page(key: String) -> void:
 	match key:
 		"main":
 			_refresh_main()
-			(_continue if not _continue.disabled else _pages.main.get_child(1)).grab_focus.call_deferred()
 		"select":
 			_refresh_slots()
-			(_slot_box.get_child(0) as Button).grab_focus.call_deferred()
+	focus_default.call_deferred()
+
+
+## The button a page starts on (and goes back to if focus is ever lost).
+func focus_default() -> void:
+	match current_page():
+		"main":
+			(_continue if not _continue.disabled else _pages.main.get_child(1)).grab_focus()
+		"select":
+			(_slot_box.get_child(0) as Button).grab_focus()
 		"create":
-			_name.grab_focus.call_deferred()
+			_race.grab_focus()  # not the name box: a gamepad can't type, and it would grab the d-pad
+
+
+## Gamepad safety net: with nothing focused, the first press or stick push
+## focuses the page's default button instead of being lost.
+func _input(event: InputEvent) -> void:
+	MenuFocus.recover(self, event, focus_default)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("menu") and current_page() == "main":
+		# Start works like A on the title screen.
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus is Button:
+			(focus as Button).pressed.emit()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel"):
 		match current_page():
 			"select":
 				show_page("main")

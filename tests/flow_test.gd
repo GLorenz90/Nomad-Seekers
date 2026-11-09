@@ -42,6 +42,17 @@ func _run() -> void:
 	_check("Continue is greyed with no character played yet; focus on Character select (%s)" % _focused_text(),
 		title._continue.disabled and _focused_text() == "Character select")
 
+	# --- Focus safety net: a click on empty space, then the controller ---------------------
+	await _click(Vector2(40, 40))
+	_check("a mouse click on the background doesn't clear focus (%s)" % _focused_text(), _focused_text() == "Character select")
+	root.gui_release_focus()
+	await _pad(JOY_BUTTON_A)
+	_check("with nothing focused, A refocuses the menu instead of being lost (%s)" % _focused_text(),
+		_focused_text() == "Character select" and title.current_page() == "main")
+	root.gui_release_focus()
+	await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("so does the d-pad (%s)" % _focused_text(), _focused_text() == "Character select")
+
 	# --- Character select ------------------------------------------------------------------
 	await _pad(JOY_BUTTON_A)
 	_check("A opens character select with 4 slots", title.current_page() == "select" and title._slot_box.get_child_count() == 4)
@@ -55,6 +66,13 @@ func _run() -> void:
 	await _pad(JOY_BUTTON_DPAD_DOWN)
 	await _pad(JOY_BUTTON_A)
 	_check("A on an empty slot opens character creation", title.current_page() == "create" and title._create_slot == 1)
+	_check("creation starts on Race, not the name box (%s)" % root.gui_get_focus_owner(), root.gui_get_focus_owner() == title._race)
+	await _pad(JOY_BUTTON_DPAD_UP)
+	_check("up reaches the name row", root.gui_get_focus_owner() == title._name or root.gui_get_focus_owner().get_parent() == title._name.get_parent())
+	await _pad(JOY_BUTTON_DPAD_DOWN)
+	await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("and the d-pad gets back out of it (%s)" % root.gui_get_focus_owner(),
+		root.gui_get_focus_owner() is OptionButton)
 
 	# --- Creation ----------------------------------------------------------------------------
 	title._race.select(CharacterData.Race.GOLUMAN)
@@ -95,8 +113,21 @@ func _run() -> void:
 	_check("choices: the gym, the test arena, stay (%s)" % [pad.picker.button_names()],
 		pad.picker.button_names().size() == 3 and pad.picker.button_names()[0].contains("gym")
 		and pad.picker.button_names()[1].contains("arena"))
+	root.gui_release_focus()
+	await _pad(JOY_BUTTON_A)
+	_check("the picker refocuses after a lost focus instead of teleporting", pad.picker != null
+		and _focused_text() == "The gym (test room)" and current_scene.scene_file_path == Session.HUB_SCENE)
 	await _pad(JOY_BUTTON_B)
 	_check("B stays in Nomad-2", pad.picker == null and not paused and current_scene.scene_file_path == Session.HUB_SCENE)
+	var menu := current_scene.loadout_menu as LoadoutMenu
+	menu.save_on_close = false
+	menu.open()
+	await _frames(3)
+	root.gui_release_focus()
+	await _pad(JOY_BUTTON_A)
+	_check("the pause menu refocuses after a lost focus too", root.gui_get_focus_owner() != null and menu.is_ancestor_of(root.gui_get_focus_owner()))
+	menu.close()
+	await _frames(3)
 	player.save.inventory.oro = 777
 	await _step_off(player, pad)
 	await _stand_on(player, pad)
@@ -128,10 +159,10 @@ func _run() -> void:
 		title != null and Session.load_slot(1).inventory.oro == 4321)
 	_check("Continue now names the last character (%s)" % title._continue.text,
 		not title._continue.disabled and title._continue.text.contains("Lirael") and _focused_text().begins_with("Continue"))
-	await _pad(JOY_BUTTON_A)
+	await _pad(JOY_BUTTON_START)  # Start works like A on the title screen
 	await _frames(20)
 	player = current_scene.get_node("Player") as Player
-	_check("Continue goes to Nomad-2 as Lirael", current_scene.scene_file_path == Session.HUB_SCENE
+	_check("Start on Continue goes to Nomad-2 as Lirael", current_scene.scene_file_path == Session.HUB_SCENE
 		and player.save.character.seeker_name == "Lirael" and player.save.inventory.oro == 4321)
 
 	# --- Delete, full slots ------------------------------------------------------------------------
@@ -188,6 +219,17 @@ func _rm(path: String) -> void:
 	for sub in d.get_directories():
 		_rm(path.path_join(sub))
 	DirAccess.remove_absolute(path)
+
+
+func _click(at: Vector2) -> void:
+	for pressed in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.position = at
+		e.global_position = at
+		e.pressed = pressed
+		Input.parse_input_event(e)
+		await process_frame
 
 
 func _focused_text() -> String:

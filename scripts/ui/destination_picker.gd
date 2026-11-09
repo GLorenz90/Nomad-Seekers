@@ -48,6 +48,11 @@ func _add_button(text: String, index: int) -> void:
 	_box.add_child(b)
 
 
+func _input(event: InputEvent) -> void:
+	if _box:
+		MenuFocus.recover(_box, event, func(): (_box.get_child(1) as Button).grab_focus())
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
