@@ -157,12 +157,12 @@ func interact(seeker: Player) -> void:
 
 
 func _on_body_exited(body: Node) -> void:
-	if body is Player and picker:
-		picker.queue_free()
+	if body is Player and picker and picker.player == body:
+		picker._finish(-1)
 		picker = null
 
 
-## Pauses and lists the destinations; picking one travels there.
+## Lists the destinations; picking one takes the party there.
 func _open_picker(seeker: Player) -> void:
 	if picker:
 		return
@@ -175,17 +175,19 @@ func _open_picker(seeker: Player) -> void:
 		names.insert(0, "Quest: %s (%s)" % [quest.title, String(quest.place).to_lower()])
 		scenes.insert(0, String(quest.scene))
 	picker = DestinationPicker.new()
-	get_tree().root.add_child(picker)
+	seeker.ui_root().add_child(picker)
 	picker.open(names, func(index: int):
 		picker = null
 		if index >= 0 and index < scenes.size():
 			destination = scenes[index]
-			travel(seeker))
+			travel(seeker), seeker)
 
 
 ## Saves and loads the destination scene (fresh every time).
 func travel(seeker: Player) -> void:
 	_leaving = true
-	seeker.save_game()
+	# The whole party goes (Part 12); everyone is saved first.
+	for node in get_tree().get_nodes_in_group("player"):
+		(node as Player).save_game()
 	travelling.emit(destination)
 	get_tree().change_scene_to_file.call_deferred(destination)

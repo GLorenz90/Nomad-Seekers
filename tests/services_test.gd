@@ -83,7 +83,8 @@ func _run() -> void:
 	await _tap("jump")
 	await _frames(3)
 	var menu := curatives.menu
-	_check("A opens the counter and pauses (%s)" % _focused_text(), is_instance_valid(menu) and paused and _focused_text() == "Buy")
+	_check("A opens the counter without pausing; the Seeker takes no game input (%s)" % _focused_text(),
+		is_instance_valid(menu) and not paused and _player.input_locked and _focused_text() == "Buy")
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)
 	_check("A on Buy lists the stock, first item focused (%s)" % _focused_text(), _focused_text().begins_with("HP Gel   50 Oro"))
@@ -116,7 +117,7 @@ func _run() -> void:
 	await _pad(JOY_BUTTON_START)
 	await _frames(3)
 	_check("Start leaves the counter without opening the pause menu",
-		not is_instance_valid(curatives.menu) and not paused and not _main.loadout_menu.visible)
+		not is_instance_valid(curatives.menu) and not _player.input_locked and not _main.loadout_menu.visible)
 
 	# --- Weapons: buy and sell ------------------------------------------------------------------
 	inv.oro = 5000

@@ -136,7 +136,7 @@ func room_for(seeker: Player) -> int:
 
 func _process(delta: float) -> void:
 	_age += delta
-	var seeker := get_tree().get_first_node_in_group("player") as Node3D
+	var seeker := Player.nearest(self, global_position) as Node3D
 	if seeker and _age > 0.4 and is_automatic() and seeker is Player and room_for(seeker as Player) > 0:
 		var to := seeker.global_position - global_position
 		if to.length() < MAGNET_RANGE:
@@ -217,7 +217,7 @@ func interact_prompt() -> String:
 
 
 func seeker_in_reach() -> Player:
-	return get_tree().get_first_node_in_group("player") as Player
+	return Player.nearest(self, global_position)
 
 
 func _no_room_reason(seeker: Player) -> String:

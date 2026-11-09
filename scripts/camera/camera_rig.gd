@@ -114,6 +114,10 @@ static func get_lock_point(node: Node3D) -> Vector3:
 # --- Input ------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Part 12: only this Seeker's devices turn this camera (the mouse belongs
+	# to the leader).
+	if player == null or not player.input.owns(event) or not player.input.uses_mouse():
+		return
 	if event.is_action_pressed("pause"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		return
@@ -143,13 +147,13 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var locked_out: bool = player is Player and (player as Player).input_locked
-	if Input.is_action_just_pressed("lock_on") and not locked_out:
+	if player.input.just_pressed("lock_on") and not locked_out:
 		_toggle_lock()
 
 	_validate_lock()
 
 	if lock_target and not locked_out:
-		_handle_switch_input(Input.get_axis("look_left", "look_right"), delta)
+		_handle_switch_input(player.input.axis("look_left", "look_right"), delta)
 
 
 func _toggle_lock() -> void:
@@ -323,7 +327,7 @@ func _apply_leash(trail: Vector3) -> void:
 
 
 func _free_look(delta: float) -> void:
-	var look := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+	var look := player.input.vector("look_left", "look_right", "look_up", "look_down") if player else Vector2.ZERO
 	if player is Player and (player as Player).input_locked:
 		look = Vector2.ZERO
 	if look != Vector2.ZERO:

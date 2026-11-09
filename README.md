@@ -270,6 +270,22 @@ PSO-style hazards and buttons (Grayson, 2026-11-09).
   - **Dark room:** two waves in the dark. The **button in the far corner** turns the darkness off, but the north door only opens once every enemy is dead. Past it, the end room's teleporter goes back to Nomad-2. Every wave room must be cleared, as with the old exit.
 - **The menu no longer pauses the game**, like PSO. While it's open your Seeker stands still and takes no game input (no moving, attacking, items, lock-on or camera), but enemies, statuses and hazards carry on. The shop, bank and Guild counters and the teleporter's list still pause for now.
 
+
+## Part 12: local co-op
+Couch co-op for up to four, split-screen.
+
+- **Joining:** press **Start on another controller**. A new pane opens with your saved characters. Pick one that isn't already playing (create characters from the title screen first). Alone, the leader plays with any controller; the first one used is theirs, and the keyboard and mouse always belong to the leader.
+- **Split screen:** two Seekers split the screen top and bottom, three or four use quarters. Each pane has its own camera, HUD, menu, counters and teleporter list, and only hears its own controller. Menus are scaled to fit a half-height pane. Each Seeker's target rings only show in their own pane.
+- **Your own character:** each guest plays one of the saved characters with their own pack, palettes, level and SyncAIDa, saved like the leader's.
+- **Together:** the party travels through teleporters together, everyone standing gets each kill's EXP, enemies chase the nearest Seeker, floor plates count everyone (Part 11's rule), and a Goluman's trap vision shows traps to the whole party.
+- **Falling:** a Seeker who falls while a partner is still standing stays down. A partner's **Revive** brings them back, or they press **A** to go back to the start (carried Lumidium is lost). When everyone is down, everyone goes back.
+- **Leaving:** a guest picks "Save and leave the party" in the Options tab. When the leader quits to the title, everyone does.
+- Counters and the teleporter's list no longer pause the game, like the menu.
+
+![Join picker](docs/screenshots/coop_join.png)
+![Split screen](docs/screenshots/coop_split.png)
+![A guest's menu in their pane](docs/screenshots/coop_menu.png)
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 
@@ -310,6 +326,7 @@ Show hitboxes (Debug tab, on by default) also draws enemy melee hit areas on the
 | Block / powerstance | LT | F |
 | Menu | Start | Tab |
 | Toggle debug panel | Select | F3 |
+| Join the party (co-op) | Start on another controller | |
 
 Click to capture the mouse, Esc to release it.
 
@@ -330,11 +347,11 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - Only the arena has Lumidium nodes, and every Guild quest happens there until real levels exist. Shop stock has no character-level tiers yet (armor stops at tier 2).
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
 - Enemies don't scale with level or area yet: past the first few levels, the arena gets easy.
-- Revive has nothing to revive until co-op. Teleportal goes to the gym until the ship exists.
-- Party bursts (several Seekers firing together) wait for co-op. SyncAIDa have no feeding cooldown and no personalities yet.
-- The menu no longer pauses; the counters and the teleporter's list still do (co-op will change that).
+- Teleportal goes to the gym until the ship exists.
+- Party bursts (several Seekers firing together) aren't in yet. SyncAIDa have no feeding cooldown and no personalities yet.
+- Co-op: partners' HP isn't shown in your pane yet, and menus get small text in a half-height pane.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
-- No step-up for small ledges yet. Input is bound to all devices until couch co-op.
+- No step-up for small ledges yet.
 
 ## Automated tests
 Run from the project folder. Each prints `ok` or `FAIL` per check and exits with code 1 if anything fails.
@@ -356,6 +373,7 @@ godot --headless --path . --script res://tests/inventory_test.gd
 godot --headless --path . --script res://tests/services_test.gd
 godot --headless --path . --script res://tests/leveling_test.gd
 godot --headless --path . --script res://tests/hazards_test.gd
+godot --headless --path . --script res://tests/coop_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.

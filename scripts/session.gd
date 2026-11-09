@@ -101,6 +101,7 @@ static func play(index: int) -> bool:
 static func quit_to_title() -> void:
 	for p in _tree().get_nodes_in_group("player"):
 		(p as Player).save_game()
+	Party.clear()  # guests go back to the title with the leader (Part 12)
 	_tree().paused = false
 	_tree().change_scene_to_file.call_deferred(TITLE_SCENE)
 

@@ -72,5 +72,7 @@ func _process(delta: float) -> void:
 
 
 func _enabled() -> bool:
-	var seeker := get_tree().get_first_node_in_group("player") as Player
-	return seeker != null and seeker.combat.show_hitboxes
+	for node in get_tree().get_nodes_in_group("player"):
+		if (node as Player).combat.show_hitboxes:
+			return true
+	return false

@@ -129,7 +129,8 @@ func _run() -> void:
 	# --- Hub teleporter ----------------------------------------------------------------------
 	var pad := current_scene.get_node("Teleporter") as Teleporter
 	await _stand_on(player, pad)
-	_check("the hub teleporter asks where to go, and pauses", pad.picker != null and paused)
+	_check("the hub teleporter asks where to go (no pause; the Seeker waits)",
+		pad.picker != null and not paused and (current_scene.get_node("Player") as Player).input_locked)
 	_check("choices: the gym, the test arena, stay (%s)" % [pad.picker.button_names()],
 		pad.picker.button_names().size() == 3 and pad.picker.button_names()[0].contains("gym")
 		and pad.picker.button_names()[1].contains("arena"))

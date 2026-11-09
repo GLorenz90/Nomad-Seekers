@@ -73,7 +73,11 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	# Hidden unless scanned, sprung, or seen through Goluman trap vision.
-	var seen := is_visible_to(get_tree().get_first_node_in_group("player") as Player)
+	# Co-op: shown when any Seeker can see it (a Goluman's trap vision shows
+	# it to the party).
+	var seen := false
+	for node in get_tree().get_nodes_in_group("player"):
+		seen = seen or is_visible_to(node as Player)
 	_mesh.visible = sprung or seen
 	if device:
 		device.set_shown(seen and not sprung)

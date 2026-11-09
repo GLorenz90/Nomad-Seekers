@@ -1,6 +1,6 @@
 class_name LoadoutMenu
 extends CanvasLayer
-## The pause menu (Start / Tab). Pauses the game while open. (Named for its
+## The menu (Start / Tab). Doesn't pause the game (Part 11, like PSO). (Named for its
 ## first job, editing loadouts; it holds every tab now.)
 ##
 ## Tabs (Part 9, Grayson 2026-11-09: PSO's menus with PSU's palettes), LB / RB
@@ -44,6 +44,7 @@ var _spells_tab: SpellsTab
 var _armor_tab: ArmorTab
 var debug_tab: DebugTab
 var _status_text: RichTextLabel
+var _to_title: Button
 var _sync_starter_title: Label
 var _sync_starters: VBoxContainer
 var _sync_info: Label
@@ -72,8 +73,8 @@ func is_open() -> bool:
 
 
 func open() -> void:
-	if combat == null or not get_tree().get_nodes_in_group("modal_menus").is_empty():
-		return  # a counter or the teleporter's list is open
+	if combat == null or _player() == null or _modal_open(_player()) or _player().downed:
+		return  # a counter or the teleporter's list is open (or down in co-op)
 	_set = combat.loadout_set
 	_rebuild_picker()
 	if debug_tab:
@@ -82,13 +83,16 @@ func open() -> void:
 	var seeker := _player()
 	if seeker and seeker.save and seeker.save.syncaida.is_empty():
 		_tabs.set_current_tab(_tab_index("SyncAIDa"))
+	if _to_title:
+		_to_title.text = "Save and leave the party" if seeker and seeker.guest_device >= 0 \
+			else "Save and quit to the title screen"
 	visible = true
 	# Part 11 (Grayson): like PSO, the menu doesn't pause the game. The Seeker
 	# just stops taking game input while it's open.
 	var seeker_open := _player()
 	if seeker_open:
 		seeker_open.input_locked = true
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		seeker_open.set_mouse_captured(false)
 	_close_picker()
 	_refresh()
 	_focus_tab()
@@ -102,8 +106,8 @@ func close() -> void:
 	visible = false
 	var seeker_closed := _player()
 	if seeker_closed:
-		seeker_closed.input_locked = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		seeker_closed.input_locked = seeker_closed.downed
+		seeker_closed.set_mouse_captured(true)
 	combat.apply_loadout_set(_set)
 	var seeker := _player()
 	if seeker:
@@ -111,6 +115,15 @@ func close() -> void:
 	if save_on_close and seeker:
 		seeker.save_game()
 	closed.emit()
+
+
+## A counter or teleporter list this Seeker has open (they share the Seeker's
+## pane, and each Seeker uses one menu at a time).
+static func _modal_open(seeker: Player) -> bool:
+	for menu in seeker.get_tree().get_nodes_in_group("modal_menus"):
+		if menu.get("player") == seeker:
+			return true
+	return false
 
 
 func _player() -> Player:
@@ -807,6 +820,7 @@ func _build_options_tab() -> void:
 	columns.add_child(left)
 	left.add_child(_label("Options", 22))
 	var to_title := Button.new()
+	_to_title = to_title
 	to_title.text = "Save and quit to the title screen"
 	to_title.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	to_title.pressed.connect(_quit_to_title)
@@ -821,14 +835,23 @@ func _build_options_tab() -> void:
 
 func _hud() -> DebugHud:
 	for node in get_tree().get_nodes_in_group("hud"):
-		return node as DebugHud
+		if (node as DebugHud).player == _player():
+			return node as DebugHud
 	return null
 
 
+## The leader quits to the title (taking the party); a guest leaves the party
+## (Part 12).
 func _quit_to_title() -> void:
 	var seeker := _player()
 	if seeker:
 		seeker.deposit_lumidium()
+	if seeker and seeker.guest_device >= 0:
+		close()
+		var level := get_tree().get_first_node_in_group("respawner")
+		if level and level.has_method("leave_party"):
+			level.call("leave_party", seeker)
+		return
 	save_on_close = false
 	close()
 	Session.quit_to_title()

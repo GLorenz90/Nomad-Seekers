@@ -3,8 +3,9 @@ extends Node
 ## readable place (North Star §4.1). Gamepad first, keyboard/mouse as a fallback
 ## for testing at a desk.
 ##
-## Events are bound to ALL devices for now. Couch co-op (Part 8) will switch to
-## per-device actions or per-player device filtering.
+## These shared actions are bound to ALL devices, which is how a Seeker plays
+## alone. Couch co-op (Part 12) copies them per Seeker, bound to that Seeker's
+## controller (PlayerInput.bind).
 
 const STICK_DEADZONE := 0.2
 const TRIGGER_DEADZONE := 0.4
