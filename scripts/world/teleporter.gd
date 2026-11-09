@@ -65,6 +65,7 @@ func _ready() -> void:
 	_label.outline_size = 8
 	_label.position.y = 2.2
 	add_child(_label)
+	add_to_group("interactables")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 	_refresh()
@@ -111,10 +112,41 @@ func _refresh() -> void:
 		_label.text = "Teleporter\n(clear every room first)"
 
 
-func _on_body_entered(body: Node) -> void:
-	var seeker := body as Player
-	if seeker == null or _leaving:
-		return
+## Standing on the pad no longer does anything by itself (Grayson,
+## 2026-11-09): A activates it (see Player interaction).
+func _on_body_entered(_body: Node) -> void:
+	pass
+
+
+# --- Interaction (A) ---------------------------------------------------------------
+
+const INTERACT_RANGE := 1.6
+
+
+func interact_point() -> Vector3:
+	return global_position
+
+
+func interact_range() -> float:
+	return INTERACT_RANGE
+
+
+func can_interact(_seeker: Player) -> bool:
+	return not _leaving and picker == null
+
+
+func interact_prompt() -> String:
+	if not destinations.is_empty():
+		return "Teleport..."
+	if destination == "":
+		return "Deposit Lumidium"
+	if not is_active():
+		return "Teleporter locked (clear every room first)"
+	return destination_name if destination_name != "" else "Teleport"
+
+
+## A on the pad: banks carried Lumidium, then asks where to go or travels.
+func interact(seeker: Player) -> void:
 	var amount := seeker.deposit_lumidium()
 	if amount > 0:
 		deposited.emit(seeker, amount)

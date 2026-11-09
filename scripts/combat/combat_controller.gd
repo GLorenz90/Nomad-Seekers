@@ -247,6 +247,15 @@ static func make_default_loadouts() -> LoadoutSet:
   return defaults
 
 
+## A new character's palette (Grayson, 2026-11-09): only loadout 1 is
+## filled, with the Pistol (X) and Sword (Y); the rest start empty.
+static func make_starter_loadouts() -> LoadoutSet:
+  var starter := LoadoutSet.new()
+  starter.loadouts.append(Loadout.make(load_weapon(DEFAULT_LOADOUTS[0][0]), load_weapon(DEFAULT_LOADOUTS[0][1])))
+  starter.ensure_slots()
+  return starter
+
+
 func apply_loadout_set(new_set: LoadoutSet) -> void:
   loadout_set = new_set
   loadout_set.ensure_slots()

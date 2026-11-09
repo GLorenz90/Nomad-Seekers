@@ -196,8 +196,12 @@ func _run() -> void:
 	var pad := gym.get_node("ArenaTeleporter") as Teleporter
 	_check("the gym has a teleporter to the arena", pad != null and pad.destination == "res://scenes/arena.tscn")
 	gym_player.global_position = pad.global_position + Vector3.UP * 0.1
+	await _frames(10)
+	_check("standing on it shows the A prompt (%s)" % gym_player.interact_prompt(),
+		gym_player.interact_prompt().begins_with("A: To the arena"))
+	await _pad(JOY_BUTTON_A)
 	await _frames(30)
-	_check("standing on it loads the arena (%s)" % current_scene.scene_file_path,
+	_check("A on it loads the arena (%s)" % current_scene.scene_file_path,
 		current_scene.scene_file_path == "res://scenes/arena.tscn")
 	var arena := current_scene
 	var arena_player: Player = arena.get_node("Player")
@@ -207,13 +211,18 @@ func _run() -> void:
 		(arena.get_node("Rooms/RoomA") as WaveRoom).state == WaveRoom.RoomState.WAITING)
 	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
 	await _frames(20)
-	_check("the arena's exit stays shut until every room is cleared", current_scene == arena and not exit.is_active())
+	await _pad(JOY_BUTTON_A)
+	await _frames(20)
+	_check("the arena's exit stays shut until every room is cleared (%s)" % arena_player.interact_prompt(),
+		current_scene == arena and not exit.is_active())
 	arena_player.global_position = Vector3(0, 0.1, 20)
 	await _frames(10)
 	for room in ["Rooms/RoomA", "Rooms/RoomB"]:
 		(arena.get_node(room) as WaveRoom).state = WaveRoom.RoomState.CLEARED
 	await _frames(5)
 	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
+	await _frames(10)
+	await _pad(JOY_BUTTON_A)
 	await _frames(30)
 	_check("once cleared it returns to Nomad-2 (%s)" % current_scene.scene_file_path,
 		current_scene.scene_file_path == "res://scenes/hub.tscn")

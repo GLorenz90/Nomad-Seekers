@@ -27,6 +27,7 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 	s.inventory.add_consumable(&"hp_gel", 3)
 	s.inventory.add_consumable(&"lp_cell", 2)
 	s.inventory.add_consumable(&"cure_salt", 1)
+	s.inventory.add_consumable(&"trap_scanner", 2)
 	# First spells (Part 6): level 1 Fajro, Glacio and Fulmo (SOL 40 each).
 	for id in STARTING_SPELLS:
 		s.character.spells[id] = 1
@@ -47,13 +48,18 @@ func give_starter_armor() -> void:
 
 
 const STARTING_SPELLS: Array[StringName] = [&"fajro", &"glacio", &"fulmo"]
+const STARTER_WEAPONS: Array[String] = ["sword", "pistol", "wand"]
 
 
 ## Character creation (Part 8): a new Seeker with the choices made on the
 ## creation screen, their starter SyncAIDa paired, and the starter armor.
 static func create(seeker_name: String, race: CharacterData.Race, gender: CharacterData.Gender,
 		job: CharacterData.Job, starter: int) -> SaveData:
-	var s := fresh(CombatController.make_default_loadouts())
+	var s := fresh(CombatController.make_starter_loadouts())
+	# Starter kit: a Sword, a Pistol and a Wand to carry (the palette only
+	# uses the Pistol and Sword).
+	for id in STARTER_WEAPONS:
+		s.inventory.weapons.append(CombatController.load_weapon(id).duplicate())
 	s.character.seeker_name = seeker_name.strip_edges() if seeker_name.strip_edges() != "" else "Seeker"
 	s.character.race = race
 	s.character.gender = gender

@@ -103,6 +103,16 @@ func _run() -> void:
 	_check("with the chosen SyncAIDa paired (Lumi) and the Field Frame on",
 		player.save.paired_syncaida() != null and player.save.paired_syncaida().display_name == "Lumi"
 		and c.torso != null)
+	var names := player.save.inventory.weapons.map(func(w: WeaponData) -> String: return w.display_name)
+	_check("starter kit: a Sword, a Pistol and a Wand to carry (%s), and 2 Trap Scanners" % [names],
+		names == ["Sword", "Pistol", "Wand"] and player.save.inventory.count(&"trap_scanner") == 2)
+	var used := 0
+	for lo in player.save.loadouts.loadouts:
+		if not lo.is_empty():
+			used += 1
+	var first: Loadout = player.save.loadouts.loadouts[0]
+	_check("only loadout 1 is filled: X Pistol, Y Sword (%d in use)" % used, used == 1
+		and first.right.display_name == "Pistol" and first.left.display_name == "Sword")
 	_check("saved to slot 2 straight away, and remembered for Continue",
 		Session.has_slot(1) and Session.load_slot(1).character.seeker_name == "Lirael" and Session.last_slot() == 1)
 
@@ -119,6 +129,8 @@ func _run() -> void:
 		and _focused_text() == "The gym (test room)" and current_scene.scene_file_path == Session.HUB_SCENE)
 	await _pad(JOY_BUTTON_B)
 	_check("B stays in Nomad-2", pad.picker == null and not paused and current_scene.scene_file_path == Session.HUB_SCENE)
+	await _frames(10)
+	_check("and the B that closed the picker didn't also dash", player.dash_cooldown_left() == 0.0 and player.state != Player.State.DASH)
 	var menu := current_scene.loadout_menu as LoadoutMenu
 	menu.save_on_close = false
 	menu.open()
@@ -193,10 +205,14 @@ func _scene(path: String) -> void:
 	await _frames(10)
 
 
+## Steps onto a pad and presses A (pads no longer fire on their own).
 func _stand_on(player: Player, pad: Teleporter) -> void:
 	player.global_position = pad.global_position + Vector3.UP * 0.1
 	player.velocity = Vector3.ZERO
-	await _frames(8)
+	for i in 15:
+		await physics_frame
+	await _pad(JOY_BUTTON_A)
+	await _frames(4)
 
 
 func _step_off(player: Player, pad: Teleporter) -> void:

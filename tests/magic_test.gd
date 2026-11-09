@@ -300,6 +300,35 @@ func _run() -> void:
 	save.character.race = CharacterData.Race.GOLUMAN
 	_check("Goluman see them (trap vision)", hazard.is_visible_to(_player))
 	save.character.race = CharacterData.Race.HUMAN
+	# Trap devices: only targetable while the trap is visible.
+	var poison := _main.get_node("Hazards/HazardPoison") as HazardTrap
+	var freeze := _main.get_node("Hazards/HazardFreeze") as HazardTrap
+	await _frames(2)
+	_check("a hidden trap's device can't be locked on to or hit",
+		not poison.device.is_in_group("lockable") and poison.device.collision_layer == 0
+		and poison.device.receive_hit(DamageInfo.new(), null) == 0.0 and is_instance_valid(poison))
+	save.character.spells[&"granglacio"] = 10
+	SpellCaster.clear_cache()
+	_combat.get_loadout().set_spell(1, 0, &"granglacio")  # spear rain on everything around you
+	await _place(Vector3(0, 0.1, -31.5))  # between Room B's two traps
+	await _tap("hand_x")
+	await _idle()
+	await _frames(10)
+	_check("an area spell doesn't touch traps nobody can see", is_instance_valid(poison) and not poison.destroyed)
+	var scanners := save.inventory.count(&"trap_scanner")
+	_feedback.clear()
+	await _tap("item_4")  # D-pad down: Trap Scanner
+	await _frames(3)
+	_check("D-pad down uses a Trap Scanner: Room B's 2 traps found (%s)" % [_feedback],
+		"Trap Scanner: 2 traps found" in _feedback and save.inventory.count(&"trap_scanner") == scanners - 1)
+	_check("only the room you're in: Room A's traps stay hidden",
+		poison.revealed and freeze.revealed and not (_main.get_node("Hazards/HazardSlow") as HazardTrap).revealed)
+	await _frames(2)
+	_check("a revealed trap's device is visible and lockable", poison.device.is_shown() and poison.device.is_in_group("lockable"))
+	await _tap("hand_x")
+	await _idle()
+	await _frames(10)
+	_check("now the area spell destroys both traps", not is_instance_valid(poison) and not is_instance_valid(freeze))
 	_player.status.clear_all()
 	await _place(hazard.global_position + Vector3.UP * 0.1)
 	await _frames(5)

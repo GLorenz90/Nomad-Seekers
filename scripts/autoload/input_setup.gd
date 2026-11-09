@@ -73,12 +73,13 @@ func _enter_tree() -> void:
 	_define("sync_burst")
 	_joy_button("sync_burst", JOY_BUTTON_LEFT_STICK)
 	_key("sync_burst", KEY_R)
-	# Quick-use consumables: D-pad left / up / right, keys 1 / 2 / 3.
-	for i in 3:
+	# Quick-use consumables: D-pad left / up / right / down, keys 1-4
+	# (down is the Trap Scanner).
+	for i in 4:
 		var action := "item_%d" % (i + 1)
 		_define(action)
-		_joy_button(action, [JOY_BUTTON_DPAD_LEFT, JOY_BUTTON_DPAD_UP, JOY_BUTTON_DPAD_RIGHT][i])
-		_key(action, [KEY_1, KEY_2, KEY_3][i])
+		_joy_button(action, [JOY_BUTTON_DPAD_LEFT, JOY_BUTTON_DPAD_UP, JOY_BUTTON_DPAD_RIGHT, JOY_BUTTON_DPAD_DOWN][i])
+		_key(action, [KEY_1, KEY_2, KEY_3, KEY_4][i])
 
 	# --- System ---
 	_define("pause")  # Esc releases the mouse

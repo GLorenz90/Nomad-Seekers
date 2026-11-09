@@ -1,8 +1,13 @@
 class_name HazardTrap
 extends Area3D
 ## A hidden floor trap in a level (PSO-style, Part 6). It springs once when a
-## Seeker steps on it: damage, a status, or both. Goluman see every hazard
-## (PSO androids' trap vision); everyone else only sees one once it's sprung.
+## Seeker steps on it: damage, a status, or both.
+##
+## Each trap has a small device (Grayson, 2026-11-09) that can be attacked to
+## destroy the trap, but only while the trap is visible: after a Trap Scanner
+## reveals the room, or always for Goluman (PSO androids' trap vision). A
+## hidden trap's device can't be locked on to or hit by anything, area spells
+## included. Everyone sees a trap once it has sprung.
 
 const PLAYER_MASK := 2
 
@@ -24,7 +29,11 @@ const KIND_STATUS := {
 @export var status_seconds := 3.0
 @export var radius := 1.2
 
+## Shown by a Trap Scanner (stays shown).
+var revealed := false
+var destroyed := false
 var sprung := false
+var device: TrapDevice
 var _mesh: MeshInstance3D
 var _material: StandardMaterial3D
 
@@ -55,12 +64,19 @@ func _ready() -> void:
 	_mesh.position.y = 0.03
 	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_mesh)
+	device = TrapDevice.new()
+	device.name = "Device"
+	device.trap = self
+	add_child(device)
 	body_entered.connect(_on_body_entered)
 
 
 func _process(_delta: float) -> void:
-	# Trap vision: visible to Goluman Seekers, hidden from everyone else.
-	_mesh.visible = sprung or is_visible_to(get_tree().get_first_node_in_group("player") as Player)
+	# Hidden unless scanned, sprung, or seen through Goluman trap vision.
+	var seen := is_visible_to(get_tree().get_first_node_in_group("player") as Player)
+	_mesh.visible = sprung or seen
+	if device:
+		device.set_shown(seen and not sprung)
 
 
 static func goluman(seeker: Player) -> bool:
@@ -68,7 +84,42 @@ static func goluman(seeker: Player) -> bool:
 
 
 func is_visible_to(seeker: Player) -> bool:
-	return goluman(seeker)
+	return not destroyed and (revealed or goluman(seeker))
+
+
+## Trap Scanner: reveals every trap in the room the Seeker is in (or within
+## SCAN_RADIUS when they aren't in a room). Returns how many it found.
+const SCAN_RADIUS := 15.0
+
+
+static func scan(seeker: Player) -> int:
+	var tree := seeker.get_tree()
+	var room: WaveRoom = null
+	for r in tree.get_nodes_in_group("wave_rooms"):
+		if (r as WaveRoom).contains(seeker.global_position):
+			room = r
+			break
+	var found := 0
+	for node in tree.get_nodes_in_group("hazards"):
+		var trap := node as HazardTrap
+		if trap.sprung or trap.destroyed:
+			continue
+		var inside := room.contains(trap.global_position) if room \
+			else trap.global_position.distance_to(seeker.global_position) <= SCAN_RADIUS
+		if inside:
+			trap.revealed = true
+			found += 1
+	return found
+
+
+## Attacking a visible trap's device destroys it.
+func destroy() -> void:
+	if destroyed or sprung:
+		return
+	destroyed = true
+	SpellFx.burst(get_parent(), global_position + Vector3.UP * 0.4, radius, Color(0.8, 0.8, 0.8, 0.6))
+	DamageNumber.spawn_text(get_parent(), global_position + Vector3.UP * 1.6, "Trap destroyed")
+	queue_free()
 
 
 func _on_body_entered(body: Node) -> void:
@@ -93,3 +144,5 @@ func spring(seeker: Player) -> void:
 		DamageNumber.spawn_text(get_parent(), seeker.global_position + Vector3.UP * 2.2,
 			StatusEffects.Status.keys()[KIND_STATUS[kind]].capitalize())
 	_material.albedo_color.a = 0.2
+	if device:
+		device.set_shown(false)

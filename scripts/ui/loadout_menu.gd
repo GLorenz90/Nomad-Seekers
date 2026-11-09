@@ -128,6 +128,8 @@ func close() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	combat.apply_loadout_set(_set)
 	var seeker := _player()
+	if seeker:
+		seeker.hold_input()  # the B / Start that closed the menu mustn't dash
 	if save_on_close and seeker:
 		seeker.save_game()
 	closed.emit()

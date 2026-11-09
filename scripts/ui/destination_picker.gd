@@ -63,6 +63,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _finish(index: int) -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	for p in get_tree().get_nodes_in_group("player"):
+		(p as Player).hold_input()
 	var done := _done
 	queue_free()
 	if done.is_valid():

@@ -14,8 +14,9 @@ Chain: press again inside the timing window (too early breaks the combo)
 Second spell: hold RT / E while casting    Loadouts: LB/RB / Z,C
 Same-type pair (e.g. Sword + Frost Sword): every attack uses both hands
 Block: LT / F    Special: hold RT / E + hand    Loadout menu: Start / Tab
-Items: D-pad left/up/right / 1,2,3 (HP Gel, LP Cell, Cure Salt)
-Lumidium: hit a crystal 3 times; stand on a teleporter to deposit it
+Items: D-pad left/up/right/down / 1-4 (HP Gel, LP Cell, Cure Salt, Trap Scanner)
+A: activate a teleporter / pick up an item (Oro and Lumidium are picked up by walking over them)
+Lumidium: hit a crystal 3 times; press A on a teleporter to deposit it
 Sync Burst (gauge full): L3 / R    Feed and pair SyncAIDa: menu, SyncAIDa tab
 Menu: Start / Tab. In menus: d-pad or stick to move, A to accept, B to go back, LB / RB to switch tabs.
 Click to capture the mouse, Esc to release. Debug readout: Select / F3."""
@@ -28,6 +29,7 @@ var _lp_bar: ProgressBar
 var _sync_bar: ProgressBar
 var _sync_label: Label
 var _pips: Label
+var _prompt: Label
 var _hands: Label
 var _lt: Label
 var _status: Label
@@ -93,6 +95,7 @@ func _process(_delta: float) -> void:
 	var pips := ""
 	for i in CombatController.MAX_CHAIN:
 		pips += ("● " if i < combat.chain_step else "○ ")
+	_prompt.text = player.interact_prompt()
 	var dash_left := player.dash_cooldown_left()
 	_pips.text = "Chain  %s    Dash %s" % [pips, "ready" if dash_left <= 0.0 else "%.1fs" % dash_left]
 	var x_hand := CombatController.Hand.LEFT if combat.x_is_left else CombatController.Hand.RIGHT
@@ -110,7 +113,7 @@ func _process(_delta: float) -> void:
 	if player.save:
 		var c := player.save.character
 		var inv := player.save.inventory
-		_wallet.text = "%s  %s  (%s emblem)\nEXP %d\nOro %d\nLumidium carried %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d" % [
+		_wallet.text = "%s  %s  (%s emblem)\nEXP %d\nOro %d\nLumidium carried %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d   Trap Scanner %d" % [
 			c.seeker_name, c.job_name(), c.emblem_name(), c.experience, inv.oro,
 			player.carried_lumidium_total(), inv.lumidium_total(),
 			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt")]
@@ -189,6 +192,17 @@ func _build_status() -> void:
 	_lt = _label(box, 16)
 	_status = _label(box, 16)
 	_status.modulate = Color(1.0, 0.75, 0.5)
+
+	# "A: Pick up Sword" when something is in reach.
+	_prompt = _label(self, 24)
+	_prompt.anchor_left = 0.5
+	_prompt.anchor_right = 0.5
+	_prompt.anchor_top = 0.72
+	_prompt.anchor_bottom = 0.72
+	_prompt.offset_left = -300.0
+	_prompt.offset_right = 300.0
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt.modulate = Color(0.85, 1.0, 0.85)
 
 	_feedback = _label(self, 34)
 	_feedback.anchor_left = 0.5

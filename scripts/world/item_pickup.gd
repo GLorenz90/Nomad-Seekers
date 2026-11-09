@@ -1,8 +1,10 @@
 class_name ItemPickup
 extends Area3D
-## A dropped item: Oro, a consumable, a weapon or Lumidium. Walk over it to
-## collect. Drops are instanced per player (North Star §7.2), so this one is
-## only for the Seeker that rolled it.
+## A dropped item. Oro and Lumidium are picked up by walking over them (and
+## drift to a Seeker close by); everything else waits for A, since items will
+## count against an inventory limit (Grayson, 2026-11-09). Drops are instanced
+## per player (North Star §7.2), so this one is only for the Seeker that
+## rolled it.
 
 const PLAYER_MASK := 2
 ## Spiral Knights-style magnet: pickups drift to a Seeker this close.
@@ -70,12 +72,19 @@ func _ready() -> void:
 	label.position.y = 1.3
 	add_child(label)
 	body_entered.connect(_on_body_entered)
+	if not is_automatic():
+		add_to_group("interactables")
+
+
+## Oro and Lumidium are collected on touch; other items need A.
+func is_automatic() -> bool:
+	return contents.has("oro") or contents.has("lumidium")
 
 
 func _process(delta: float) -> void:
 	_age += delta
 	var seeker := get_tree().get_first_node_in_group("player") as Node3D
-	if seeker and _age > 0.4:
+	if seeker and _age > 0.4 and is_automatic():
 		var to := seeker.global_position - global_position
 		if to.length() < MAGNET_RANGE:
 			global_position += to.normalized() * minf(MAGNET_SPEED * delta, to.length())
@@ -127,8 +136,33 @@ func color() -> Color:
 
 func _on_body_entered(body: Node) -> void:
 	var seeker := body as Player
-	if seeker == null or seeker.save == null or seeker.health.is_dead():
+	if seeker == null or seeker.save == null or seeker.health.is_dead() or not is_automatic():
 		return
+	collect(seeker)
+
+
+# --- Interaction (A) ---------------------------------------------------------------
+
+const INTERACT_RANGE := 1.8
+
+
+func interact_point() -> Vector3:
+	return global_position
+
+
+func interact_range() -> float:
+	return INTERACT_RANGE
+
+
+func can_interact(seeker: Player) -> bool:
+	return seeker.save != null and not is_queued_for_deletion()
+
+
+func interact_prompt() -> String:
+	return "Pick up %s" % describe()
+
+
+func interact(seeker: Player) -> void:
 	collect(seeker)
 
 

@@ -95,6 +95,21 @@ func _run() -> void:
 	_check("lock-on shows the large ring (locked: %s)" % (rig.lock_target.name if rig.lock_target else "none"),
 		rig.lock_target == _a and _markers.is_lock_marker_visible())
 	_check("the locked enemy still shows which hands would hit it", _markers.get_marked().get(_a, 0) == 3)
+	# When the locked target dies, the lock jumps to the next closest one.
+	_a.remove_from_group("lockable")  # what an enemy does when it dies
+	await _frames(3)
+	_check("killing the locked target re-locks the next closest (%s)" % (rig.lock_target.name if rig.lock_target else "none"),
+		rig.lock_target == _b and _markers.is_lock_marker_visible())
+	var everyone := get_nodes_in_group("lockable")
+	for node in everyone:
+		node.remove_from_group("lockable")
+	await _frames(3)
+	_check("with nothing left in range the lock drops", rig.lock_target == null and not _markers.is_lock_marker_visible())
+	for node in everyone:
+		node.add_to_group("lockable")
+	_a.add_to_group("lockable")
+	rig._set_lock(_a)
+	await _frames(2)
 	Input.action_press("lock_on")
 	await _frames(2)
 	Input.action_release("lock_on")

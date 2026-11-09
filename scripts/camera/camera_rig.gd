@@ -58,6 +58,8 @@ enum FollowMode { LOOSE, RIGID }
 @export_group("Lock-on")
 @export var lock_range := 22.0
 @export var lock_break_range := 28.0
+## When the locked target dies, lock the next closest one.
+@export var retarget_on_kill := true
 ## Targets further than this from the camera's facing are ignored.
 @export var lock_max_angle_deg := 75.0
 @export var lock_turn_speed := 10.0
@@ -174,12 +176,12 @@ func _set_lock(target: Node3D) -> void:
 func _validate_lock() -> void:
 	if lock_target == null:
 		return
-	if not is_instance_valid(lock_target):
-		_set_lock(null)
-		return
-	if not lock_target.is_inside_tree() or not lock_target.is_in_group("lockable") \
-			or not lock_target.is_visible_in_tree():
-		_set_lock(null)
+	# The target died or went away: move on to the next closest one (Grayson,
+	# 2026-11-09), or drop the lock when nothing is left in range.
+	if not is_instance_valid(lock_target) or not lock_target.is_inside_tree() \
+			or not lock_target.is_in_group("lockable") or not lock_target.is_visible_in_tree():
+		var gone := lock_target if is_instance_valid(lock_target) else null
+		_set_lock(_find_nearest_target(gone) if retarget_on_kill else null)
 		return
 	if _player_center().distance_to(get_lock_point(lock_target)) > lock_break_range:
 		_set_lock(null)
@@ -216,6 +218,27 @@ func _find_best_target() -> Node3D:
 		if score < best_score:
 			best_score = score
 			best = candidate
+	return best
+
+
+## The closest lockable target in range and in sight, any direction (used
+## when the locked target dies).
+func _find_nearest_target(exclude: Node3D = null) -> Node3D:
+	var origin := _player_center()
+	var best: Node3D = null
+	var best_dist := INF
+	for node in get_tree().get_nodes_in_group("lockable"):
+		var candidate := node as Node3D
+		if candidate == null or candidate == exclude or not candidate.is_visible_in_tree():
+			continue
+		var point := get_lock_point(candidate)
+		var dist := origin.distance_to(point)
+		if dist > lock_range or dist >= best_dist:
+			continue
+		if not _has_line_of_sight(origin, point):
+			continue
+		best_dist = dist
+		best = candidate
 	return best
 
 

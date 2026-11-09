@@ -7,6 +7,7 @@ extends Resource
 ## Consumable ids -> display names. SyncAIDa eat these too (Part 6).
 const CONSUMABLES := {
 	&"hp_gel": "HP Gel", &"lp_cell": "LP Cell", &"cure_salt": "Cure Salt",
+	&"trap_scanner": "Trap Scanner",
 }
 ## Lumidium colors: one per element plus rare Raw (typeless).
 const LUMIDIUM := [&"fire", &"ice", &"lightning", &"nature", &"light", &"dark", &"raw"]

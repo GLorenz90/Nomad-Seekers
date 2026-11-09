@@ -477,9 +477,17 @@ func _run() -> void:
 	var gels := _player.save.inventory.count(&"hp_gel")
 	await _place(ARENA + Vector3(0, 0, -3))
 	await _frames(10)
-	_check("walking over drops collects them (weapon, Oro, HP Gel)",
-		found in _player.save.inventory.weapons and _player.save.inventory.oro == oro + 25
-		and _player.save.inventory.count(&"hp_gel") == gels + 1)
+	_check("walking over drops picks up Oro only (Oro +25, weapon and gel left lying)",
+		_player.save.inventory.oro == oro + 25 and not found in _player.save.inventory.weapons
+		and _player.save.inventory.count(&"hp_gel") == gels)
+	_check("the HUD offers A for the closest item (%s)" % _player.interact_prompt(),
+		_player.interact_prompt().begins_with("A: Pick up"))
+	for i in 2:
+		await _tap("jump")
+		await _frames(3)
+	_check("A picks up the items one at a time (weapon, HP Gel)",
+		found in _player.save.inventory.weapons and _player.save.inventory.count(&"hp_gel") == gels + 1)
+	_check("and A only jumps when nothing is in reach", _player.interact_prompt() == "")
 	_player.health.hp = 100.0
 	await _tap("item_1")
 	_check("D-pad left / 1 uses an HP Gel (100 -> %.0f)" % _player.health.hp, _player.health.hp > 100.0)
@@ -502,7 +510,11 @@ func _run() -> void:
 	var pad := _main.get_node("Gathering/TeleporterStart") as Teleporter
 	await _place(pad.global_position + Vector3(0, 0.1, 0))
 	await _frames(10)
-	_check("a teleporter deposits it (banked %d, carried %d)" % [_player.save.inventory.lumidium_total(), _player.carried_lumidium_total()],
+	_check("standing on a teleporter does nothing by itself (carried %d)" % _player.carried_lumidium_total(),
+		_player.carried_lumidium_total() == 4)
+	await _tap("jump")
+	await _frames(5)
+	_check("A on a teleporter deposits it (banked %d, carried %d)" % [_player.save.inventory.lumidium_total(), _player.carried_lumidium_total()],
 		_player.save.inventory.lumidium_total() == 4 and _player.carried_lumidium_total() == 0)
 
 	# --- Save file ---------------------------------------------------------
