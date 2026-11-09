@@ -91,6 +91,10 @@ func race_name() -> String:
 ## Goluman perks (Grayson, 2026-11-08): more DEX to start, and slow HP regen.
 const GOLUMAN_DEX_BONUS := 10.0
 const GOLUMAN_HP_REGEN := 0.005  # of max HP per second
+## Slow LP regen (Grayson, 2026-11-09): Goluman (they lost magic; their LP
+## goes to traps, specials and gear) and Lumera. Nobody else regenerates LP,
+## like PSO's TP. 1% of max LP a second is Claude's rate.
+const LP_REGEN_RACES := {Race.GOLUMAN: 0.01, Race.LUMERA: 0.01}
 ## Spells that level to 30 follow the caps below; the rest (Cure, Revive,
 ## Teleportal) always reach their own max.
 const FULL_SPELL_LEVEL := 30
@@ -154,6 +158,11 @@ func race_bonuses() -> Dictionary:
 
 func hp_regen_fraction() -> float:
 	return GOLUMAN_HP_REGEN if race == Race.GOLUMAN else 0.0
+
+
+## Fraction of max LP regenerated per second (0 for most races).
+func lp_regen_fraction() -> float:
+	return float(LP_REGEN_RACES.get(race, 0.0))
 
 
 func can_use_magic() -> bool:

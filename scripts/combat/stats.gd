@@ -13,8 +13,11 @@ extends Resource
 
 @export var max_hp := 300.0
 @export var max_lp := 100.0
-## Prototype convenience so testing never stalls. Tune or remove later.
-@export var lp_regen_per_second := 6.0
+## Flat LP regen per second (0: nobody regenerates LP by default, like PSO's
+## TP; Goluman and Lumera regen a share of max LP, CombatController
+## lp_regen_fraction). Kept for gear or buffs later. Was 6 as a prototype
+## convenience until 2026-11-09; the Debug tab has Infinite LP for testing.
+@export var lp_regen_per_second := 0.0
 
 
 func attack_stat(weapon_class: WeaponData.WeaponClass) -> float:

@@ -149,6 +149,7 @@ func apply_bonuses() -> void:
 		if delta != 0.0:
 			s.set(stat, float(s.get(stat)) + delta)
 	_material_applied = target
+	combat.lp_regen_fraction = save.character.lp_regen_fraction() if save else 0.0
 	if health.max_hp != s.max_hp:
 		var gained := s.max_hp - health.max_hp
 		health.max_hp = s.max_hp

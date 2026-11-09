@@ -188,6 +188,9 @@ var _time := 0.0
 var _lp_regen_delay := 0.0
 ## Testing (Levels tab): LP never runs out.
 var infinite_lp := false
+## Racial LP regen: this fraction of max LP per second (Player.apply_bonuses
+## sets it from CharacterData.lp_regen_fraction()).
+var lp_regen_fraction := 0.0
 var _held: Array[float] = [-1.0, -1.0]
 var _hard_fired: Array[bool] = [false, false]
 ## Whether each hand's current press landed in the chain window (judged at press).
@@ -1378,7 +1381,9 @@ func _regen_lp(delta: float) -> void:
   if _lp_regen_delay > 0.0:
     _lp_regen_delay -= delta
     return
-  lp = minf(lp + stats.lp_regen_per_second * delta, stats.max_lp)
+  var rate := stats.lp_regen_per_second + stats.max_lp * lp_regen_fraction
+  if rate > 0.0:
+    lp = minf(lp + rate * delta, stats.max_lp)
 
 
 # --- Placeholder visuals ----------------------------------------------------
