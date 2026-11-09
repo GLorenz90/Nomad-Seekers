@@ -126,9 +126,9 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Goluman** can't cast. They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
 - **Level hazards.** Six hidden traps sit in the arena. Only Goluman can see them; anyone else finds out by stepping on one (each springs once).
 - **Paralyze** is a new status: 2.5 s, no moving or acting.
-- **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them in the **Character** tab.
-  - PSO's limits: the seven stat materials share one limit, **275 for Humans and 175 for everyone else** (PSO's 250 / 150, +25 for the two new materials). HP and LP have their own 125 each.
-  - Goluman, like PSO's androids, can't use Mind or LP Materials.
+- **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Res (RES, new), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them in the **Character** tab.
+  - PSO's limits: the eight stat materials share one limit: **Humans 275, Lumera and Coresian 175** (PSO's 250 / 150, +25 for the new materials), **Goluman 150**. HP and LP have their own 125 each.
+  - Goluman can't use Mind Materials (no magic), and can use only 62 LP Materials (half).
   - They drop from enemies (about 2.4% of kills). Levels tab: +10 of each. Reset character forgets the ones used.
   - Accuracy has no other source yet; character levels and gear will add to it.
 
@@ -236,4 +236,4 @@ The tests always use a fresh save and never write yours.
 
 - `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job, Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
 
-- `materials_test.gd` (in the arena): the nine materials, the 275 / 175 shared limit and the separate HP / LP 125, Goluman restrictions, STR / DEX / ATA / max HP gains (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.
+- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 62 LP), STR / DEX / RES / ATA / max HP gains (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.

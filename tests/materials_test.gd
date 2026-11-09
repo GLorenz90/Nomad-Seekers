@@ -1,5 +1,5 @@
 extends SceneTree
-## Automated test for PSO materials: the nine materials, PSO's usage limits
+## Automated test for PSO materials: the ten materials, PSO's usage limits
 ## (+25 on the shared one), Goluman restrictions, stat gains (including max HP
 ## and hit chance), drops and pickups, the save round-trip, the debug reset,
 ## and using one from the Character tab with a gamepad. Runs in the arena.
@@ -34,17 +34,22 @@ func _run() -> void:
 	var s := _player.combat.stats
 
 	# --- Limits -------------------------------------------------------------------
-	_check("nine materials: PSO's seven plus Dex and Accuracy", Materials.ALL.size() == 9
-		and Materials.is_material(&"dex_material") and Materials.is_material(&"accuracy_material"))
+	_check("ten materials: PSO's seven plus Dex, Res and Accuracy", Materials.ALL.size() == 10
+		and Materials.is_material(&"dex_material") and Materials.is_material(&"res_material")
+		and Materials.is_material(&"accuracy_material"))
 	var limits := []
 	for race in [CharacterData.Race.HUMAN, CharacterData.Race.LUMERA, CharacterData.Race.CORESIAN, CharacterData.Race.GOLUMAN]:
 		limits.append(Materials.stat_limit(race))
-	_check("shared stat limit: Human 250 + 25, everyone else 150 + 25 (%s)" % [limits], limits == [275, 175, 175, 175])
+	_check("shared stat limit: Human 250 + 25, Lumera / Coresian 150 + 25, Goluman 150 (%s)" % [limits], limits == [275, 175, 175, 150])
 	_check("HP and LP materials have their own 125 each", Materials.pool_limit(c, &"hp") == 125 and Materials.pool_limit(c, &"lp") == 125)
 	c.race = CharacterData.Race.GOLUMAN
-	_check("Goluman (PSO androids) can't use Mind or LP materials, but can use HP",
-		Materials.use_error(c, &"mind_material") != "" and Materials.use_error(c, &"lp_material") != ""
-		and Materials.use_error(c, &"hp_material") == "")
+	_check("Goluman can't use Mind, can use HP, and LP up to half as many (62)",
+		Materials.use_error(c, &"mind_material") != "" and Materials.use_error(c, &"lp_material") == ""
+		and Materials.use_error(c, &"hp_material") == "" and Materials.pool_limit(c, &"lp") == 62
+		and Materials.pool_limit(c, &"hp") == 125)
+	c.materials[&"lp_material"] = 62
+	_check("the 63rd LP Material is refused for a Goluman", Materials.use_error(c, &"lp_material") != "")
+	c.materials.clear()
 	c.race = CharacterData.Race.HUMAN
 
 	# --- Using them ---------------------------------------------------------------
@@ -74,6 +79,10 @@ func _run() -> void:
 	inv.add_consumable(&"dex_material", 1)
 	_player.use_material(&"dex_material")
 	_check("a Dex Material: DEX +2", s.dexterity == dex_before + 2.0)
+	var res_before := s.resolve
+	inv.add_consumable(&"res_material", 1)
+	_player.use_material(&"res_material")
+	_check("a Res Material: RES +2", s.resolve == res_before + 2.0)
 
 	# Shared limit: 275 for a human, HP / LP outside it.
 	c.materials[&"def_material"] = 275 - Materials.pool_used(c, &"stat") - 1
@@ -122,8 +131,8 @@ func _run() -> void:
 		if drop.has("material"):
 			drops += 1
 			found[drop.material] = true
-	_check("materials drop (~2.4%% of kills: %d / 4000), all nine kinds (%d)" % [drops, found.size()],
-		drops > 60 and drops < 150 and found.size() == 9)
+	_check("materials drop (~2.4%% of kills: %d / 4000), all ten kinds (%d)" % [drops, found.size()],
+		drops > 60 and drops < 150 and found.size() == 10)
 	var pickup: ItemPickup = _main.spawn_drop({"material": &"mind_material"}, _player.global_position + Vector3(4, 0, 0))
 	_check("a material pickup is labelled (%s)" % pickup.describe(), pickup.describe() == "Mind Material")
 	pickup.collect(_player)

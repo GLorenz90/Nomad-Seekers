@@ -1,15 +1,15 @@
 class_name Materials
 extends RefCounted
 ## PSO materials: single-use items that permanently raise one stat by 2.
-## PSO's seven (Power, Mind, Def, Evade, Luck, HP, TP as LP) plus two new ones
-## for stats PSO didn't have: Dex (DEX) and Accuracy (ATA).
+## PSO's seven (Power, Mind, Def, Evade, Luck, HP, TP as LP) plus three new
+## ones for stats PSO didn't have: Dex (DEX), Res (RES) and Accuracy (ATA).
 ##
-## Usage limits follow PSO:
-## - Stat materials share one limit: humans 250, everyone else 150, each
-##   raised by 25 here to make room for Dex and Accuracy (Grayson, 2026-11-08).
-## - HP and LP materials have their own limit of 125 each, outside the shared one.
-## - Goluman are PSO's androids: no Mind (SOL) or LP materials, like androids
-##   had no MST or TP materials.
+## Usage limits follow PSO (Grayson, 2026-11-08):
+## - Stat materials share one limit: humans 250, Lumera and Coresian 150, each
+##   raised by 25 for the new materials. Goluman stay at 150: they can't use
+##   Mind (SOL), like PSO's androids couldn't use MST materials.
+## - HP and LP materials have their own limit of 125 each, outside the shared
+##   one. Goluman can use LP materials, but only half as many (62).
 ##
 ## Used counts live on CharacterData.materials (id -> count); the items
 ## themselves sit in Inventory.consumables like any other item.
@@ -17,6 +17,8 @@ extends RefCounted
 const PER_USE := 2.0
 const EXTRA_LIMIT := 25  # Grayson: compensates for Dex and Accuracy materials
 const HP_LP_LIMIT := 125
+const GOLUMAN_STAT_LIMIT := 150
+const GOLUMAN_LP_LIMIT := 62  # half of 125, rounded down
 
 ## id -> [display name, Stats property, short stat name, pool]
 ## pool: &"stat" counts toward the shared limit, &"hp" / &"lp" have their own.
@@ -25,6 +27,7 @@ const ALL := {
 	&"dex_material": ["Dex Material", &"dexterity", "DEX", &"stat"],
 	&"mind_material": ["Mind Material", &"soul", "SOL", &"stat"],
 	&"def_material": ["Def Material", &"defense", "DEF", &"stat"],
+	&"res_material": ["Res Material", &"resolve", "RES", &"stat"],
 	&"evade_material": ["Evade Material", &"evasion", "EVA", &"stat"],
 	&"accuracy_material": ["Accuracy Material", &"accuracy", "ATA", &"stat"],
 	&"luck_material": ["Luck Material", &"luck", "LCK", &"stat"],
@@ -54,8 +57,10 @@ static func pool_of(id: StringName) -> StringName:
 
 
 ## The shared stat-material limit for a race: PSO's 250 for humans and 150 for
-## everyone else, +25 each.
+## Lumera and Coresian, +25 each. Goluman 150 (no Mind materials).
 static func stat_limit(race: CharacterData.Race) -> int:
+	if race == CharacterData.Race.GOLUMAN:
+		return GOLUMAN_STAT_LIMIT
 	return (250 if race == CharacterData.Race.HUMAN else 150) + EXTRA_LIMIT
 
 
@@ -64,7 +69,7 @@ static func pool_limit(character: CharacterData, pool: StringName) -> int:
 		&"hp":
 			return HP_LP_LIMIT
 		&"lp":
-			return 0 if character.race == CharacterData.Race.GOLUMAN else HP_LP_LIMIT
+			return GOLUMAN_LP_LIMIT if character.race == CharacterData.Race.GOLUMAN else HP_LP_LIMIT
 		_:
 			return stat_limit(character.race)
 
@@ -82,7 +87,7 @@ static func pool_used(character: CharacterData, pool: StringName) -> int:
 static func use_error(character: CharacterData, id: StringName) -> String:
 	if not ALL.has(id):
 		return "That isn't a material"
-	if character.race == CharacterData.Race.GOLUMAN and (id == &"mind_material" or id == &"lp_material"):
+	if character.race == CharacterData.Race.GOLUMAN and id == &"mind_material":
 		return "Goluman can't use %s" % display_name(id)
 	var pool := pool_of(id)
 	if pool_used(character, pool) >= pool_limit(character, pool):
