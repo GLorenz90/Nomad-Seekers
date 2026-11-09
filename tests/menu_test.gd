@@ -31,7 +31,7 @@ func _run() -> void:
 
 	# Open with Start: no SyncAIDa yet, so it opens on the SyncAIDa tab.
 	await _pad(JOY_BUTTON_START)
-	_check("Start opens the menu and pauses", _menu.visible and paused)
+	_check("Start opens the menu; the game keeps running (Part 11, PSO)", _menu.visible and not paused and _player.input_locked)
 	_check("with no SyncAIDa it opens on the SyncAIDa tab, a starter focused (%s)" % _focus_name(),
 		_tab() == "SyncAIDa" and _focused_text().begins_with("Aegi"))
 	await _pad(JOY_BUTTON_DPAD_DOWN)
@@ -208,7 +208,7 @@ func _run() -> void:
 
 	# B closes the menu.
 	await _pad(JOY_BUTTON_B)
-	_check("B closes the menu and unpauses", not _menu.visible and not paused)
+	_check("B closes the menu and gives control back", not _menu.visible and not _player.input_locked)
 	_check("no control keeps focus after closing", root.gui_get_focus_owner() == null)
 
 	# Level switch: back to the test room.
@@ -246,7 +246,7 @@ func _run() -> void:
 		current_scene == arena and not exit.is_active())
 	arena_player.global_position = Vector3(0, 0.1, 20)
 	await _frames(10)
-	for room in ["Rooms/RoomA", "Rooms/RoomB"]:
+	for room in ["Rooms/RoomA", "Rooms/RoomB", "Rooms/RoomD"]:
 		(arena.get_node(room) as WaveRoom).state = WaveRoom.RoomState.CLEARED
 	await _frames(5)
 	arena_player.global_position = exit.global_position + Vector3.UP * 0.1

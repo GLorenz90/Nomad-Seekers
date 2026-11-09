@@ -160,6 +160,9 @@ func apply_bonuses() -> void:
 # --- Interaction (A) ------------------------------------------------------------------
 
 var _input_hold := 0.0
+## Part 11: the menu no longer pauses (PSO). While it's open the Seeker
+## stands still and takes no game input, but the world keeps going.
+var input_locked := false
 
 
 ## Ignore jump / dash / interact for a moment (called when a menu closes).
@@ -424,6 +427,8 @@ func _physics_process(delta: float) -> void:
 		# A menu just closed: the button that closed it (B, A) mustn't also
 		# dash or jump.
 		_input_hold -= delta
+	elif input_locked:
+		pass
 	elif Input.is_action_just_pressed("jump"):
 		if interact_target and is_on_floor() and status.can_act() and not health.is_dead():
 			interact_target.interact(self)
@@ -431,12 +436,12 @@ func _physics_process(delta: float) -> void:
 		else:
 			_jump_buffer = jump_buffer_time
 	for i in QUICK_ITEMS.size():
-		if Input.is_action_just_pressed(&"item_%d" % (i + 1)):
+		if not input_locked and Input.is_action_just_pressed(&"item_%d" % (i + 1)):
 			use_consumable(QUICK_ITEMS[i])
 
 	var move_dir := _get_move_direction()
 
-	if Input.is_action_just_pressed("dash") and _can_dash() and status.can_act() and _input_hold <= 0.0:
+	if not input_locked and Input.is_action_just_pressed("dash") and _can_dash() and status.can_act() and _input_hold <= 0.0:
 		combat.cancel()
 		_start_dash(move_dir)
 
@@ -580,7 +585,7 @@ func _update_ground_state() -> void:
 
 func _get_move_direction() -> Vector3:
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if input == Vector2.ZERO:
+	if input == Vector2.ZERO or input_locked:
 		return Vector3.ZERO
 
 	var forward := _camera_forward()

@@ -164,7 +164,7 @@ func _run() -> void:
 	_check("and the empty stack leaves the pack", not still_listed)
 	_menu.debug_tab._reset_character()
 	_check("Reset character forgets materials used (SOL back to %.0f)" % s.soul, c.materials.is_empty() and s.soul == sol_before)
-	_menu.close()  # the menu pauses the game; regen and LP need it running
+	_menu.close()  # the menu locks input (Part 11: it no longer pauses)
 
 	# --- Race perks through the Debug tab -----------------------------------------
 	c.job = CharacterData.Job.RANGER

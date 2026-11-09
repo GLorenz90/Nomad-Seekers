@@ -34,6 +34,8 @@ var _exp_bar: ProgressBar
 var _level_label: Label
 ## Level-up: a quick flash and PSO-style list of what grew.
 var _flash: ColorRect
+## Part 11: darkness rooms close the view down around the Seeker.
+var _dark: TextureRect
 var _gains: Label
 var _gains_tween: Tween
 var _sync_label: Label
@@ -81,7 +83,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_panel.visible = not _panel.visible
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if player == null:
 		return
 	var combat := player.combat
@@ -89,6 +91,8 @@ func _process(_delta: float) -> void:
 	_hp_bar.value = player.health.hp
 	_lp_bar.max_value = combat.stats.max_lp
 	_lp_bar.value = combat.lp
+	var dark_target := 1.0 if RoomHazard.dark_for(player) else 0.0
+	_dark.modulate.a = move_toward(_dark.modulate.a, dark_target, delta * 2.5)
 	if player.save:
 		var c := player.save.character
 		_exp_bar.value = Leveling.progress(c.experience)
@@ -278,6 +282,26 @@ func _build_status() -> void:
 	_feed.alignment = BoxContainer.ALIGNMENT_END
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_feed)
+
+	_dark = TextureRect.new()
+	_dark.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dark.stretch_mode = TextureRect.STRETCH_SCALE
+	_dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var grad := Gradient.new()
+	grad.set_color(0, Color(0, 0, 0, 0.0))
+	grad.set_color(1, Color(0, 0, 0, 0.97))
+	grad.add_point(0.35, Color(0, 0, 0, 0.55))
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(1.0, 0.5)
+	tex.width = 256
+	tex.height = 256
+	_dark.texture = tex
+	_dark.modulate.a = 0.0
+	add_child(_dark)
+	move_child(_dark, 0)
 
 	_flash = ColorRect.new()
 	_flash.set_anchors_preset(Control.PRESET_FULL_RECT)

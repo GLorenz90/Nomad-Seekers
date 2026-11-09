@@ -83,7 +83,11 @@ func open() -> void:
 	if seeker and seeker.save and seeker.save.syncaida.is_empty():
 		_tabs.set_current_tab(_tab_index("SyncAIDa"))
 	visible = true
-	get_tree().paused = true
+	# Part 11 (Grayson): like PSO, the menu doesn't pause the game. The Seeker
+	# just stops taking game input while it's open.
+	var seeker_open := _player()
+	if seeker_open:
+		seeker_open.input_locked = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_close_picker()
 	_refresh()
@@ -96,7 +100,9 @@ func close() -> void:
 	_close_picker()
 	get_viewport().gui_release_focus()
 	visible = false
-	get_tree().paused = false
+	var seeker_closed := _player()
+	if seeker_closed:
+		seeker_closed.input_locked = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	combat.apply_loadout_set(_set)
 	var seeker := _player()

@@ -560,6 +560,9 @@ func _action_for(hand: int) -> StringName:
 
 
 func _read_hand(hand: int, delta: float) -> void:
+  if _player and _player.input_locked:  # menu open (Part 11: it doesn't pause)
+    _held[hand] = -1.0
+    return
   var action := _action_for(hand)
   if Input.is_action_just_pressed(action):
     _held[hand] = 0.0
@@ -578,7 +581,7 @@ func _read_hand(hand: int, delta: float) -> void:
 
 
 func _handle_loadout_input() -> void:
-  if _current:
+  if _current or (_player and _player.input_locked):
     return
   if Input.is_action_just_pressed("loadout_next"):
     cycle_loadout(1)
@@ -592,7 +595,7 @@ func _update_block(delta: float) -> void:
   var mode := get_lt_mode()
   var can_block := mode == Loadout.LTMode.SHIELD or mode == Loadout.LTMode.TWO_HAND \
     or mode == Loadout.LTMode.ARMS_UP
-  var lt_down := Input.is_action_pressed("block")
+  var lt_down := Input.is_action_pressed("block") and not (_player and _player.input_locked)
   var fresh_press := lt_down and not _lt_was_down
   _lt_was_down = lt_down
   # Shields stay up while you attack; other blocks drop for the attack.

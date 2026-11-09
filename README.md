@@ -252,6 +252,24 @@ Characters level up (Grayson, 2026-11-09).
   - Stock is rolled the first time you open a shop on each visit.
 - **Debug tab:** Level +1 / +10 / +50 / Max, done with EXP so the level-up shows. Reset character now goes back to level 1 and takes off armor above it.
 
+## Part 11 (continued): room hazards, buttons and a menu that doesn't pause
+![Poison mist](docs/screenshots/hazard_poison.png)
+![Darkness](docs/screenshots/hazard_darkness.png)
+
+PSO-style hazards and buttons (Grayson, 2026-11-09).
+
+- **Room hazards** (`RoomHazard`) belong to rooms but can **span several boxes**. The poison mist covers the poison room and its corridor. A button turns them off or on.
+  - **Poison mist:** anyone inside is Poisoned, refreshed every second.
+  - **Darkness:** the view closes down to a small circle around you while you're inside, and the room reads black from outside.
+- **Buttons** (`RoomButton`) come in groups (`SwitchGroup`). When every button in a group is down, the group acts on its targets: open, close or toggle a door (`SwitchDoor`); turn a hazard off, on or toggle it; start a room's waves; turn traps off.
+  - **Press buttons:** a pedestal you press with A, once.
+  - **Floor plates:** you stand on them. Alone, every plate but the last stays down once stepped on (PSO), and the last needs you on it. **In co-op, plates minus Seekers stay down**: four plates with two Seekers means two latch and the last two need a Seeker on each.
+- **Arena east wing**, through Room B's new east doorway:
+  - **Poison room:** the mist fills the room and its corridor. The button in the corner opens the east door and clears the mist.
+  - **Switch hall:** a branch north of the poison room. **Four floor plates** open the door to a Lumidium alcove.
+  - **Dark room:** two waves in the dark. The **button in the far corner** turns the darkness off, but the north door only opens once every enemy is dead. Past it, the end room's teleporter goes back to Nomad-2. Every wave room must be cleared, as with the old exit.
+- **The menu no longer pauses the game**, like PSO. While it's open your Seeker stands still and takes no game input (no moving, attacking, items, lock-on or camera), but enemies, statuses and hazards carry on. The shop, bank and Guild counters and the teleporter's list still pause for now.
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 
@@ -314,7 +332,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - Enemies don't scale with level or area yet: past the first few levels, the arena gets easy.
 - Revive has nothing to revive until co-op. Teleportal goes to the gym until the ship exists.
 - Party bursts (several Seekers firing together) wait for co-op. SyncAIDa have no feeding cooldown and no personalities yet.
-- The game pauses while the menu is open. Co-op will need a non-pausing version.
+- The menu no longer pauses; the counters and the teleporter's list still do (co-op will change that).
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
 - No step-up for small ledges yet. Input is bound to all devices until couch co-op.
 
@@ -337,6 +355,7 @@ godot --headless --path . --script res://tests/flow_test.gd
 godot --headless --path . --script res://tests/inventory_test.gd
 godot --headless --path . --script res://tests/services_test.gd
 godot --headless --path . --script res://tests/leveling_test.gd
+godot --headless --path . --script res://tests/hazards_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
@@ -371,3 +390,5 @@ The tests always use a fresh save and never write yours.
 - `services_test.gd` (in Nomad-2, then the arena): the five clerks and their prompts, PSO's curative prices, weapon prices, stock (sizes, no rares, armor tiers, rerolled per visit), buying stacks with an amount, gear, armor and augments with a gamepad, not enough Oro, a full pack, selling back at 1/8 (palette weapons refused, stacks by amount), Start leaving without the pause menu, B backing out, the bank (200 slots, items, stacks, Oro both ways, kept in the save), and the Guild (accept, one at a time, reporting early, the teleporter listing the quest first, defeats, room clears and banked Lumidium completing quests, the reward, abandoning).
 
 - `leveling_test.gd` (in the arena): PSO's EXP curve at its anchor levels and rising every level, level lookups, the seven tables (and nothing gained at level 1), Human Striker = HUmar's growth, Coresian Striker above it like HUcast, Lumera Invoker above a Human Invoker like a Newman Force, Rangers' ATA, LCK never growing, a level-up (stats, HP / LP refill, banner, gains list, flash, the EXP bar under LP), a multi-level jump, armor level requirements (tiers and rares), weapon stat requirements (Pistol, Great Sword, Arbalest, rares; the palette refusing), shop tiers by level, the Debug tab's level tools, Reset character, and the save.
+
+- `hazards_test.gd` (in the arena): poison mist (poisoning, keeping you poisoned, spanning the corridor), its button opening the door and clearing it, the four floor plates (three latch alone, the fourth needs you; with two Seekers two latch and the last two need one each), darkness (the HUD darkens, the corner button clears it, the exit still waits for every enemy), buttons starting waves and turning traps off, and the menu not pausing (no movement while it's open, poison still ticking).

@@ -83,6 +83,12 @@ static func goluman(seeker: Player) -> bool:
 	return seeker != null and seeker.save != null and seeker.save.character.race == CharacterData.Race.GOLUMAN
 
 
+## Buttons (Part 11): "disable" turns the trap off for good.
+func switch_action(action: String) -> void:
+	if action == "disable" and not sprung:
+		destroy()
+
+
 func is_visible_to(seeker: Player) -> bool:
 	return not destroyed and (revealed or goluman(seeker))
 
