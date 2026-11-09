@@ -48,7 +48,8 @@ const QUICK_ITEMS: Array[StringName] = [&"hp_gel", &"lp_cell", &"cure_salt"]
 @export_group("Dash")
 @export var dash_distance := 4.5
 @export var dash_duration := 0.18
-@export var dash_cooldown := 0.3
+## Delay between dashes (Grayson, 2026-11-08: dashing was far too strong).
+@export var dash_cooldown := 5.0
 ## Invulnerability window at the start of a dash (used by combat in Part 2).
 @export var dash_invuln_time := 0.15
 @export var air_dash_count := 1
@@ -120,13 +121,22 @@ var _material_applied := {}
 ## Moves the material stat bonus to the current save's counts (like the
 ## SyncAIDa bonus, only the difference is applied).
 func apply_materials() -> void:
+	apply_bonuses()
+
+
+## Moves every flat bonus from the save (materials, race, armor and its
+## augments) onto the stats; only the difference from last time is applied.
+## Also turns the Double-Heavy rule on when an augment for it is worn.
+func apply_bonuses() -> void:
 	var target := Materials.bonuses(save.character) if save else {}
-	if save:  # race bonuses ride along with materials (Goluman DEX)
-		var race_bonus := save.character.race_bonuses()
-		for stat in race_bonus:
-			target[stat] = float(target.get(stat, 0.0)) + float(race_bonus[stat])
+	if save:
+		for extra in [save.character.race_bonuses(), ArmorBook.bonuses(save.character)]:
+			for stat in extra:
+				target[stat] = float(target.get(stat, 0.0)) + float(extra[stat])
+		if save.loadouts:
+			save.loadouts.double_heavy_augment = ArmorBook.has_double_heavy(save.character)
 	var s := combat.stats
-	var stats_touched: Array = Materials.ALL.values().map(func(m: Array) -> StringName: return m[1])
+	var stats_touched: Array = target.keys()
 	for stat in _material_applied:
 		if not stat in stats_touched:
 			stats_touched.append(stat)
@@ -357,6 +367,10 @@ func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) ->
 	if block_scale <= 0.0:
 		return 0.0
 	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense * status.stat_scale(&"defense"), s.resolve)
+	if save:  # armor resistances: the hit's element, and the attacker's monster type
+		info.amount *= 1.0 - ArmorBook.resist(save.character, info.damage_type)
+		if attacker is Enemy:
+			info.amount *= 1.0 - ArmorBook.monster_resist(save.character, (attacker as Enemy).data.enemy_type)
 	if combat.aegis_active():
 		info.amount *= CombatController.AEGIS_GUARD
 	var amount := health.take_damage(info)
@@ -496,6 +510,11 @@ func _update_facing(delta: float, move_dir: Vector3) -> void:
 
 
 # --- Dash -------------------------------------------------------------------
+
+## Seconds until the next dash is allowed (0 = ready).
+func dash_cooldown_left() -> float:
+	return _dash_cooldown_timer
+
 
 func _can_dash() -> bool:
 	if state == State.DASH or _dash_cooldown_timer > 0.0:

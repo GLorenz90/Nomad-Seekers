@@ -30,7 +30,20 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 	# First spells (Part 6): level 1 Fajro, Glacio and Fulmo (SOL 40 each).
 	for id in STARTING_SPELLS:
 		s.character.spells[id] = 1
+	s.give_starter_armor()
 	return s
+
+
+## Every Seeker starts in a Field Frame with one augment slot (PSO's Frame).
+func give_starter_armor() -> void:
+	if character.armor_granted:
+		return
+	character.armor_granted = true
+	if character.torso == null:
+		var frame := ArmorBook.make(ArmorBook.STARTER)
+		frame.slots = 1
+		frame.ensure_units()
+		character.torso = frame
 
 
 const STARTING_SPELLS: Array[StringName] = [&"fajro", &"glacio", &"fulmo"]
@@ -78,3 +91,4 @@ func _fill_missing(default_loadouts: LoadoutSet) -> void:
 	if inventory == null:
 		inventory = Inventory.new()
 	loadouts.ensure_slots()
+	give_starter_armor()

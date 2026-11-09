@@ -7,8 +7,8 @@ const SLOT_COUNT := 8
 const SAVE_PATH := "user://loadouts.tres"
 
 @export var loadouts: Array[Loadout] = []
-## Placeholder for the armor augment (North Star §5.1). Armor arrives later;
-## for now the loadout menu toggles it.
+## Set from armor (Part 7): on while a Double-Heavy augment is slotted in any worn
+## piece (Player.apply_bonuses). Two Heavy one-handed items per loadout.
 @export var double_heavy_augment := false
 ## No longer used: powerstanced pairs always twin-attack now. Kept so loadouts
 ## saved by the first Part 3 build still load.

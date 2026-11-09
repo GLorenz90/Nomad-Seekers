@@ -45,6 +45,10 @@ func _ready() -> void:
 		var box := BoxMesh.new()
 		box.size = Vector3(0.12, 0.12, 0.8)
 		shape_mesh = box
+	elif contents.has("armor"):
+		var plate := BoxMesh.new()
+		plate.size = Vector3(0.45, 0.45, 0.15)
+		shape_mesh = plate
 	elif contents.has("lumidium"):
 		var prism := PrismMesh.new()
 		prism.size = Vector3(0.35, 0.5, 0.35)
@@ -88,6 +92,10 @@ func describe() -> String:
 		return Materials.display_name(StringName(contents.material))
 	if contents.has("weapon"):
 		return (contents.weapon as WeaponData).display_name
+	if contents.has("armor"):
+		return (contents.armor as ArmorData).display_name
+	if contents.has("unit"):
+		return UnitBook.display_name(StringName(contents.unit))
 	if contents.has("lumidium"):
 		return "%s Lumidium" % String(contents.lumidium).capitalize()
 	if contents.has("disc"):
@@ -106,6 +114,10 @@ func color() -> Color:
 	if contents.has("weapon"):
 		var w := contents.weapon as WeaponData
 		return Color(1.0, 0.35, 0.9) if w.rare else Color(0.6, 0.8, 1.0)
+	if contents.has("armor"):
+		return Color(1.0, 0.35, 0.9) if (contents.armor as ArmorData).rare else Color(0.75, 0.75, 0.9)
+	if contents.has("unit"):
+		return Color(0.9, 0.9, 0.5)
 	if contents.has("lumidium"):
 		return Inventory.LUMIDIUM_COLORS.get(contents.lumidium, Color.WHITE)
 	if contents.has("disc"):
@@ -137,6 +149,13 @@ func collect(seeker: Player) -> void:
 		var w := contents.weapon as WeaponData
 		inv.add_weapon(w)
 		text = "Found %s%s" % [w.display_name, "  (RARE)" if w.rare else ""]
+	elif contents.has("armor"):
+		var a := contents.armor as ArmorData
+		inv.armors.append(a)
+		text = "Found %s (%d slot%s)%s" % [a.display_name, a.slots, "" if a.slots == 1 else "s", "  (RARE)" if a.rare else ""]
+	elif contents.has("unit"):
+		inv.add_unit(StringName(contents.unit))
+		text = "+1 " + text
 	elif contents.has("lumidium"):
 		seeker.add_lumidium(contents.lumidium)
 		queue_free()

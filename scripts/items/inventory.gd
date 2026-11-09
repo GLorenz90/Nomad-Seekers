@@ -23,6 +23,26 @@ const LUMIDIUM_COLORS := {
 @export var lumidium: Dictionary = {}  # StringName -> int (banked)
 ## Spell / trap discs kept to read later: [{"id": "gifoie", "level": 4}, ...].
 @export var discs: Array = []
+## Armor not being worn (Part 7), and augments not in a slot (id -> count).
+@export var armors: Array[ArmorData] = []
+@export var units: Dictionary = {}
+
+
+func add_unit(id: StringName, count: int = 1) -> void:
+	units[id] = int(units.get(id, 0)) + count
+
+
+func unit_count(id: StringName) -> int:
+	return int(units.get(id, 0))
+
+
+func take_unit(id: StringName) -> bool:
+	if unit_count(id) <= 0:
+		return false
+	units[id] = unit_count(id) - 1
+	if units[id] == 0:
+		units.erase(id)
+	return true
 
 
 func add_weapon(w: WeaponData) -> void:

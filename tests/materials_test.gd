@@ -116,8 +116,8 @@ func _run() -> void:
 	_check("switching to that save re-applies them once, not twice (DEF %.0f)" % s.defense, s.defense == def_now)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
 	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
-	_check("a fresh save has none, and the stats go back (STR %.0f, DEF %.0f, HP %.0f)" % [s.strength, s.defense, s.max_hp],
-		s.strength == str_before and s.defense == 20.0 and s.max_hp == hp_before and _player.health.max_hp == hp_before)
+	_check("a fresh save has none, and the stats go back (STR %.0f, DEF %.0f with the Field Frame, HP %.0f)" % [s.strength, s.defense, s.max_hp],
+		s.strength == str_before and s.defense == 24.0 and s.max_hp == hp_before and _player.health.max_hp == hp_before)
 	c = _player.save.character
 	inv = _player.save.inventory
 

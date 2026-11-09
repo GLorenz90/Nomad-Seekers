@@ -93,7 +93,8 @@ func _process(_delta: float) -> void:
 	var pips := ""
 	for i in CombatController.MAX_CHAIN:
 		pips += ("● " if i < combat.chain_step else "○ ")
-	_pips.text = "Chain  " + pips
+	var dash_left := player.dash_cooldown_left()
+	_pips.text = "Chain  %s    Dash %s" % [pips, "ready" if dash_left <= 0.0 else "%.1fs" % dash_left]
 	var x_hand := CombatController.Hand.LEFT if combat.x_is_left else CombatController.Hand.RIGHT
 	var y_hand := CombatController.Hand.RIGHT if combat.x_is_left else CombatController.Hand.LEFT
 	var two_hand := combat.get_loadout().two_handed_weapon()

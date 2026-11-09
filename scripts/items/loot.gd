@@ -29,6 +29,11 @@ const FAVORED := [
 const DROP_CHANCE := 0.6
 const WEAPON_SHARE := 0.35
 const ORO_SHARE := 0.4
+## Armor and augments (Part 7) take their share out of Oro. The Blue emblem
+## finds armor twice as often (Grayson: one of the blue emblems).
+const ARMOR_SHARE := 0.08
+const UNIT_SHARE := 0.04
+const ARMOR_EMBLEM := 6  # Blue
 ## Spell discs (Part 6); the rest of the drops are consumables.
 const DISC_SHARE := 0.1
 ## PSO materials (any of the nine, evenly), taken from the consumable share.
@@ -74,7 +79,8 @@ static func rares_for(emblem: int) -> Array[WeaponData]:
 
 
 ## What an enemy leaves behind: {} (nothing), {"oro": n}, {"consumable": id},
-## {"material": id}, {"disc": {...}} or {"weapon": WeaponData}.
+## {"material": id}, {"disc": {...}}, {"armor": ArmorData}, {"unit": id} or
+## {"weapon": WeaponData}.
 static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator,
 		traps := false) -> Dictionary:
 	if rng.randf() > DROP_CHANCE:
@@ -82,6 +88,11 @@ static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator,
 	var r := rng.randf()
 	if r < WEAPON_SHARE:
 		return {"weapon": roll_weapon(emblem, rng)}
+	var armor_share := armor_share_for(emblem)
+	if r < WEAPON_SHARE + armor_share:
+		return {"armor": ArmorBook.roll_drop(rng)}
+	if r < WEAPON_SHARE + armor_share + UNIT_SHARE:
+		return {"unit": UnitBook.roll(rng)}
 	if r < WEAPON_SHARE + ORO_SHARE:
 		return {"oro": int(round(rng.randf_range(10.0, 30.0) * enemy.max_hp / 100.0))}
 	if r < WEAPON_SHARE + ORO_SHARE + DISC_SHARE:
@@ -91,6 +102,10 @@ static func roll_drop(enemy: EnemyData, emblem: int, rng: RandomNumberGenerator,
 		return {"material": mats[rng.randi() % mats.size()]}
 	var ids := Inventory.CONSUMABLES.keys()
 	return {"consumable": ids[rng.randi() % ids.size()]}
+
+
+static func armor_share_for(emblem: int) -> float:
+	return ARMOR_SHARE * (2.0 if emblem == ARMOR_EMBLEM else 1.0)
 
 
 ## A spell disc (or a trap disc for Goluman): any spell, low levels most often
