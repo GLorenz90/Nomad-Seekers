@@ -173,7 +173,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Title screen** (gamepad: A or Start accepts, B goes back): **Continue** (your last character), **Character select**, Quit.
 - **Every menu recovers focus for the controller:** if nothing is focused (say, after clicking the window to bring it forward), the first A or d-pad press focuses the menu's default button instead of doing nothing. Character creation starts on Race, so the d-pad isn't caught in the name box.
 - **4 character slots**, like PSO. Each slot is a whole save (character, loadouts, inventory, spells, armor, SyncAIDa) in `user://characters/slot_N.tres`. X on a slot asks, and a second X deletes it. Your Part 5-7 save moves into slot 1 the first time.
-- **Primary and off hand:** loadouts read primary hand (X) first, then off hand (Y), everywhere. Creation asks for the **primary hand** (right or left): a left-handed Seeker holds the primary weapon on the left side, still on X. The Character tab can change it for testing.
+- **Primary and off hand:** loadouts read primary hand (X) first, then off hand (Y), everywhere. The code uses the same names (`Hand.PRIMARY` / `Hand.OFF`, `Loadout.primary` / `off_hand`), so **saves from before this change don't keep their loadouts**: make a new character. Creation asks for the **primary hand** (right or left): a left-handed Seeker holds the primary weapon on the left side, still on X. The Character tab can change it for testing.
 
 ![Loadouts read Primary (X) first](docs/screenshots/loadouts_primary.png)
 ![A left-handed Seeker: Sword (X) on the left, Shield (Y) on the right](docs/screenshots/left_handed.png)
@@ -236,7 +236,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 
 - **Player**: `move_speed`, `acceleration`, `jump_height`, `time_to_peak`, `dash_distance`, `dash_duration`.
 - **CameraRig**: `follow_mode`, `leash_radius`, `follow_speed`, `pitch_return_delay`, `pitch_return_speed`, `shoulder_offset`, `default_pitch_deg`.
-- **Player/Combat**: `hold_threshold` (tap vs hold), `x_is_left`, soft-aim range and angle, `show_hitboxes`.
+- **Player/Combat**: `hold_threshold` (tap vs hold), `swap_hand_buttons` (X on the off hand), soft-aim range and angle, `show_hitboxes`.
 - **Each attack** in a weapon `.tres`: `move_speed_scale`, `face_movement`, `sustained_tick`, `duration`, `active_start`/`active_end` (hit timing), `window_open`/`window_close` (combo timing), `damage_mult`, `lp_cost`, lunge, hitbox size, projectile settings.
 
 ## Physics layers

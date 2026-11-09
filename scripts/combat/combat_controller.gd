@@ -4,12 +4,11 @@ extends Node3D
 ## LP and attack execution (North Star §4, §5).
 ##
 ## Input: each face button is one hand. X is the **primary hand** and Y the
-## **off hand** (Grayson, 2026-11-09). In code the primary hand is still
-## Hand.RIGHT and the off hand Hand.LEFT (and Loadout.right / .left), so old
-## saves load unchanged; players only ever see "primary" and "off hand".
-## Which side of the body the primary hand is on comes from the character's
-## handedness (left_handed); it only changes where weapons are drawn.
-## (x_is_left swaps the buttons; only older tests use it.) Tap = Normal
+## **off hand** (Grayson, 2026-11-09): Hand.PRIMARY / Hand.OFF, and
+## Loadout.primary / .off_hand. Which side of the body the primary hand is on
+## comes from the character's handedness (left_handed); it only changes where
+## weapons are drawn. (swap_hand_buttons puts X on the off hand; only older
+## tests use it.) Tap = Normal
 ## attack (fires on release), hold past hold_threshold = Hard attack. Holding
 ## Shift (RT) uses that hand's special (WeaponData.special_attack; none exist
 ## until Part 5, so it's a normal attack) or, on a casting item, its second spell.
@@ -69,7 +68,7 @@ signal combo_feedback(text: String)
 signal loadout_changed(index: int)
 signal hit_landed(target: Node, info: DamageInfo, amount: float)
 
-enum Hand { LEFT, RIGHT }
+enum Hand { OFF, PRIMARY }
 
 const ENEMY_MASK := 4
 const MAX_CHAIN := 3
@@ -100,26 +99,21 @@ const STAT_FOR_CLASS := {
   WeaponData.WeaponClass.MAGIC: &"soul",
 }
 const WEAPON_DIR := "res://data/weapons/"
-## Default loadouts as [off hand, primary hand]; "" is empty. Two-handed
+## Default loadouts as [primary hand, off hand]; "" is empty. Two-handed
 ## weapons go in the primary hand, and both buttons use them.
 const DEFAULT_LOADOUTS := [
-  ["sword", "pistol"], ["shield", "sword"], ["sword", "frost_sword"], ["pistol", "pistol"],
-  ["wand", "sword"], ["", "great_sword"], ["", "dervish_blades"], ["", ""]]
+  ["pistol", "sword"], ["sword", "shield"], ["frost_sword", "sword"], ["pistol", "pistol"],
+  ["sword", "wand"], ["great_sword", ""], ["dervish_blades", ""], ["", ""]]
 
 @export var stats: Stats
-## North Star: the player chooses which face button is which hand.
-## Default: X = primary hand, Y = off hand.
-@export var x_is_left := false
+## X = primary hand, Y = off hand. On: X = off hand (older tests).
+@export var swap_hand_buttons := false
 ## Left-handed characters hold the primary weapon on their left side.
 var left_handed := false
 
-const PRIMARY := 1  # Hand.RIGHT
-const OFF_HAND := 0  # Hand.LEFT
-
-
 ## "Primary" / "Off hand" for menus and messages.
 static func hand_name(hand: int) -> String:
-  return "Primary" if hand == PRIMARY else "Off hand"
+  return "Primary" if hand == Hand.PRIMARY else "Off hand"
 
 
 ## Puts the primary hand on the character's left or right (visual only).
@@ -127,8 +121,8 @@ func set_left_handed(on: bool) -> void:
   left_handed = on
   if _pivots.size() == 2:
     var side := -1.0 if on else 1.0
-    _pivots[Hand.RIGHT].position.x = 0.5 * side
-    _pivots[Hand.LEFT].position.x = -0.5 * side
+    _pivots[Hand.PRIMARY].position.x = 0.5 * side
+    _pivots[Hand.OFF].position.x = -0.5 * side
 @export var hold_threshold := 0.22
 @export var soft_aim_angle_deg := 25.0
 @export var soft_aim_range := 25.0
@@ -241,7 +235,7 @@ func _physics_process(delta: float) -> void:
   _time += delta
   _regen_lp(delta)
   _handle_loadout_input()
-  for hand in [Hand.LEFT, Hand.RIGHT]:
+  for hand in [Hand.OFF, Hand.PRIMARY]:
     _read_hand(hand, delta)
   if _current:
     _update_attack(delta)
@@ -308,7 +302,7 @@ func is_usable(index: int) -> bool:
 
 ## "" when the current job can use every weapon in the loadout.
 func job_error(l: Loadout) -> String:
-  for w: WeaponData in [l.left, l.right]:
+  for w: WeaponData in [l.off_hand, l.primary]:
     if w and not w.can_be_used_by(job_code):
       return "%s needs %s" % [w.display_name, w.jobs_text()]
   return ""
@@ -432,7 +426,7 @@ func cancel() -> void:
   chain_step = 0
   _chain_locked = false
   _blocking = false
-  for hand in [Hand.LEFT, Hand.RIGHT]:
+  for hand in [Hand.OFF, Hand.PRIMARY]:
     if hand < _pivots.size():
       _return_to_rest(hand)
 
@@ -483,14 +477,14 @@ func _has_reflecting_shield() -> bool:
   var l := get_loadout()
   if l == null:
     return false
-  for w in [l.left, l.right]:
+  for w in [l.off_hand, l.primary]:
     if w and w.is_shield and w.reflects:
       return true
   return false
 
 
 func button_for(hand: int) -> String:
-  return "X" if (hand == Hand.LEFT) == x_is_left else "Y"
+  return "X" if (hand == Hand.OFF) == swap_hand_buttons else "Y"
 
 
 func apply_aegis(seconds: float) -> void:
@@ -540,7 +534,7 @@ func get_debug_text() -> String:
   if two_hand:
     lines.append("X / Y (both hands): %s" % two_hand.display_name)
   else:
-    for hand in [Hand.LEFT, Hand.RIGHT]:
+    for hand in [Hand.OFF, Hand.PRIMARY]:
       var w := current_weapon(hand)
       var label := w.display_name if w else "-"
       if w and w.casting:
@@ -559,7 +553,7 @@ func get_debug_text() -> String:
 # --- Input ------------------------------------------------------------------
 
 func _action_for(hand: int) -> StringName:
-  return &"hand_x" if (hand == Hand.LEFT) == x_is_left else &"hand_y"
+  return &"hand_x" if (hand == Hand.OFF) == swap_hand_buttons else &"hand_y"
 
 
 func _read_hand(hand: int, delta: float) -> void:
@@ -610,7 +604,7 @@ func _update_block(delta: float) -> void:
     _block_time += delta
   elif _blocking:
     _blocking = false
-    for hand in [Hand.LEFT, Hand.RIGHT]:
+    for hand in [Hand.OFF, Hand.PRIMARY]:
       _return_to_rest(hand)
 
 
@@ -1402,7 +1396,7 @@ func _build_hand(shoulder: Vector3) -> void:
 func _holding_hand(hand: int) -> int:
   var l := get_loadout()
   if l and l.two_handed_weapon():
-    return Hand.RIGHT
+    return Hand.PRIMARY
   return hand
 
 
@@ -1413,13 +1407,13 @@ func _held_weapon(hand: int) -> WeaponData:
     return null
   var two_hand := l.two_handed_weapon()
   if two_hand:
-    return two_hand if hand == Hand.RIGHT else null
+    return two_hand if hand == Hand.PRIMARY else null
   return l.get_hand(hand)
 
 
 func _equip_visuals() -> void:
   rotation.y = 0.0
-  for hand in [Hand.LEFT, Hand.RIGHT]:
+  for hand in [Hand.OFF, Hand.PRIMARY]:
     var w := _held_weapon(hand)
     var mesh_instance := _meshes[hand]
     if w == null:
@@ -1440,7 +1434,7 @@ func _equip_visuals() -> void:
 func _rest_pose(hand: int) -> Vector3:
   var w := current_weapon(hand)
   if w and w.is_shield:
-    return Vector3(-0.3, 0.6 if hand == Hand.LEFT else -0.6, 0.0)
+    return Vector3(-0.3, 0.6 if hand == Hand.OFF else -0.6, 0.0)
   if w and w.weapon_class == WeaponData.WeaponClass.MELEE:
     return Vector3(-0.6, 0.0, 0.0)
   return Vector3(-0.2, 0.0, 0.0)
@@ -1455,7 +1449,7 @@ func _return_to_rest(hand: int) -> void:
 
 ## Shields come up square in front; other weapons are raised crosswise.
 func _block_pose() -> void:
-  for hand in [Hand.LEFT, Hand.RIGHT]:
+  for hand in [Hand.OFF, Hand.PRIMARY]:
     if _tweens[hand]:
       _tweens[hand].kill()
     var w := _held_weapon(hand)
@@ -1467,7 +1461,7 @@ func _block_pose() -> void:
       _pivots[hand].rotation = Vector3.ZERO
       _pivots[hand].position.z = -0.25
     else:
-      _pivots[hand].rotation = Vector3(0.9, 0.5 if hand == Hand.LEFT else -0.5, 0.0)
+      _pivots[hand].rotation = Vector3(0.9, 0.5 if hand == Hand.OFF else -0.5, 0.0)
 
 
 func _animate(hand: int, a: AttackData, sustained: bool = false) -> void:

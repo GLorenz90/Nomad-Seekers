@@ -59,9 +59,9 @@ func _physics_process(delta: float) -> void:
 		return
 	_time += delta
 	_hands_on.clear()
-	for target in combat.predict_targets(CombatController.Hand.RIGHT):
+	for target in combat.predict_targets(CombatController.Hand.PRIMARY):
 		_hands_on[target] = _hands_on.get(target, 0) | RIGHT_BIT
-	for target in combat.predict_targets(CombatController.Hand.LEFT):
+	for target in combat.predict_targets(CombatController.Hand.OFF):
 		_hands_on[target] = _hands_on.get(target, 0) | LEFT_BIT
 
 	var used := 0

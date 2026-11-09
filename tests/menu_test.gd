@@ -67,7 +67,7 @@ func _run() -> void:
 		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
 	await _frames(3)
 	_check("RB switches tabs and focus follows (Loadouts, %s)" % _focus_name(), _tab() == "Loadouts" and _focused() is Button)
-	_check("focus starts on loadout 1's primary hand, the first column", _focused() == _menu._slot_buttons[0][CombatController.PRIMARY])
+	_check("focus starts on loadout 1's primary hand, the first column", _focused() == _menu._slot_buttons[0][CombatController.Hand.PRIMARY])
 	await _pad(JOY_BUTTON_A)
 	_check("A on a hand opens the weapon picker", _menu._picker.visible and _menu._picker_list.is_ancestor_of(_focused()))
 	await _pad(JOY_BUTTON_B)
@@ -97,16 +97,16 @@ func _run() -> void:
 		await _pad(JOY_BUTTON_DPAD_DOWN)
 	var picked := _focused_text()
 	await _pad(JOY_BUTTON_A)
-	var right := _menu._set.loadouts[0].right
+	var right := _menu._set.loadouts[0].primary
 	_check("d-pad + A equips a weapon (%s)" % picked, right != null and picked.begins_with(right.display_name)
 		and not _menu._picker.visible)
 
 	# Testing helpers: X unequips the focused hand, Y the whole loadout.
-	_menu._set.loadouts[0].left = load("res://data/weapons/sword.tres")
+	_menu._set.loadouts[0].off_hand = load("res://data/weapons/sword.tres")
 	_menu._refresh()
 	_menu._slot_buttons[0][1].grab_focus()
 	await _pad(JOY_BUTTON_X)
-	_check("X unequips the focused hand only", _menu._set.loadouts[0].right == null and _menu._set.loadouts[0].left != null)
+	_check("X unequips the focused hand only", _menu._set.loadouts[0].primary == null and _menu._set.loadouts[0].off_hand != null)
 	await _pad(JOY_BUTTON_Y)
 	_check("Y clears the whole loadout", _menu._set.loadouts[0].is_empty())
 	_menu._clear_all_loadouts()

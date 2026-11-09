@@ -37,10 +37,10 @@ func _run() -> void:
 	_main.get_node("Dummies").add_child(_b)
 	await _frames(30)
 
-	_check("default buttons: X is the right hand, Y the left",
-		_combat.button_for(CombatController.Hand.RIGHT) == "X" and _combat.button_for(CombatController.Hand.LEFT) == "Y")
-	var LEFT := CombatController.Hand.LEFT
-	var RIGHT := CombatController.Hand.RIGHT
+	_check("default buttons: X is the primary hand, Y the off hand",
+		_combat.button_for(CombatController.Hand.PRIMARY) == "X" and _combat.button_for(CombatController.Hand.OFF) == "Y")
+	var LEFT := CombatController.Hand.OFF
+	var RIGHT := CombatController.Hand.PRIMARY
 
 	# --- Melee: the Sword (single-target saber) vs the Great Sword sweep ---
 	_place(_b, Vector3(1.6, 0, -8))  # side by side with DummyA

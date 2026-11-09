@@ -98,8 +98,8 @@ func _process(_delta: float) -> void:
 	_prompt.text = player.interact_prompt()
 	var dash_left := player.dash_cooldown_left()
 	_pips.text = "Chain  %s    Dash %s" % [pips, "ready" if dash_left <= 0.0 else "%.1fs" % dash_left]
-	var x_hand := CombatController.Hand.LEFT if combat.x_is_left else CombatController.Hand.RIGHT
-	var y_hand := CombatController.Hand.RIGHT if combat.x_is_left else CombatController.Hand.LEFT
+	var x_hand := CombatController.Hand.OFF if combat.swap_hand_buttons else CombatController.Hand.PRIMARY
+	var y_hand := CombatController.Hand.PRIMARY if combat.swap_hand_buttons else CombatController.Hand.OFF
 	var two_hand := combat.get_loadout().two_handed_weapon()
 	if two_hand:
 		var mode := ""

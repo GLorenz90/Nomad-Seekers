@@ -195,7 +195,7 @@ func _run() -> void:
 		drone_dist > 4.5 and _player.health.hp < hp)
 	_player.health.restore_full()
 
-	var ward_loadout := Loadout.make(CombatController.load_weapon("ward"), CombatController.load_weapon("pistol"))
+	var ward_loadout := Loadout.make(CombatController.load_weapon("pistol"), CombatController.load_weapon("ward"))
 	_combat.loadout_set.loadouts[7] = ward_loadout
 	_combat.select_loadout(7)
 	_player.face_direction(drone.global_position - _player.global_position)
@@ -208,7 +208,7 @@ func _run() -> void:
 		var incoming := _incoming_shot()
 		if incoming and incoming.global_position.distance_to(_player.global_position) < 3.5:
 			_player.face_direction(drone.global_position - _player.global_position)
-			await _tap(_combat._action_for(CombatController.Hand.LEFT))  # Ward's Reflect
+			await _tap(_combat._action_for(CombatController.Hand.OFF))  # Ward's Reflect
 			for j in 60:
 				await physics_frame
 				if drone.health.hp < drone_hp:

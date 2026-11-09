@@ -22,7 +22,7 @@ enum Weight { LIGHT, HEAVY }
 @export var casting := false
 ## Casting items (Part 6): damage-spell power, support-spell power (heal,
 ## buffs, traps) and cast time (2.0 = twice as slow). Spells are assigned per
-## loadout hand (Loadout.left_spells / right_spells).
+## loadout hand (Loadout.off_spells / primary_spells).
 @export var spell_power := 1.0
 @export var support_power := 1.0
 @export var cast_speed := 1.0

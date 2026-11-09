@@ -366,7 +366,7 @@ func _run() -> void:
 	# --- Spells tab with a gamepad ---------------------------------------------------------
 	_equip(null, null)
 	_menu._set = _combat.loadout_set
-	_combat.loadout_set.loadouts[7] = Loadout.make(load("res://data/weapons/wand.tres"), null)
+	_combat.loadout_set.loadouts[7] = Loadout.make(null, load("res://data/weapons/wand.tres"))
 	_menu.open()
 	while _menu._tab_name() != "Spells":
 		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
@@ -445,7 +445,7 @@ func _clear_enemies(list: Array[Enemy]) -> void:
 
 
 func _equip(left: WeaponData, right: WeaponData) -> void:
-	_combat.loadout_set.loadouts[7] = Loadout.make(left, right)
+	_combat.loadout_set.loadouts[7] = Loadout.make(right, left)
 	_combat.select_loadout(7)
 
 

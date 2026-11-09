@@ -40,7 +40,7 @@ var save_on_close := true
 
 var _set: LoadoutSet
 var _weapons: Array[WeaponData] = []
-var _slot_buttons: Array = []  # [[left Button, right Button], ...]
+var _slot_buttons: Array = []  # [[off-hand Button, primary Button], ...] (indexed by Hand)
 var _slot_status: Array[Label] = []
 var _picker: VBoxContainer
 var _picker_title: Label
@@ -190,8 +190,8 @@ func equip(index: int, hand: int, weapon: WeaponData) -> String:
 	var l := _set.loadouts[index]
 	if weapon and weapon.two_handed:
 		# A two-handed weapon is one item, held in the primary hand.
-		l.right = weapon
-		l.left = null
+		l.primary = weapon
+		l.off_hand = null
 		return l.validate(_set.double_heavy_augment)
 	l.set_hand(hand, weapon)
 	var other := l.get_hand(1 - hand)
@@ -379,7 +379,7 @@ func _build() -> void:
 	for i in LoadoutSet.SLOT_COUNT:
 		grid.add_child(_label(str(i + 1), 18))
 		var pair := [null, null]  # indexed by hand
-		for hand in [CombatController.PRIMARY, CombatController.OFF_HAND]:
+		for hand in [CombatController.Hand.PRIMARY, CombatController.Hand.OFF]:
 			var b := Button.new()
 			b.custom_minimum_size = Vector2(270.0, 34.0)
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -925,7 +925,7 @@ func _focus_tab() -> void:
 	if page == null:
 		return
 	if page.name == "Loadouts" and combat:
-		(_slot_buttons[combat.loadout_index][CombatController.PRIMARY] as Button).grab_focus()
+		(_slot_buttons[combat.loadout_index][CombatController.Hand.PRIMARY] as Button).grab_focus()
 		return
 	if page.name == "SyncAIDa" and _focus_paired():
 		return
@@ -1207,14 +1207,14 @@ func _clear_focused_slot(whole: bool) -> void:
 				continue
 			var l := _set.loadouts[i]
 			if whole:
-				l.left = null
-				l.right = null
+				l.off_hand = null
+				l.primary = null
 				_message.text = "Loadout %d cleared." % (i + 1)
 			else:
 				var two := l.two_handed_weapon()
 				if two:
-					l.left = null
-					l.right = null  # a two-handed weapon fills both hands
+					l.off_hand = null
+					l.primary = null  # a two-handed weapon fills both hands
 				else:
 					l.set_hand(hand, null)
 				_message.text = "Loadout %d, %s unequipped." % [i + 1, CombatController.hand_name(hand).to_lower()]
@@ -1224,8 +1224,8 @@ func _clear_focused_slot(whole: bool) -> void:
 
 func _clear_all_loadouts() -> void:
 	for l in _set.loadouts:
-		l.left = null
-		l.right = null
+		l.off_hand = null
+		l.primary = null
 	_refresh()
 	_message.text = "All loadouts cleared (equip something before closing to fight)."
 

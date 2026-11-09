@@ -61,7 +61,7 @@ func _run() -> void:
 		_w("bow").can_be_used_by("I") and _w("crossbow").can_be_used_by("I") and _w("bladestaff").can_be_used_by("I")
 		and not _w("burstbow").can_be_used_by("I"))
 	_check("Staff is a 2h Invoker casting item with 4 spell slots",
-		_w("staff").two_handed and _w("staff").casting and Loadout.make(null, _w("staff")).spell_slot_count(1) == 4
+		_w("staff").two_handed and _w("staff").casting and Loadout.make(_w("staff"), null).spell_slot_count(1) == 4
 		and _w("staff").jobs_text() == "I")
 	var rare_emblems := {}
 	for r in Loot.rare_weapons():
@@ -84,7 +84,7 @@ func _run() -> void:
 		and ember.damage_type == Element.Type.FIRE and is_equal_approx(ember.base_damage, _w("sword").base_damage * 1.3))
 
 	# --- Jobs --------------------------------------------------------------
-	_combat.loadout_set.loadouts[7] = Loadout.make(null, rifle)
+	_combat.loadout_set.loadouts[7] = Loadout.make(rifle, null)
 	_check("a Striker can't use a Rifle loadout", not _combat.is_usable(7))
 	_combat.set_job("R")
 	_check("a Ranger can", _combat.is_usable(7))
@@ -210,7 +210,7 @@ func _run() -> void:
 	var e2 := _spawn("grub_hound", ARENA + Vector3(1.2, 0, -7.5))
 	await _place(ARENA)
 	_player.camera_rig.lock_target = e1
-	var predicted := _combat.predict_targets(CombatController.Hand.RIGHT)
+	var predicted := _combat.predict_targets(CombatController.Hand.PRIMARY)
 	_check("Grenade prediction includes the blast (%d targets)" % predicted.size(), e1 in predicted and e2 in predicted)
 	_hits.clear()
 	await _tap("hand_x")
@@ -236,7 +236,7 @@ func _run() -> void:
 		ring.append(_spawn("grub_hound", ARENA + Vector3(x, 0, -8)))
 	await _place(ARENA)
 	_player.camera_rig.lock_target = ring[1]
-	predicted = _combat.predict_targets(CombatController.Hand.RIGHT)
+	predicted = _combat.predict_targets(CombatController.Hand.PRIMARY)
 	_check("Boomerang predicts its lock chain (%d)" % predicted.size(), predicted.size() == 3)
 	_hits.clear()
 	await _tap("hand_x")
@@ -496,7 +496,7 @@ func _run() -> void:
 	var node := _main.get_node("Gathering/NodeA1") as LumidiumNode
 	await _place(node.global_position + Vector3(0, 0.1, 2.0))
 	for i in 3:
-		await _tap("hand_y")  # Y = left hand = Sword
+		await _tap("hand_y")  # Y = off hand = Sword
 		await _idle()
 	await _frames(10)
 	_check("a Lumidium node breaks after 3 hits", node == null or not is_instance_valid(node) or node.is_broken())
@@ -519,14 +519,14 @@ func _run() -> void:
 
 	# --- Save file ---------------------------------------------------------
 	var data := _player.save
-	data.loadouts.loadouts[7] = Loadout.make(null, found)
+	data.loadouts.loadouts[7] = Loadout.make(found, null)
 	ResourceSaver.save(data, TEST_SAVE)
 	var loaded := ResourceLoader.load(TEST_SAVE, "", ResourceLoader.CACHE_MODE_IGNORE) as SaveData
 	_check("save round-trip keeps inventory, Oro and banked Lumidium",
 		loaded.inventory.weapons.size() == data.inventory.weapons.size()
 		and loaded.inventory.oro == data.inventory.oro and loaded.inventory.lumidium_total() == 4)
 	_check("a found weapon in a loadout is the same object as in the inventory",
-		loaded.loadouts.loadouts[7].right in loaded.inventory.weapons)
+		loaded.loadouts.loadouts[7].primary in loaded.inventory.weapons)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
@@ -583,7 +583,7 @@ func _spawn(file: String, at: Vector3) -> Enemy:
 
 
 func _equip(left: WeaponData, right: WeaponData) -> void:
-	_combat.loadout_set.loadouts[7] = Loadout.make(left, right)
+	_combat.loadout_set.loadouts[7] = Loadout.make(right, left)
 	_combat.select_loadout(7)
 
 
