@@ -195,7 +195,7 @@ func _run() -> void:
 		drone_dist > 4.5 and _player.health.hp < hp)
 	_player.health.restore_full()
 
-	var ward_loadout := Loadout.make(CombatController.load_weapon("ward"), CombatController.load_weapon("pistol"))
+	var ward_loadout := Loadout.make(CombatController.load_weapon("pistol"), CombatController.load_weapon("ward"))
 	_combat.loadout_set.loadouts[7] = ward_loadout
 	_combat.select_loadout(7)
 	_player.face_direction(drone.global_position - _player.global_position)
@@ -208,7 +208,7 @@ func _run() -> void:
 		var incoming := _incoming_shot()
 		if incoming and incoming.global_position.distance_to(_player.global_position) < 3.5:
 			_player.face_direction(drone.global_position - _player.global_position)
-			await _tap(_combat._action_for(CombatController.Hand.LEFT))  # Ward's Reflect
+			await _tap(_combat._action_for(CombatController.Hand.OFF))  # Ward's Reflect
 			for j in 60:
 				await physics_frame
 				if drone.health.hp < drone_hp:
@@ -231,10 +231,12 @@ func _run() -> void:
 	var cleared := [false]
 	room.wave_started.connect(func(_r, index, _total): waves_seen.append(index))
 	room.room_cleared.connect(func(_r): cleared[0] = true)
-	_check("Room A waits with its doors open", room.state == WaveRoom.RoomState.WAITING and not _door_closed(room))
+	_check("PSO doors: before the fight, the way on (exit door) is already locked",
+		room.state == WaveRoom.RoomState.WAITING and _door_closed(room))
+	_check("and there's no door shutting the way in behind you", room.get_node("Doors").get_child_count() == 1)
 	_place_player(Vector3(0, 0.1, 6))
 	await _frames(10)
-	_check("walking in closes the doors", room.state == WaveRoom.RoomState.ACTIVE and _door_closed(room))
+	_check("walking in starts the fight, exit still locked", room.state == WaveRoom.RoomState.ACTIVE and _door_closed(room))
 	await create_timer(1.2).timeout
 	_check("wave 1 spawns 3 Grub Hounds (%d alive)" % room.alive.size(), room.alive.size() == 3 and waves_seen == [0])
 	for wave in 3:
@@ -249,7 +251,7 @@ func _run() -> void:
 				break
 	_check("clearing each wave starts the next (waves %s)" % [waves_seen], waves_seen == [0, 1, 2])
 	await _frames(10)
-	_check("after the last wave the room is clear and the doors open",
+	_check("after the last wave the room is clear and the exit unlocks",
 		cleared[0] and room.state == WaveRoom.RoomState.CLEARED and not _door_closed(room))
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])

@@ -25,6 +25,7 @@ signal closed
 const WEAPON_DIR := "res://data/weapons/"
 ## Level select (prototype): [label, scene].
 const LEVELS := [
+	["Nomad-2 (hub)", "res://scenes/hub.tscn"],
 	["Test room", "res://scenes/main.tscn"],
 	["Arena (wave rooms, Lumidium, teleporters)", "res://scenes/arena.tscn"],
 ]
@@ -39,7 +40,7 @@ var save_on_close := true
 
 var _set: LoadoutSet
 var _weapons: Array[WeaponData] = []
-var _slot_buttons: Array = []  # [[left Button, right Button], ...]
+var _slot_buttons: Array = []  # [[off-hand Button, primary Button], ...] (indexed by Hand)
 var _slot_status: Array[Label] = []
 var _picker: VBoxContainer
 var _picker_title: Label
@@ -54,6 +55,7 @@ var _character_info: Label
 var _name_edit: LineEdit
 var _race: OptionButton
 var _gender: OptionButton
+var _hand: OptionButton
 var _job: OptionButton
 var _sync_owned: VBoxContainer
 var _spells_tab: SpellsTab
@@ -127,6 +129,8 @@ func close() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	combat.apply_loadout_set(_set)
 	var seeker := _player()
+	if seeker:
+		seeker.hold_input()  # the B / Start that closed the menu mustn't dash
 	if save_on_close and seeker:
 		seeker.save_game()
 	closed.emit()
@@ -134,6 +138,13 @@ func close() -> void:
 
 func _player() -> Player:
 	return combat.get_parent() as Player if combat else null
+
+
+## Gamepad safety net: a press with nothing in the menu focused refocuses the
+## current tab instead of being lost (see MenuFocus).
+func _input(event: InputEvent) -> void:
+	if visible:
+		MenuFocus.recover(self, event, _focus_tab)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -178,9 +189,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func equip(index: int, hand: int, weapon: WeaponData) -> String:
 	var l := _set.loadouts[index]
 	if weapon and weapon.two_handed:
-		# A two-handed weapon is one item, held in the right hand.
-		l.right = weapon
-		l.left = null
+		# A two-handed weapon is one item, held in the primary hand.
+		l.primary = weapon
+		l.off_hand = null
 		return l.validate(_set.double_heavy_augment)
 	l.set_hand(hand, weapon)
 	var other := l.get_hand(1 - hand)
@@ -191,8 +202,8 @@ func equip(index: int, hand: int, weapon: WeaponData) -> String:
 
 func _on_slot_pressed(index: int, hand: int) -> void:
 	_editing = Vector2i(index, hand)
-	_picker_title.text = "Loadout %d, %s hand (%s)" % [
-		index + 1, "left" if hand == 0 else "right", combat.button_for(hand)]
+	_picker_title.text = "Loadout %d, %s (%s)" % [
+		index + 1, CombatController.hand_name(hand).to_lower(), combat.button_for(hand)]
 	_picker.visible = true
 	(_picker_list.get_child(0) as Button).grab_focus()
 
@@ -362,18 +373,19 @@ func _build() -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 6)
 	left.add_child(grid)
-	for header in ["", "Left hand", "Right hand", "LT"]:
+	# Primary hand first (X), then the off hand (Y): the order players read.
+	for header in ["", "Primary (X)", "Off hand (Y)", "LT"]:
 		grid.add_child(_label(header, 14))
 	for i in LoadoutSet.SLOT_COUNT:
 		grid.add_child(_label(str(i + 1), 18))
-		var pair := []
-		for hand in 2:
+		var pair := [null, null]  # indexed by hand
+		for hand in [CombatController.Hand.PRIMARY, CombatController.Hand.OFF]:
 			var b := Button.new()
 			b.custom_minimum_size = Vector2(270.0, 34.0)
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			b.pressed.connect(_on_slot_pressed.bind(i, hand))
 			grid.add_child(b)
-			pair.append(b)
+			pair[hand] = b
 		_slot_buttons.append(pair)
 		var status := _label("", 14)
 		status.custom_minimum_size.x = 170.0
@@ -519,7 +531,7 @@ func _build_character_tab() -> void:
 	box.name = "Character"
 	box.add_theme_constant_override("separation", 10)
 	_tabs.add_child(box)
-	box.add_child(_label("Character (placeholder until character creation)", 22))
+	box.add_child(_label("Character (set at creation; edits here are for testing)", 22))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 16)
@@ -542,6 +554,7 @@ func _build_character_tab() -> void:
 	grid.add_child(name_row)
 	_race = _option(grid, "Race", CharacterData.Race.keys())
 	_gender = _option(grid, "Gender", CharacterData.Gender.keys())
+	_hand = _option(grid, "Primary hand", ["Right", "Left"])
 	_job = _option(grid, "Job", CharacterData.Job.keys())
 	# Chosen at character creation and fixed afterwards (debug: Levels tab).
 	_job.disabled = true
@@ -593,6 +606,7 @@ func _load_character() -> void:
 	_name_edit.text = c.seeker_name
 	_race.select(c.race)
 	_gender.select(c.gender)
+	_hand.select(1 if c.left_handed else 0)
 	_job.select(c.job)
 
 
@@ -609,6 +623,8 @@ func _apply_character() -> void:
 	elif new_race != c.race:
 		c.race = new_race
 	c.gender = _gender.selected as CharacterData.Gender
+	c.left_handed = _hand.selected == 1
+	seeker.combat.set_left_handed(c.left_handed)
 	var removed := ArmorBook.strip_unwearable(seeker.save)
 	if not removed.is_empty():
 		_character_message.text = "Took off %s (can't wear it now)." % ", ".join(removed)
@@ -909,7 +925,7 @@ func _focus_tab() -> void:
 	if page == null:
 		return
 	if page.name == "Loadouts" and combat:
-		(_slot_buttons[combat.loadout_index][0] as Button).grab_focus()
+		(_slot_buttons[combat.loadout_index][CombatController.Hand.PRIMARY] as Button).grab_focus()
 		return
 	if page.name == "SyncAIDa" and _focus_paired():
 		return
@@ -987,6 +1003,11 @@ func _build_levels_tab() -> void:
 		left.add_child(b)
 		_level_buttons.append(b)
 	left.add_child(_label("Switching saves first. Carried Lumidium is banked on the way.", 13))
+	var to_title := Button.new()
+	to_title.text = "Save and quit to the title screen"
+	to_title.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	to_title.pressed.connect(_quit_to_title)
+	left.add_child(to_title)
 	_level_message = _label("", 16)
 	_level_message.modulate = Color(1.0, 0.85, 0.5)
 	left.add_child(_level_message)
@@ -1086,6 +1107,15 @@ func _on_level(scene: String) -> void:
 	get_tree().change_scene_to_file(scene)
 
 
+func _quit_to_title() -> void:
+	var seeker := _player()
+	if seeker:
+		seeker.deposit_lumidium()
+	save_on_close = false
+	close()
+	Session.quit_to_title()
+
+
 func _tool_refill() -> void:
 	var seeker := _player()
 	seeker.health.restore_full()
@@ -1177,25 +1207,25 @@ func _clear_focused_slot(whole: bool) -> void:
 				continue
 			var l := _set.loadouts[i]
 			if whole:
-				l.left = null
-				l.right = null
+				l.off_hand = null
+				l.primary = null
 				_message.text = "Loadout %d cleared." % (i + 1)
 			else:
 				var two := l.two_handed_weapon()
 				if two:
-					l.left = null
-					l.right = null  # a two-handed weapon fills both hands
+					l.off_hand = null
+					l.primary = null  # a two-handed weapon fills both hands
 				else:
 					l.set_hand(hand, null)
-				_message.text = "Loadout %d, %s hand unequipped." % [i + 1, "left" if hand == 0 else "right"]
+				_message.text = "Loadout %d, %s unequipped." % [i + 1, CombatController.hand_name(hand).to_lower()]
 			_refresh()
 			return
 
 
 func _clear_all_loadouts() -> void:
 	for l in _set.loadouts:
-		l.left = null
-		l.right = null
+		l.off_hand = null
+		l.primary = null
 	_refresh()
 	_message.text = "All loadouts cleared (equip something before closing to fight)."
 

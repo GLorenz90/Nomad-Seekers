@@ -3,8 +3,8 @@ extends Node3D
 ## PSU-style target cursors, one color per hand.
 ##
 ## Small rings sit on every enemy each hand's next attack would hit (from
-## CombatController.predict_targets): blue for the right hand, yellow for the
-## left hand, green when both hands would hit the same enemy. So you can see a
+## CombatController.predict_targets): blue for the primary hand, yellow for the
+## off hand, green when both hands would hit the same enemy. So you can see a
 ## Great Sword sweep catching two enemies, or a piercing spell lining up three.
 ## The locked-on enemy also gets a larger red ring, dimmed when neither hand's
 ## next attack would reach it.
@@ -59,9 +59,9 @@ func _physics_process(delta: float) -> void:
 		return
 	_time += delta
 	_hands_on.clear()
-	for target in combat.predict_targets(CombatController.Hand.RIGHT):
+	for target in combat.predict_targets(CombatController.Hand.PRIMARY):
 		_hands_on[target] = _hands_on.get(target, 0) | RIGHT_BIT
-	for target in combat.predict_targets(CombatController.Hand.LEFT):
+	for target in combat.predict_targets(CombatController.Hand.OFF):
 		_hands_on[target] = _hands_on.get(target, 0) | LEFT_BIT
 
 	var used := 0

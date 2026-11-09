@@ -116,7 +116,7 @@ func _rebuild_hands() -> void:
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			var w := l.get_hand(hand)
 			b.text = "%s%d  %s: %s" % ["> " if _hand == Vector2i(i, hand) else "   ", i + 1,
-				"Both hands" if w.two_handed else ("Right (%s)" % menu.combat.button_for(1) if hand == 1 else "Left (%s)" % menu.combat.button_for(0)),
+				"Both hands" if w.two_handed else "%s (%s)" % [CombatController.hand_name(hand), menu.combat.button_for(hand)],
 				w.display_name]
 			b.pressed.connect(_pick_hand.bind(i, hand))
 			_hands.add_child(b)

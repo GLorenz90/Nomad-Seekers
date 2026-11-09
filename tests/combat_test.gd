@@ -35,7 +35,7 @@ func _run() -> void:
 	_combat.stats.defense = 0.0
 	_combat.stats.resolve = 0.0
 	_combat.stats.evasion = 0.0
-	_combat.x_is_left = true  # these checks were written with X = left hand  # no random crits in tests
+	_combat.swap_hand_buttons = true  # these checks were written with X = the off hand  # no random crits in tests
 	# Never depend on (or overwrite) the player's saved loadouts.
 	# A fresh save (Striker, default loadouts) that is never written to disk.
 	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
@@ -80,7 +80,7 @@ func _run() -> void:
 	for i in 6:
 		await _tap("hand_y")
 	await _idle()
-	var pistol: WeaponData = _combat.current_weapon(CombatController.Hand.RIGHT)
+	var pistol: WeaponData = _combat.current_weapon(CombatController.Hand.PRIMARY)
 	_check("mashing the pistol can't beat PSO's 14-frame window (opens %.2f s)" % pistol.normal_attacks[0].window_open,
 		is_equal_approx(pistol.normal_attacks[0].window_open, 14.0 / 30.0) and _started.size() <= 2)
 
@@ -202,7 +202,7 @@ func _run() -> void:
 	Input.action_release("loadout_next")
 	_check("LB/RB cycles to the next loadout (now %d)" % (_combat.loadout_index + 1), _combat.loadout_index == 1)
 	_set_loadout(WAND)
-	_check("wand loadout equipped", _combat.current_weapon(CombatController.Hand.LEFT).display_name == "Wand")
+	_check("wand loadout equipped", _combat.current_weapon(CombatController.Hand.OFF).display_name == "Wand")
 	_dummy.health.multipliers[Element.Type.FIRE] = 2.0
 	await _tap("hand_x")
 	await _idle()
@@ -244,7 +244,7 @@ func _run() -> void:
 	_set_loadout(DERVISH)
 	await _reset(Vector3(0, 0.1, -6.5))
 	_check("two-handed Dervish Blades answer both buttons",
-		_combat.current_weapon(CombatController.Hand.RIGHT) == _combat.current_weapon(CombatController.Hand.LEFT))
+		_combat.current_weapon(CombatController.Hand.PRIMARY) == _combat.current_weapon(CombatController.Hand.OFF))
 	_started.clear()
 	for button in ["hand_x", "hand_y", "hand_x"]:
 		await _tap(button)

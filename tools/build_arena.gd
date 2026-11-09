@@ -74,11 +74,13 @@ func _initialize() -> void:
 	var rooms := Node3D.new()
 	rooms.name = "Rooms"
 	_add(_root, rooms)
-	_room(rooms, "RoomA", "Room A", Vector3(0, 0, 0), [Vector3(0, 0, 11), Vector3(0, 0, -11)], [
+	# PSO-style doors: the way in stays open; the way on is locked until the
+	# room is cleared. Room B is the last room: clearing it wakes the exit pad.
+	_room(rooms, "RoomA", "Room A", Vector3(0, 0, 0), [Vector3(0, 0, -11)], [
 		["grub_hound", "grub_hound", "grub_hound"],
 		["mutated_crawler", "mutated_crawler", "sentry_drone"],
 		["caustic_ooze", "lumen_sprite", "lumen_sprite"]])
-	_room(rooms, "RoomB", "Room B", Vector3(0, 0, -30), [Vector3(0, 0, 11)], [
+	_room(rooms, "RoomB", "Room B", Vector3(0, 0, -30), [], [
 		["umbral_eye", "umbral_eye", "grub_hound", "grub_hound"],
 		["grub_hound", "mutated_crawler", "sentry_drone", "umbral_eye", "caustic_ooze", "lumen_sprite"]])
 
@@ -115,12 +117,12 @@ func _initialize() -> void:
 		hazard.position = spec[2]
 		_add(hazards, hazard)
 
-	# The end of the arena: back to the gym once every room is cleared.
+	# The end of the arena: back to Nomad-2 once every room is cleared.
 	var exit := Area3D.new()
 	exit.name = "TeleporterExit"
 	exit.set_script(load("res://scripts/world/teleporter.gd"))
-	exit.set("destination", "res://scenes/main.tscn")
-	exit.set("destination_name", "Back to the gym")
+	exit.set("destination", "res://scenes/hub.tscn")
+	exit.set("destination_name", "Back to Nomad-2")
 	exit.set("requires_rooms_cleared", true)
 	exit.position = Vector3(0, 0, -37)
 	_add(gather, exit)
@@ -221,7 +223,15 @@ func _room(parent: Node, node_name: String, title: String, center: Vector3,
 	door_mat.emission_enabled = true
 	door_mat.emission = Color(0.9, 0.3, 0.15)
 	for i in door_offsets.size():
-		_box(doors, "Door%d" % i, Vector3(4.2, WALL_H, 0.6), door_offsets[i] + Vector3(0, WALL_H / 2, 0), door_mat)
+		var door := _box(doors, "ExitDoor%d" % i, Vector3(4.2, WALL_H, 0.6), door_offsets[i] + Vector3(0, WALL_H / 2, 0), door_mat)
+		var sign := Label3D.new()
+		sign.name = "Locked"
+		sign.text = "LOCKED\nclear the room"
+		sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sign.font_size = 48
+		sign.outline_size = 10
+		sign.position = Vector3(0, 0.2, 0.6)
+		_add(door, sign)
 
 	var points := Node3D.new()
 	points.name = "SpawnPoints"

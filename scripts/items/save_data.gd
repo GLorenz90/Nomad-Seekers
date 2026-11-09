@@ -27,6 +27,7 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 	s.inventory.add_consumable(&"hp_gel", 3)
 	s.inventory.add_consumable(&"lp_cell", 2)
 	s.inventory.add_consumable(&"cure_salt", 1)
+	s.inventory.add_consumable(&"trap_scanner", 2)
 	# First spells (Part 6): level 1 Fajro, Glacio and Fulmo (SOL 40 each).
 	for id in STARTING_SPELLS:
 		s.character.spells[id] = 1
@@ -47,6 +48,24 @@ func give_starter_armor() -> void:
 
 
 const STARTING_SPELLS: Array[StringName] = [&"fajro", &"glacio", &"fulmo"]
+const STARTER_WEAPONS: Array[String] = ["sword", "pistol", "wand"]
+
+
+## Character creation (Part 8): a new Seeker with the choices made on the
+## creation screen, their starter SyncAIDa paired, and the starter armor.
+static func create(seeker_name: String, race: CharacterData.Race, gender: CharacterData.Gender,
+		job: CharacterData.Job, starter: int) -> SaveData:
+	var s := fresh(CombatController.make_starter_loadouts())
+	# Starter kit: a Sword, a Pistol and a Wand to carry (the palette only
+	# uses the Pistol and Sword).
+	for id in STARTER_WEAPONS:
+		s.inventory.weapons.append(CombatController.load_weapon(id).duplicate())
+	s.character.seeker_name = seeker_name.strip_edges() if seeker_name.strip_edges() != "" else "Seeker"
+	s.character.race = race
+	s.character.gender = gender
+	s.character.job = job
+	s.choose_starter(starter)
+	return s
 
 
 ## Gives the Seeker their starting SyncAIDa (SyncAIDaData.STARTERS index).
@@ -79,8 +98,14 @@ static func load_or_new(default_loadouts: LoadoutSet) -> SaveData:
 	return s
 
 
+## Where save() writes: a character slot (Session) or, before Part 8, the
+## single save file.
+var save_path := SAVE_PATH
+
+
 func save() -> void:
-	ResourceSaver.save(self, SAVE_PATH)
+	DirAccess.make_dir_recursive_absolute(save_path.get_base_dir())
+	ResourceSaver.save(self, save_path)
 
 
 func _fill_missing(default_loadouts: LoadoutSet) -> void:

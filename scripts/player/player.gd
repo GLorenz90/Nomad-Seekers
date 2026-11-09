@@ -24,7 +24,7 @@ signal item_collected(text: String)
 enum State { GROUND, AIR, DASH }
 
 ## Quick-use slots: item_1 HP Gel, item_2 LP Cell, item_3 Cure Salt.
-const QUICK_ITEMS: Array[StringName] = [&"hp_gel", &"lp_cell", &"cure_salt"]
+const QUICK_ITEMS: Array[StringName] = [&"hp_gel", &"lp_cell", &"cure_salt", &"trap_scanner"]
 
 @export_group("Ground")
 @export var move_speed := 7.0
@@ -96,7 +96,7 @@ func _ready() -> void:
 	syncaida.setup(self)
 	var defaults := CombatController.make_default_loadouts()
 	if combat.use_saved_loadouts:
-		use_save(SaveData.load_or_new(defaults))
+		use_save(Session.current_save(defaults))
 	else:
 		use_save(SaveData.fresh(defaults))
 		autosave = false
@@ -107,6 +107,7 @@ func use_save(data: SaveData) -> void:
 	save = data
 	combat.inventory = save.inventory
 	combat.job_code = save.character.job_code()
+	combat.set_left_handed(save.character.left_handed)
 	combat.apply_loadout_set(save.loadouts)
 	if syncaida:
 		syncaida.pair(save.paired_syncaida())
@@ -150,6 +151,43 @@ func apply_bonuses() -> void:
 		health.max_hp = s.max_hp
 		health.hp = clampf(health.hp + maxf(gained, 0.0), 0.0, health.max_hp)
 	combat.lp = minf(combat.lp, s.max_lp)
+
+
+# --- Interaction (A) ------------------------------------------------------------------
+
+var _input_hold := 0.0
+
+
+## Ignore jump / dash / interact for a moment (called when a menu closes).
+func hold_input(seconds: float = 0.15) -> void:
+	_input_hold = seconds
+
+## What A would use right now (a teleporter or an item in reach), or null.
+var interact_target: Node3D = null
+
+
+## The closest interactable in reach. Interactables are in the
+## "interactables" group and have interact_point(), interact_range(),
+## can_interact(seeker), interact_prompt() and interact(seeker).
+func _find_interactable() -> Node3D:
+	var best: Node3D = null
+	var best_dist := INF
+	for node in get_tree().get_nodes_in_group("interactables"):
+		if not node.is_inside_tree() or not node.can_interact(self):
+			continue
+		var to: Vector3 = node.interact_point() - global_position
+		var dist := Vector2(to.x, to.z).length()
+		if dist <= node.interact_range() and absf(to.y) < 2.0 and dist < best_dist:
+			best_dist = dist
+			best = node
+	return best
+
+
+## "A: Pick up Sword" and the like, for the HUD ("" when nothing is in reach).
+func interact_prompt() -> String:
+	if interact_target and is_instance_valid(interact_target):
+		return "A: " + interact_target.interact_prompt()
+	return ""
 
 
 ## Goluman slowly regenerate HP (quietly: no heal numbers every frame).
@@ -252,6 +290,12 @@ func grant_invulnerability(seconds: float) -> void:
 	_invuln_timer = maxf(_invuln_timer, seconds)
 
 
+## Closing the game window saves (Part 8).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_game()
+
+
 func save_game() -> void:
 	if autosave and save:
 		save.loadouts = combat.loadout_set
@@ -307,6 +351,10 @@ func use_consumable(id: StringName) -> bool:
 			combat.lp = minf(combat.lp + combat.stats.max_lp * 0.5, combat.stats.max_lp)
 		&"cure_salt":
 			status.clear_all()
+		&"trap_scanner":
+			var found := HazardTrap.scan(self)
+			combat.combo_feedback.emit("Trap Scanner: %d trap%s found" % [found, "" if found == 1 else "s"])
+			return true
 	combat.combo_feedback.emit("Used %s" % Inventory.CONSUMABLES.get(id, id))
 	return true
 
@@ -316,15 +364,26 @@ func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
 	_regen_hp(delta)
 
-	if Input.is_action_just_pressed("jump"):
-		_jump_buffer = jump_buffer_time
+	# A is the action button (Grayson, 2026-11-09): next to a teleporter or an
+	# item it activates / picks up instead of jumping.
+	interact_target = _find_interactable()
+	if _input_hold > 0.0:
+		# A menu just closed: the button that closed it (B, A) mustn't also
+		# dash or jump.
+		_input_hold -= delta
+	elif Input.is_action_just_pressed("jump"):
+		if interact_target and is_on_floor() and status.can_act() and not health.is_dead():
+			interact_target.interact(self)
+			interact_target = null
+		else:
+			_jump_buffer = jump_buffer_time
 	for i in QUICK_ITEMS.size():
 		if Input.is_action_just_pressed(&"item_%d" % (i + 1)):
 			use_consumable(QUICK_ITEMS[i])
 
 	var move_dir := _get_move_direction()
 
-	if Input.is_action_just_pressed("dash") and _can_dash() and status.can_act():
+	if Input.is_action_just_pressed("dash") and _can_dash() and status.can_act() and _input_hold <= 0.0:
 		combat.cancel()
 		_start_dash(move_dir)
 

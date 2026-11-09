@@ -2,9 +2,9 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 7, armor**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 8, title screen, characters and Nomad-2**.
 
-Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` has two wave rooms full of real enemies (open it and press F6).
+F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-2 (`scenes/hub.tscn`), whose teleporter goes to the gym test room (`scenes/main.tscn`) and the test arena (`scenes/arena.tscn`, two wave rooms of real enemies). Any level can still be opened and run on its own with F6; it plays your last character.
 
 ## Part 1: movement
 - **Seeker controller** (`scripts/player/player.gd`): camera-relative movement with snappy acceleration, a variable-height jump with coyote time and an input buffer, and a dash/dodge with i-frames, one air dash, and dash-jump (jump during a ground dash to keep momentum).
@@ -13,7 +13,7 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Input map** (`scripts/autoload/input_setup.gd`): the full North Star control map, registered in code.
 
 ## Part 2: combat
-- **Hand buttons** (`scripts/combat/combat_controller.gd`): X is your right hand and Y your left (`x_is_left` swaps them). Tap for a Normal attack, hold for a Hard attack.
+- **Hand buttons** (`scripts/combat/combat_controller.gd`): X is your **primary hand** and Y your **off hand** (Part 8: menus list the primary hand first; a character's handedness, picked at creation, only decides which side the primary weapon is drawn on). Tap for a Normal attack, hold for a Hard attack.
 - **Timing combos**: 3 steps per chain, using PSO's windows. The chain window opens when the swing ends (PSO's "combo" frame, just after the hit) and closes when the recovery ends; chaining cancels the rest of the recovery. Timing is judged when the button goes down, so a Hard hold that starts in the window still chains. `early_tolerance` (0.15 s) is an input buffer: a press slightly before the window counts and fires the moment the window opens, never cutting the swing short. Earlier than that breaks the combo; too late starts a new chain. Any attack from either hand can fill the next step.
 - **Weapon steps**: each weapon counts its own consecutive uses. Sword, Sword, Sword plays Slash, Return Slash, Cleave with bonus damage. Sword, Pistol, Sword plays the sword's Slash both times.
 - **PSO timing**: the starter weapons use PSO Blue Burst's frame data for hit frames, attack length and window length (30 fps) from the [Ephinea wiki](https://wiki.pioneer2.net/w/Game_mechanics/Frame_data): saber timings for the Sword, handgun for the Pistol, and Foie's cast time for spells. `tools/build_starter_weapons.gd` lists the source frame numbers next to each attack.
@@ -37,8 +37,8 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
   - With a shield you can attack without dropping the block; those attacks deal 66% damage. Other blocks drop while you attack.
 - **Powerstance**: a pair of the same weapon type (even different items, like Sword + Frost Sword) always attacks with both weapons, each at 75% (1.5x total), on either button. Twin attacks chain their own 3 steps. Twin casting items cast both spells at full power and full LP.
 - **RT + a hand's button** uses the special of the weapon in that hand (`WeaponData.special_attack`); with a powerstanced pair, the other hand swings normally at the same time. No weapon has a special until Part 5, so for now RT + a button is a normal attack (or the second spell on a casting item).
-- **Two-handed weapons are one item**, held in the right hand and used by both buttons.
-- **Target markers** (PSU-style, `scripts/ui/target_markers.gd`): rings on every enemy each hand's next attack would hit, shown for both hands at once: **blue** for the right hand (X), **yellow** for the left hand (Y), **green** when both would hit the same enemy. You can see a Great Sword sweep catching two enemies, or a piercing Frost Lance lining up a row. The locked-on enemy also gets a larger red ring, dimmed when neither hand would reach it. Predictions include the attack's lunge and update while you hold RT (specials and second spells).
+- **Two-handed weapons are one item**, held in the primary hand and used by both buttons.
+- **Target markers** (PSU-style, `scripts/ui/target_markers.gd`): rings on every enemy each hand's next attack would hit, shown for both hands at once: **blue** for the primary hand (X), **yellow** for the off hand (Y), **green** when both would hit the same enemy. You can see a Great Sword sweep catching two enemies, or a piercing Frost Lance lining up a row. The locked-on enemy also gets a larger red ring, dimmed when neither hand would reach it. Predictions include the attack's lunge and update while you hold RT (specials and second spells).
 - **Sword hitbox narrowed** to match PSO's single-target saber; the Great Sword is the wide sweep.
 - **Shield hand button**: Shield **Deflect** opens a parry window; Heavy Shield **Shove** knocks enemies back.
 - **Dodge**: hits during the dash's i-frames are dodged.
@@ -79,9 +79,9 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Jobs.** Each weapon lists the jobs that can use it (S Striker, R Ranger, I Invoker). Loadouts holding a weapon your job can't use say "job locked" and LB/RB skips them. The job is chosen at character creation and can't change afterwards (unlike PSU); the Levels tab has a debug switch for testing.
 - **Special tags.** Found weapons can roll a tag line in tiers (PSO's specials: Heat → Fire → Flame → Burning, Dim → … → Hell, Draw → … → Gush, and so on). The tag names the weapon ("Flame Sword"), gives elemental lines their element, and unlocks the weapon's **RT special**: hold RT and press that hand. The special is a stronger first attack that costs LP and applies the tag: elemental status buildup, instant kill (never bosses), heal from damage, LP steal, EXP steal, HP cut, or the Charge line's x3 hit (paid in Oro, LP or HP).
 - **Monster-type bonuses** (PSO's "% vs Native"): +5–30% damage vs one of the six monster types.
-- **Drops.** Enemies give EXP and roll a drop where they fall: Oro, a consumable, or a weapon. Weapons come from your **emblem's pool**: each of the 12 emblems (Crimson, Orange, Gold, Green, Teal, Cyan, Blue, Purple, Magenta, Pink, White, Black; from name + race + gender + job, like PSO section IDs) favors two weapon families and carries its own **rares** (Emberfang, Glacier Maw, Stormcaller, Gravesong, Lifeleech Coil, Lumen Edge, Kingmaker). Pickups drift to you when you're close.
+- **Drops.** Enemies give EXP and roll a drop where they fall: Oro, a consumable, or a weapon. Weapons come from your **emblem's pool**: each of the 12 emblems (Crimson, Orange, Gold, Green, Teal, Cyan, Blue, Purple, Magenta, Pink, White, Black; from name + race + gender + job, like PSO section IDs) favors two weapon families and carries its own **rares** (Emberfang, Glacier Maw, Stormcaller, Gravesong, Lifeleech Coil, Lumen Edge, Kingmaker). Oro (and Lumidium) is picked up by walking over it and drifts to you when you're close; everything else waits for **A** (there will be an inventory limit).
 - **Heal and Cure** (Talisman, Totem, Staff): Heal restores HP, Cure clears every status. Both reach other Seekers within 10 m.
-- **Consumables:** HP Gel, LP Cell, Cure Salt. D-pad left / up / right or 1 / 2 / 3.
+- **Consumables:** HP Gel, LP Cell, Cure Salt, Trap Scanner. D-pad left / up / right / down or 1 / 2 / 3 / 4.
 - **Lumidium.** Crystal deposits in the arena break after 3 hits into Lumidium of their color. Carried Lumidium is lost when you die; stand on a **teleporter** pad to bank it.
 - **Menu tabs** (LB/RB in the menu): Loadouts (the picker now lists found weapons first, greyed out if your job can't use them), Inventory, Character.
 - **Save file:** `user://save.tres` holds the character, loadouts and inventory. It's written when the menu closes and at teleporters. Part 3's `loadouts.tres` is imported once.
@@ -132,7 +132,7 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Spell discs** drop from enemies (about 6% of kills). A disc you can read is learned; one you can't yet is stored (read it from the Spells tab later); one you already know is sold for Oro.
 - **Race stat bonuses:** Humans +5 STR / DEX / SOL, Coresian +10 STR, Lumera +10 SOL, Goluman +10 DEX.
 - **Goluman** can't cast and can't be Invokers. In return they **slowly regenerate HP** (0.5% of max HP a second). They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
-- **Level hazards.** Six hidden traps sit in the arena. Only Goluman can see them; anyone else finds out by stepping on one (each springs once).
+- **Level hazards.** Six hidden traps sit in the arena; each springs once. Each has a small device that can be locked on to and destroyed with any attack, but **only while the trap is visible**: after a **Trap Scanner** (D-pad down) reveals the room you're in, or always for Goluman. Hidden traps can't be hit by anything, area spells included.
 - **Paralyze** is a new status: 2.5 s, no moving or acting.
 - **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Res (RES, new), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them in the **Character** tab.
   - PSO's limits: the eight stat materials share one limit: **Humans 275, Lumera and Coresian 175** (PSO's 250 / 150, +25 for the new materials), **Goluman 150**. HP and LP have their own 125 each.
@@ -144,6 +144,7 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 
 ![The Spells tab](docs/screenshots/magic_spells_tab.png)
 ![Hazards seen by a Goluman](docs/screenshots/magic_hazards.png)
+![Trap Scanner: revealed traps and their devices, and the A prompt](docs/screenshots/traps_scanned.png)
 
 ## Part 7: armor
 ![The Armor tab](docs/screenshots/armor_tab.png)
@@ -166,8 +167,31 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - Every Seeker starts in a **Field Frame** with one slot (old saves get one too). Armor you can no longer wear after a race, gender or job change comes off.
 - **Dash cooldown:** 5 s between dashes (shown next to the chain pips on the HUD).
 
+## Part 8: title screen, characters and Nomad-2
+![Character select](docs/screenshots/title_select.png)
+
+- **Title screen** (gamepad: A or Start accepts, B goes back): **Continue** (your last character), **Character select**, Quit.
+- **Every menu recovers focus for the controller:** if nothing is focused (say, after clicking the window to bring it forward), the first A or d-pad press focuses the menu's default button instead of doing nothing. Character creation starts on Race, so the d-pad isn't caught in the name box.
+- **4 character slots**, like PSO. Each slot is a whole save (character, loadouts, inventory, spells, armor, SyncAIDa) in `user://characters/slot_N.tres`. X on a slot asks, and a second X deletes it. Your Part 5-7 save moves into slot 1 the first time.
+- **Primary and off hand:** loadouts read primary hand (X) first, then off hand (Y), everywhere. The code uses the same names (`Hand.PRIMARY` / `Hand.OFF`, `Loadout.primary` / `off_hand`), so **saves from before this change don't keep their loadouts**: make a new character. Creation asks for the **primary hand** (right or left): a left-handed Seeker holds the primary weapon on the left side, still on X. The Character tab can change it for testing.
+
+![Loadouts read Primary (X) first](docs/screenshots/loadouts_primary.png)
+![A left-handed Seeker: Sword (X) on the left, Shield (Y) on the right](docs/screenshots/left_handed.png)
+
+- **Starter kit:** every new character carries a Sword, a Pistol and a Wand, plus 2 Trap Scanners; only loadout 1 is filled (X Pistol, Y Sword).
+- **Lock-on:** when the locked target dies, the lock moves to the next closest one.
+- **Character creation:** name (type it, or "New name" on a gamepad), race, gender, job and starter SyncAIDa, with a preview of the race and job rules and the emblem the choices make. Goluman can't pick Invoker. Creating saves the slot and drops you into Nomad-2.
+- **Nomad-2** (`scenes/hub.tscn`, built by `tools/build_hub.gd`): the lobby. Its counters (guild, bank, shops, armorer) are placeholders. Its **teleporter asks where to go**: the gym or the test arena (B or "Stay here" cancels; step off and back on to ask again).
+- The gym has a pad back to Nomad-2, and the arena's exit now returns there too. Teleportal opens a pad to Nomad-2.
+- **Saving:** every teleport, closing the menu, quitting to the title (Levels tab) and closing the window save the character's slot.
+
+![Creating a character](docs/screenshots/title_create.png)
+![The Nomad-2 teleporter](docs/screenshots/hub_teleporter.png)
+
 ## Travel
-The gym (`scenes/main.tscn`) has a teleporter to the arena. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to the gym. Every trip loads the arena fresh. Teleporters save first and bank carried Lumidium.
+Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
+
+**Arena doors (PSO-style):** the way into a room stays open, and the way on is locked ("LOCKED") until the room is cleared. Clearing the last room wakes the exit pad.
 
 ## Menu (Start / Tab)
 Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goes back (closes the weapon picker, then the menu), **LB / RB** switch tabs, Start closes.
@@ -180,7 +204,7 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
 | Character | Name (New name button for gamepads), race, gender, emblem and drop pool, materials (A uses one), Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
-| Levels | Prototype only: level select, one of every armor piece and 3 of each augment, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
+| Levels | Prototype only: level select (Nomad-2, gym, arena), save and quit to the title screen, one of every armor piece and 3 of each augment, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |
 
 Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Levels tab turns it on.
@@ -197,7 +221,8 @@ Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on th
 | Hand attacks (tap / hold) | X / Y | Left / right click |
 | Cast (tap) / Hard cast (hold) | X / Y with a casting item | Left / right click |
 | Spell slots 2 / 4 (hold while casting) / special | RT | E |
-| Use HP Gel / LP Cell / Cure Salt | D-pad left / up / right | 1 / 2 / 3 |
+| Use HP Gel / LP Cell / Cure Salt / Trap Scanner | D-pad left / up / right / down | 1 / 2 / 3 / 4 |
+| Activate a teleporter / pick up an item (when the prompt shows; otherwise jump) | A | Space |
 | Sync Burst | L3 | R |
 | Cycle loadouts | LB / RB | Z / C |
 | Block / powerstance | LT | F |
@@ -211,7 +236,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 
 - **Player**: `move_speed`, `acceleration`, `jump_height`, `time_to_peak`, `dash_distance`, `dash_duration`.
 - **CameraRig**: `follow_mode`, `leash_radius`, `follow_speed`, `pitch_return_delay`, `pitch_return_speed`, `shoulder_offset`, `default_pitch_deg`.
-- **Player/Combat**: `hold_threshold` (tap vs hold), `x_is_left`, soft-aim range and angle, `show_hitboxes`.
+- **Player/Combat**: `hold_threshold` (tap vs hold), `swap_hand_buttons` (X on the off hand), soft-aim range and angle, `show_hitboxes`.
 - **Each attack** in a weapon `.tres`: `move_speed_scale`, `face_movement`, `sustained_tick`, `duration`, `active_start`/`active_end` (hit timing), `window_open`/`window_close` (combo timing), `damage_mult`, `lp_cost`, lunge, hitbox size, projectile settings.
 
 ## Physics layers
@@ -243,6 +268,8 @@ godot --headless --path . --script res://tests/syncaida_test.gd
 godot --headless --path . --script res://tests/menu_test.gd
 godot --headless --path . --script res://tests/magic_test.gd
 godot --headless --path . --script res://tests/materials_test.gd
+godot --headless --path . --script res://tests/armor_test.gd
+godot --headless --path . --script res://tests/flow_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
@@ -250,11 +277,11 @@ godot --headless --path . --script res://tests/materials_test.gd
 
 - `loadout_test.gd`: one-Heavy and two-handed rules, the augment, cycling past empty and invalid loadouts, LT mode per loadout, shield / arms-up / two-handed block percentages, parry and stagger, no block from behind, Deflect, dash dodge, Heavy Shield shove, blocking a real Shooter bolt, powerstance twin hits and twin combos, twin pistols, the powerstance option, and the menu opening and pausing.
 
-- `targeting_test.gd`: default buttons (X = right hand); Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; blue / yellow / green per hand, and using one hand doesn't hide the other hand's marker; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release.
+- `targeting_test.gd`: default buttons (X = primary hand); Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; blue / yellow / green per hand, and using one hand doesn't hide the other hand's marker; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release, and the lock moving to the next closest target when the locked one dies.
 
-- `enemy_test.gd` (in the arena): all six monster types, DEF / RES math, hit chance (ATA vs EVA, combo steps, Hard openers, the streak, statuses lowering EVA, spells never missing), every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard hits pushing and flinching (light hits never interrupting), a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open).
+- `enemy_test.gd` (in the arena): all six monster types, DEF / RES math, hit chance (ATA vs EVA, combo steps, Hard openers, the streak, statuses lowering EVA, spells never missing), every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard hits pushing and flinching (light hits never interrupting), a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open), and PSO doors (the exit locked until the room is cleared).
 
-- `loot_test.gd` (in the arena): the full weapon list and every emblem's favored families, job locks, the 7 rares covering all 10 emblems, drop rates and emblem weighting, tag tiers, tag names and RT specials, the +30% vs Beast bonus, Gush / Mind / King's / Hell effects (and Hell never killing a boss), the Charge special paying Oro, Shotgun pellets, a Grenade arc and its blast (and its prediction), the Boomerang lock chain, the Gigarang hitting out and back, the Thrown Daggers finisher, Machine Pistol automatic fire, the Staff's four spells, Heal and Cure, EXP and drops, pickups and an HP Gel, a Lumidium node breaking, losing carried Lumidium on death, a teleporter deposit, and a save round-trip.
+- `loot_test.gd` (in the arena): the full weapon list and every emblem's favored families, job locks, the 7 rares covering all 10 emblems, drop rates and emblem weighting, tag tiers, tag names and RT specials, the +30% vs Beast bonus, Gush / Mind / King's / Hell effects (and Hell never killing a boss), the Charge special paying Oro, Shotgun pellets, a Grenade arc and its blast (and its prediction), the Boomerang lock chain, the Gigarang hitting out and back, the Thrown Daggers finisher, Machine Pistol automatic fire, the Staff's four spells, Heal and Cure, EXP and drops, pickups and an HP Gel, a Lumidium node breaking, losing carried Lumidium on death, a teleporter deposit, and a save round-trip, Oro picked up on touch while items wait for A, and teleporters needing A.
 
 - `syncaida_test.gd` (in the arena): no SyncAIDa until a starter is chosen, the four starters at level 5 in their stat and the instant bonus, level-10 forms following stats rather than job, feeding from inventory and bank, the stat math, the Seeker stat bonus following the paired SyncAIDa, every evolution (job, strongest stat, top two, Prime), burst unlocks, the 200 cap, the gauge from damage dealt and taken, L3 firing Lumen Nova (in range only), Aegis Pulse in both directions, Mending Bloom, feeding from the menu, and a save round-trip.
 
@@ -264,8 +291,10 @@ The tests always use a fresh save and never write yours.
 
 `tools/build_starter_weapons.gd`, `tools/build_enemies.gd` and `tools/build_arena.gd` regenerate the weapons, enemies and arena with their default values (this overwrites any edits).
 
-- `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
+- `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, trap devices (untouchable while hidden, even by area spells; the Trap Scanner on D-pad down revealing only the current room; destroyed by a spell once revealed), discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
 
 - `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.
 
 - `armor_test.gd` (in the arena): the armor book (24 tiered pieces, 5 rares, slot rules, job-locked sets), drop rolls (0-4 / 0-1 slots, DEF / EVA bonus), the starter Field Frame, who can wear what (Invokers Light only, job, race and gender locks), swapping pieces with their augments, stat augments, Fire Wards and a Beast Guard in real hits, Double-Heavy from an augment, unwearable armor coming off after a race change, drop rates (Blue emblem 2x), pickups, the save, old saves, and the Armor tab with a gamepad.
+
+- `flow_test.gd`: the old single save moving into slot 1, the title screen with a gamepad (main menu, character select, B back, Start, focus surviving a background click and coming back after it's lost, in the title, the teleporter picker and the pause menu), creation (Goluman can't be Invokers, the preview), the new character's starter kit (Sword, Pistol, Wand; only loadout 1 filled), saved to its slot with its SyncAIDa and Field Frame, Nomad-2's teleporter (pauses, lists the gym, arena and stay; B cancels), travel to the gym and back and to the arena with saves on the way, quitting to the title, Continue, deleting with a double X, and full slots. It uses its own folder, so real characters are never touched.

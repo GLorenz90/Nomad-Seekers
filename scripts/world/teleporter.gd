@@ -23,6 +23,12 @@ const COLOR_LOCKED := Color(0.25, 0.3, 0.35)
 @export var requires_rooms_cleared := false
 ## Seconds until it closes on its own (Teleportal spell); 0 = permanent.
 @export var lifetime := 0.0
+## Part 8: a pad with several destinations (Nomad-2's) asks where to go.
+## Scene paths and the names shown for them, in the same order.
+@export var destinations: PackedStringArray = []
+@export var destination_names: PackedStringArray = []
+
+var picker: DestinationPicker
 
 var _material: StandardMaterial3D
 var _label: Label3D
@@ -59,7 +65,9 @@ func _ready() -> void:
 	_label.outline_size = 8
 	_label.position.y = 2.2
 	add_child(_label)
+	add_to_group("interactables")
 	body_entered.connect(_on_body_entered)
+	body_exited.connect(_on_body_exited)
 	_refresh()
 
 
@@ -93,7 +101,10 @@ func _refresh() -> void:
 		color = COLOR_TRAVEL if _active else COLOR_LOCKED
 	_material.albedo_color = color
 	_material.emission = color
-	if destination == "":
+	if not destinations.is_empty():
+		color = COLOR_TRAVEL
+		_label.text = "Teleporter\n(choose a destination)"
+	elif destination == "":
 		_label.text = "Teleporter\n(deposit Lumidium)"
 	elif _active:
 		_label.text = "Teleporter\n%s" % (destination_name if destination_name != "" else destination.get_file().get_basename())
@@ -101,15 +112,67 @@ func _refresh() -> void:
 		_label.text = "Teleporter\n(clear every room first)"
 
 
-func _on_body_entered(body: Node) -> void:
-	var seeker := body as Player
-	if seeker == null or _leaving:
-		return
+## Standing on the pad no longer does anything by itself (Grayson,
+## 2026-11-09): A activates it (see Player interaction).
+func _on_body_entered(_body: Node) -> void:
+	pass
+
+
+# --- Interaction (A) ---------------------------------------------------------------
+
+const INTERACT_RANGE := 1.6
+
+
+func interact_point() -> Vector3:
+	return global_position
+
+
+func interact_range() -> float:
+	return INTERACT_RANGE
+
+
+func can_interact(_seeker: Player) -> bool:
+	return not _leaving and picker == null
+
+
+func interact_prompt() -> String:
+	if not destinations.is_empty():
+		return "Teleport..."
+	if destination == "":
+		return "Deposit Lumidium"
+	if not is_active():
+		return "Teleporter locked (clear every room first)"
+	return destination_name if destination_name != "" else "Teleport"
+
+
+## A on the pad: banks carried Lumidium, then asks where to go or travels.
+func interact(seeker: Player) -> void:
 	var amount := seeker.deposit_lumidium()
 	if amount > 0:
 		deposited.emit(seeker, amount)
-	if destination != "" and is_active():
+	if not destinations.is_empty():
+		_open_picker(seeker)
+	elif destination != "" and is_active():
 		travel(seeker)
+
+
+func _on_body_exited(body: Node) -> void:
+	if body is Player and picker:
+		picker.queue_free()
+		picker = null
+
+
+## Pauses and lists the destinations; picking one travels there.
+func _open_picker(seeker: Player) -> void:
+	if picker:
+		return
+	picker = DestinationPicker.new()
+	get_tree().root.add_child(picker)
+	picker.open(destination_names, func(index: int):
+		picker = null
+		if index >= 0 and index < destinations.size():
+			destination = destinations[index]
+			travel(seeker))
 
 
 ## Saves and loads the destination scene (fresh every time).

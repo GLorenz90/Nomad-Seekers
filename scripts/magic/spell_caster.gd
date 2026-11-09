@@ -231,11 +231,11 @@ static func _self_spell(ctrl: CombatController, item: WeaponData, spell: SpellDe
 		SpellDef.Kind.TELEPORTAL:
 			var here := player.get_tree().current_scene.scene_file_path if player.get_tree().current_scene else ""
 			if here == SHIP_SCENE:
-				ctrl.combo_feedback.emit("Already on the ship")
+				ctrl.combo_feedback.emit("Already on Nomad-2")
 				return
 			var pad := Teleporter.new()
 			pad.destination = SHIP_SCENE
-			pad.destination_name = "Back to the ship"
+			pad.destination_name = "Back to Nomad-2"
 			pad.lifetime = 30.0
 			world.add_child(pad)
 			var flat := Vector3(direction.x, 0.0, direction.z).normalized()
@@ -257,7 +257,7 @@ static func _self_spell(ctrl: CombatController, item: WeaponData, spell: SpellDe
 
 
 ## The ship, for Teleportal. The gym stands in until the hub exists.
-const SHIP_SCENE := "res://scenes/main.tscn"
+const SHIP_SCENE := "res://scenes/hub.tscn"  # Nomad-2 (Part 8)
 
 
 # --- Damage ---------------------------------------------------------------------------

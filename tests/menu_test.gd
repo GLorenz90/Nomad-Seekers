@@ -67,7 +67,7 @@ func _run() -> void:
 		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
 	await _frames(3)
 	_check("RB switches tabs and focus follows (Loadouts, %s)" % _focus_name(), _tab() == "Loadouts" and _focused() is Button)
-	await _pad(JOY_BUTTON_DPAD_RIGHT)  # right hand of loadout 1
+	_check("focus starts on loadout 1's primary hand, the first column", _focused() == _menu._slot_buttons[0][CombatController.Hand.PRIMARY])
 	await _pad(JOY_BUTTON_A)
 	_check("A on a hand opens the weapon picker", _menu._picker.visible and _menu._picker_list.is_ancestor_of(_focused()))
 	await _pad(JOY_BUTTON_B)
@@ -97,16 +97,16 @@ func _run() -> void:
 		await _pad(JOY_BUTTON_DPAD_DOWN)
 	var picked := _focused_text()
 	await _pad(JOY_BUTTON_A)
-	var right := _menu._set.loadouts[0].right
+	var right := _menu._set.loadouts[0].primary
 	_check("d-pad + A equips a weapon (%s)" % picked, right != null and picked.begins_with(right.display_name)
 		and not _menu._picker.visible)
 
 	# Testing helpers: X unequips the focused hand, Y the whole loadout.
-	_menu._set.loadouts[0].left = load("res://data/weapons/sword.tres")
+	_menu._set.loadouts[0].off_hand = load("res://data/weapons/sword.tres")
 	_menu._refresh()
 	_menu._slot_buttons[0][1].grab_focus()
 	await _pad(JOY_BUTTON_X)
-	_check("X unequips the focused hand only", _menu._set.loadouts[0].right == null and _menu._set.loadouts[0].left != null)
+	_check("X unequips the focused hand only", _menu._set.loadouts[0].primary == null and _menu._set.loadouts[0].off_hand != null)
 	await _pad(JOY_BUTTON_Y)
 	_check("Y clears the whole loadout", _menu._set.loadouts[0].is_empty())
 	_menu._clear_all_loadouts()
@@ -166,16 +166,11 @@ func _run() -> void:
 		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
 	await _frames(3)
 	var oro := _player.save.inventory.oro
-	while not _focused_text().begins_with("+1000 Oro"):
-		await _pad(JOY_BUTTON_DPAD_DOWN)
-		if _focused() is CheckButton:
+	await _pad(JOY_BUTTON_DPAD_RIGHT)  # the testing tools column
+	for i in 12:
+		if _focused_text().begins_with("+1000 Oro"):
 			break
-	if not _focused_text().begins_with("+1000 Oro"):
-		await _pad(JOY_BUTTON_DPAD_RIGHT)
-		for i in 6:
-			if _focused_text().begins_with("+1000 Oro"):
-				break
-			await _pad(JOY_BUTTON_DPAD_DOWN)
+		await _pad(JOY_BUTTON_DPAD_DOWN)
 	await _pad(JOY_BUTTON_A)
 	_check("Levels tab: +1000 Oro with A (%d -> %d)" % [oro, _player.save.inventory.oro], _player.save.inventory.oro == oro + 1000)
 	_menu._debug_toggle.button_pressed = true
@@ -201,8 +196,12 @@ func _run() -> void:
 	var pad := gym.get_node("ArenaTeleporter") as Teleporter
 	_check("the gym has a teleporter to the arena", pad != null and pad.destination == "res://scenes/arena.tscn")
 	gym_player.global_position = pad.global_position + Vector3.UP * 0.1
+	await _frames(10)
+	_check("standing on it shows the A prompt (%s)" % gym_player.interact_prompt(),
+		gym_player.interact_prompt().begins_with("A: To the arena"))
+	await _pad(JOY_BUTTON_A)
 	await _frames(30)
-	_check("standing on it loads the arena (%s)" % current_scene.scene_file_path,
+	_check("A on it loads the arena (%s)" % current_scene.scene_file_path,
 		current_scene.scene_file_path == "res://scenes/arena.tscn")
 	var arena := current_scene
 	var arena_player: Player = arena.get_node("Player")
@@ -212,16 +211,21 @@ func _run() -> void:
 		(arena.get_node("Rooms/RoomA") as WaveRoom).state == WaveRoom.RoomState.WAITING)
 	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
 	await _frames(20)
-	_check("the arena's exit stays shut until every room is cleared", current_scene == arena and not exit.is_active())
+	await _pad(JOY_BUTTON_A)
+	await _frames(20)
+	_check("the arena's exit stays shut until every room is cleared (%s)" % arena_player.interact_prompt(),
+		current_scene == arena and not exit.is_active())
 	arena_player.global_position = Vector3(0, 0.1, 20)
 	await _frames(10)
 	for room in ["Rooms/RoomA", "Rooms/RoomB"]:
 		(arena.get_node(room) as WaveRoom).state = WaveRoom.RoomState.CLEARED
 	await _frames(5)
 	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
+	await _frames(10)
+	await _pad(JOY_BUTTON_A)
 	await _frames(30)
-	_check("once cleared it returns to the gym (%s)" % current_scene.scene_file_path,
-		current_scene.scene_file_path == "res://scenes/main.tscn")
+	_check("once cleared it returns to Nomad-2 (%s)" % current_scene.scene_file_path,
+		current_scene.scene_file_path == "res://scenes/hub.tscn")
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)

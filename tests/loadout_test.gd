@@ -38,7 +38,7 @@ func _run() -> void:
 	_combat.stats.defense = 0.0
 	_combat.stats.resolve = 0.0
 	_combat.stats.evasion = 0.0
-	_combat.x_is_left = true  # these checks were written with X = left hand
+	_combat.swap_hand_buttons = true  # these checks were written with X = the off hand
 	# A fresh save (Striker, default loadouts) that is never written to disk.
 	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
 	# The expected numbers here use base stats: take the Human race bonus back off.
@@ -58,11 +58,11 @@ func _run() -> void:
 	var w := func(name: String) -> WeaponData: return CombatController.load_weapon(name)
 
 	# --- Loadout rules ---
-	var axe_heavy := Loadout.make(w.call("axe"), w.call("heavy_shield"))
+	var axe_heavy := Loadout.make(w.call("heavy_shield"), w.call("axe"))
 	_check("Axe + Heavy Shield breaks the one-Heavy rule", axe_heavy.validate(false) != "")
 	_check("Double-Heavy augment allows Axe + Heavy Shield", axe_heavy.validate(true) == "")
-	_check("Axe + Sword is fine (one Heavy)", Loadout.make(w.call("axe"), w.call("sword")).validate(false) == "")
-	_check("Great Sword can't share hands", Loadout.make(w.call("great_sword"), w.call("sword")).validate(true) != "")
+	_check("Axe + Sword is fine (one Heavy)", Loadout.make(w.call("sword"), w.call("axe")).validate(false) == "")
+	_check("Great Sword can't share hands", Loadout.make(w.call("sword"), w.call("great_sword")).validate(true) != "")
 
 	var menu: LoadoutMenu = _main.loadout_menu
 	menu.save_on_close = false
@@ -71,10 +71,10 @@ func _run() -> void:
 	menu.equip(EMPTY_SLOT, 1, w.call("pistol"))
 	menu.equip(EMPTY_SLOT, 0, w.call("great_sword"))
 	var slot := _combat.loadout_set.loadouts[EMPTY_SLOT]
-	_check("a two-handed weapon goes in the right hand and clears the left",
-		slot.right.display_name == "Great Sword" and slot.left == null)
+	_check("a two-handed weapon goes in the primary hand and clears the off hand",
+		slot.primary.display_name == "Great Sword" and slot.off_hand == null)
 	menu.equip(EMPTY_SLOT, 1, w.call("pistol"))
-	_check("equipping a one-handed weapon clears a two-handed one", slot.left == null and slot.right.display_name == "Pistol")
+	_check("equipping a one-handed weapon clears a two-handed one", slot.off_hand == null and slot.primary.display_name == "Pistol")
 	menu.equip(EMPTY_SLOT, 0, w.call("axe"))
 	menu.equip(EMPTY_SLOT, 1, w.call("heavy_shield"))
 	_combat.select_loadout(6)
@@ -111,8 +111,8 @@ func _run() -> void:
 	for m in _combat._meshes:
 		if m.mesh != null:
 			meshes += 1
-	_check("Great Sword shows as one weapon, in the right hand (%d meshes)" % meshes,
-		meshes == 1 and _combat._meshes[CombatController.Hand.RIGHT].mesh != null)
+	_check("Great Sword shows as one weapon, in the primary hand (%d meshes)" % meshes,
+		meshes == 1 and _combat._meshes[CombatController.Hand.PRIMARY].mesh != null)
 	_check("both buttons use the one Great Sword",
 		_combat.current_weapon(0) == _combat.current_weapon(1) and _combat.current_weapon(0).display_name == "Great Sword")
 
@@ -171,7 +171,7 @@ func _run() -> void:
 	await _frames(30)
 
 	# Heavy Shield shove knocks enemies back.
-	_combat.loadout_set.loadouts[EMPTY_SLOT] = Loadout.make(w.call("heavy_shield"), w.call("sword"))
+	_combat.loadout_set.loadouts[EMPTY_SLOT] = Loadout.make(w.call("sword"), w.call("heavy_shield"))
 	_combat.select_loadout(EMPTY_SLOT)
 	await _reset(Vector3(0, 0.1, -6.3))
 	var before := _dummy.global_position
@@ -224,7 +224,7 @@ func _run() -> void:
 	_check("LT blocks with twin swords instead of twin-attacking (took %.0f)" % _last_taken, is_equal_approx(_last_taken, 15.0))
 
 	# RT + a hand: that hand's special, the other hand swings normally.
-	var sword: WeaponData = _combat.current_weapon(CombatController.Hand.LEFT)
+	var sword: WeaponData = _combat.current_weapon(CombatController.Hand.OFF)
 	var special := AttackData.new()
 	special.display_name = "Test Special"
 	special.damage_mult = 2.0
