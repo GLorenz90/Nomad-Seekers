@@ -18,6 +18,10 @@ const EMBLEM_COLORS := [Color(0.82, 0.12, 0.2), Color(1.0, 0.55, 0.1), Color(1.0
 	Color(0.2, 0.4, 1.0), Color(0.55, 0.3, 0.9), Color(0.95, 0.2, 0.8), Color(1.0, 0.6, 0.78),
 	Color(0.96, 0.96, 0.96), Color(0.18, 0.18, 0.22)]
 const JOB_CODES := ["S", "R", "I"]
+## Suggested names (creation's "New name" button, and the Debug tab's).
+const NAMES := ["Seeker", "Ardent", "Brielle", "Cassian", "Dara", "Eamon", "Fenna", "Galen",
+	"Halcyon", "Iris", "Jory", "Kestra", "Lumen", "Maren", "Nolan", "Orrin", "Perrin", "Quill",
+	"Rook", "Sable", "Tamsin", "Ulric", "Vesper", "Wren"]
 
 @export var seeker_name := "Seeker"
 @export var race: Race = Race.HUMAN

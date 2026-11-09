@@ -263,10 +263,23 @@ func read_disc(id: StringName, level: int, from_pickup: bool) -> String:
 		return error
 	if c.spell_level(id) >= level or c.level_cap_for(spell) == 0:
 		var oro := 20 * level
-		save.inventory.oro += oro
+		save.inventory.add_oro(oro)
 		return "%s %d: %s Sold for %d Oro." % [spell.display_name, level, error, oro]
-	save.inventory.discs.append({"id": String(id), "level": level})
+	if not save.take_disc({"id": id, "level": level}):
+		return "Your pack is full."
 	return "%s %d stored: %s" % [spell.display_name, level, error]
+
+
+## True when picking this disc up would put it in the pack (it can't be
+## learned yet and isn't worth selling).
+func disc_needs_slot(id: StringName, level: int) -> bool:
+	var spell := SpellBook.get_spell(id)
+	if spell == null or save == null:
+		return false
+	var c := save.character
+	if c.learn_error(spell, level, learning_stat(spell)) == "":
+		return false
+	return not (c.spell_level(id) >= level or c.level_cap_for(spell) == 0)
 
 
 ## Reads a disc from the stash (menu). Removes it once learned.
@@ -309,9 +322,29 @@ func gain_exp(amount: int) -> void:
 	exp_gained.emit(amount)
 
 
-func add_lumidium(color: StringName, amount: int = 1) -> void:
-	carried_lumidium[color] = int(carried_lumidium.get(color, 0)) + amount
-	item_collected.emit("+%d %s Lumidium" % [amount, String(color).capitalize()])
+## Puts Lumidium in the satchel, up to Inventory.SATCHEL_LUMIDIUM carried
+## (all colors together). Returns how many fit.
+func add_lumidium(color: StringName, amount: int = 1) -> int:
+	var n := mini(amount, satchel_room())
+	if n > 0:
+		carried_lumidium[color] = int(carried_lumidium.get(color, 0)) + n
+		item_collected.emit("+%d %s Lumidium" % [n, String(color).capitalize()])
+	return n
+
+
+## Removes carried Lumidium (dropping it). Returns how many were removed.
+func remove_lumidium(color: StringName, amount: int) -> int:
+	var n := mini(amount, int(carried_lumidium.get(color, 0)))
+	if n > 0:
+		carried_lumidium[color] = int(carried_lumidium[color]) - n
+		if int(carried_lumidium[color]) <= 0:
+			carried_lumidium.erase(color)
+	return n
+
+
+## Room left in the satchel for Lumidium.
+func satchel_room() -> int:
+	return maxi(Inventory.SATCHEL_LUMIDIUM - carried_lumidium_total(), 0)
 
 
 func carried_lumidium_total() -> int:

@@ -76,7 +76,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
   - **Targeted volleys:** Thrown Daggers (1 / 3 / 5 enemies), Cards (1 / 2 / 4) and the Burstbow throw one projectile at each picked enemy, so no enemy is hit twice by one attack, and each projectile flies past everything but its target. Shotguns keep their even spread.
   - **Piercing:** only the Arbalest and Gigarang pass through enemies (the Boomerang homes from one to the next). Specific rares, like Stormcaller, can pierce too.
   - **Shields:** Shield, Heavy Shield, Ward, Barrier.
-- **Jobs.** Each weapon lists the jobs that can use it (S Striker, R Ranger, I Invoker). Loadouts holding a weapon your job can't use say "job locked" and LB/RB skips them. The job is chosen at character creation and can't change afterwards (unlike PSU); the Levels tab has a debug switch for testing.
+- **Jobs.** Each weapon lists the jobs that can use it (S Striker, R Ranger, I Invoker). Loadouts holding a weapon your job can't use say "job locked" and LB/RB skips them. The job is chosen at character creation and can't change afterwards (unlike PSU); the Debug tab has a switch for testing.
 - **Special tags.** Found weapons can roll a tag line in tiers (PSO's specials: Heat → Fire → Flame → Burning, Dim → … → Hell, Draw → … → Gush, and so on). The tag names the weapon ("Flame Sword"), gives elemental lines their element, and unlocks the weapon's **RT special**: hold RT and press that hand. The special is a stronger first attack that costs LP and applies the tag: elemental status buildup, instant kill (never bosses), heal from damage, LP steal, EXP steal, HP cut, or the Charge line's x3 hit (paid in Oro, LP or HP).
 - **Monster-type bonuses** (PSO's "% vs Native"): +5–30% damage vs one of the six monster types.
 - **Drops.** Enemies give EXP and roll a drop where they fall: Oro, a consumable, or a weapon. Weapons come from your **emblem's pool**: each of the 12 emblems (Crimson, Orange, Gold, Green, Teal, Cyan, Blue, Purple, Magenta, Pink, White, Black; from name + race + gender + job, like PSO section IDs) favors two weapon families and carries its own **rares** (Emberfang, Glacier Maw, Stormcaller, Gravesong, Lifeleech Coil, Lumen Edge, Kingmaker). Oro (and Lumidium) is picked up by walking over it and drifts to you when you're close; everything else waits for **A** (there will be an inventory limit).
@@ -134,13 +134,13 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Goluman** can't cast and can't be Invokers. In return they **slowly regenerate HP** (0.5% of max HP a second). They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
 - **Level hazards.** Six hidden traps sit in the arena; each springs once. Each has a small device that can be locked on to and destroyed with any attack, but **only while the trap is visible**: after a **Trap Scanner** (D-pad down) reveals the room you're in, or always for Goluman. Hidden traps can't be hit by anything, area spells included.
 - **Paralyze** is a new status: 2.5 s, no moving or acting.
-- **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Res (RES, new), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them in the **Character** tab.
+- **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Res (RES, new), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them from the **Inventory** tab (Part 9; the Character tab is now Status).
   - PSO's limits: the eight stat materials share one limit: **Humans 275, Lumera and Coresian 175** (PSO's 250 / 150, +25 for the new materials), **Goluman 150**. HP and LP have their own 125 each.
   - Goluman can't use Mind Materials (no magic), and can use only 75 LP Materials.
-  - They drop from enemies (about 2.4% of kills). Levels tab: +10 of each. Reset character forgets the ones used.
+  - They drop from enemies (about 2.4% of kills). Debug tab: +10 of each. Reset character forgets the ones used.
   - Accuracy has no other source yet; character levels and gear will add to it.
 
-![Materials in the Character tab](docs/screenshots/materials_character_tab.png)
+![Materials in the Character tab (Part 6; they are used from the Inventory now)](docs/screenshots/materials_character_tab.png)
 
 ![The Spells tab](docs/screenshots/magic_spells_tab.png)
 ![Hazards seen by a Goluman](docs/screenshots/magic_hazards.png)
@@ -173,7 +173,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Title screen** (gamepad: A or Start accepts, B goes back): **Continue** (your last character), **Character select**, Quit.
 - **Every menu recovers focus for the controller:** if nothing is focused (say, after clicking the window to bring it forward), the first A or d-pad press focuses the menu's default button instead of doing nothing. Character creation starts on Race, so the d-pad isn't caught in the name box.
 - **4 character slots**, like PSO. Each slot is a whole save (character, loadouts, inventory, spells, armor, SyncAIDa) in `user://characters/slot_N.tres`. X on a slot asks, and a second X deletes it. Your Part 5-7 save moves into slot 1 the first time.
-- **Primary and off hand:** loadouts read primary hand (X) first, then off hand (Y), everywhere. The code uses the same names (`Hand.PRIMARY` / `Hand.OFF`, `Loadout.primary` / `off_hand`), so **saves from before this change don't keep their loadouts**: make a new character. Creation asks for the **primary hand** (right or left): a left-handed Seeker holds the primary weapon on the left side, still on X. The Character tab can change it for testing.
+- **Primary and off hand:** loadouts read primary hand (X) first, then off hand (Y), everywhere. The code uses the same names (`Hand.PRIMARY` / `Hand.OFF`, `Loadout.primary` / `off_hand`), so **saves from before this change don't keep their loadouts**: make a new character. Creation asks for the **primary hand** (right or left): a left-handed Seeker holds the primary weapon on the left side, still on X. The Debug tab can change it for testing.
 
 ![Loadouts read Primary (X) first](docs/screenshots/loadouts_primary.png)
 ![A left-handed Seeker: Sword (X) on the left, Shield (Y) on the right](docs/screenshots/left_handed.png)
@@ -183,10 +183,28 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Character creation:** name (type it, or "New name" on a gamepad), race, gender, job and starter SyncAIDa, with a preview of the race and job rules and the emblem the choices make. Goluman can't pick Invoker. Creating saves the slot and drops you into Nomad-2.
 - **Nomad-2** (`scenes/hub.tscn`, built by `tools/build_hub.gd`): the lobby. Its counters (guild, bank, shops, armorer) are placeholders. Its **teleporter asks where to go**: the gym or the test arena (B or "Stay here" cancels; step off and back on to ask again).
 - The gym has a pad back to Nomad-2, and the arena's exit now returns there too. Teleportal opens a pad to Nomad-2.
-- **Saving:** every teleport, closing the menu, quitting to the title (Levels tab) and closing the window save the character's slot.
+- **Saving:** every teleport, closing the menu, quitting to the title (Options tab) and closing the window save the character's slot.
 
 ![Creating a character](docs/screenshots/title_create.png)
 ![The Nomad-2 teleporter](docs/screenshots/hub_teleporter.png)
+
+## Part 9: the pack, the satchel and the menu
+![The Inventory tab](docs/screenshots/inventory.png)
+
+PSO's item pack with PSU's palettes (Grayson, 2026-11-09).
+
+- **The pack holds 30 slots** of items and gear, PSO's size. Everything counts, including weapons on your palettes and the armor you wear (augments slotted into armor are part of it and don't). **Stacks hold 10 and take one slot**: HP Gel, LP Cell, Cure Salt, Trap Scanner and every material.
+- **The satchel holds Oro (up to 999,999) and carried Lumidium**, outside the pack, so a pile of Lumidium never stops you picking up a rare. The satchel carries **15 Lumidium at most, all colors together**. Carried Lumidium is still lost if you fall, until a teleporter banks it.
+- **Picking up takes only what fits.** With 7 HP Gels, a stack of 4 gives you 3 and leaves 1 on the ground. With the pack full, items stay where they are and the prompt says why ("pack full", "10 max", "satchel full"). Oro and Lumidium are still picked up by walking over them.
+- **Dropping (trading, making room):** anything in the pack can be dropped from the Inventory tab, and so can Oro and Lumidium, **in part**: pick the amount and it lands as **one stack** in front of you (4 Lumidium is one pickup). What you drop always waits for A, Oro and Lumidium included, so walking over it doesn't take it back. As in PSO, equipped gear can't be dropped: take it off the palette (or take the armor off) first.
+- **Palettes are filled from the pack**, like PSU. The palette picker lists only the weapons you carry (no more free copies of every base weapon), leaving out the one already in the other hand. A new character's palette 1 holds the pack's own Pistol and Sword. The Debug tab can add any weapon, rares included, to the pack.
+- **Older saves:** weapons on a palette that weren't in the inventory are added to the pack when the save loads. A save already over 30 slots keeps everything but can't pick up more until it's under.
+- **Cards and Thrown Daggers pick their targets from a 40° cone** (20° either side of the aim; it was 100°, and they fired too wide). The Burstbow keeps the PSO shotgun's 100°. **The Grenade's three-in-a-row finisher fans its three grenades over 50°** (was 30°), and all three land as far out as the target.
+
+**The menu (Start / Tab)** now has six tabs: **Inventory, Equip, Status, SyncAIDa, Options, Debug** (LB / RB). Equip has three sections, **Palette, Spells, Armor** (LT / RT, or the buttons along the top).
+
+![Equip: Palette](docs/screenshots/equip_palette.png)
+![Debug](docs/screenshots/debug_tab.png)
 
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
@@ -194,20 +212,20 @@ Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena
 **Arena doors (PSO-style):** the way into a room stays open, and the way on is locked ("LOCKED") until the room is cleared. Clearing the last room wakes the exit pad.
 
 ## Menu (Start / Tab)
-Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goes back (closes the weapon picker, then the menu), **LB / RB** switch tabs, Start closes.
+Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goes back (closes a list or the actions, then the menu), **LB / RB** switch tabs, **LT / RT** switch the Equip sections, Start closes.
 
 | Tab | What's there |
 |---|---|
-| Loadouts | 8 loadouts (X / Delete unequips the highlighted hand, Y / Shift+Delete clears that loadout, plus a Clear all button for testing), weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy status |
-| Armor | Head / Torso / Legs and their augment slots → armor or augments you own (A wears or slots, X takes off or empties, B goes back), totals and resists |
-| Spells | Casting items in your loadouts → their slots → your learned spells (A picks, X clears a slot, B goes back). Also lists stored discs to read |
-| Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
-| Character | Name (New name button for gamepads), race, gender, emblem and drop pool, materials (A uses one), Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
-| SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
-| Levels | Prototype only: level select (Nomad-2, gym, arena), save and quit to the title screen, one of every armor piece and 3 of each augment, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
-| Controls | The control reference (moved out of the debug overlay) |
+| Inventory | The pack (30 slots: `[P1,3]` marks palette weapons, `[W]` worn armor) and the satchel (Oro, carried Lumidium). The focused item is described on the right. **A** lists what you can do with it: equip a weapon to the current palette (primary or off hand), take it off every palette, wear or take off armor, slot an augment into a free slot, use a consumable or material, read a disc, drop (with an amount for stacks, Oro and Lumidium) |
+| Equip: Palette | 8 PSU-style palettes (X / Delete unequips the highlighted hand, Y / Shift+Delete clears that palette), the weapon picker (your pack's weapons by group; job-locked weapons are grey and A on one says which job needs it), Double-Heavy status |
+| Equip: Spells | Casting items on your palettes → their slots → your learned spells (A picks, X clears a slot, B goes back). Also lists stored discs to read |
+| Equip: Armor | Head / Torso / Legs and their augment slots → armor or augments in your pack (A wears or slots, X takes off or empties, B goes back), totals and resists |
+| Status | Name, race, gender, job, hand, emblem, EXP, HP / LP, every stat with everything applied, materials used, spell level caps, drop pool |
+| SyncAIDa | Starter choice, pairing, feeding (consumables from the pack, Lumidium from the bank), active Sync Burst |
+| Options | Save and quit to the title screen, the control reference. Settings will go here |
+| Debug | Everything for testing, in one tab that can be removed with one line (`LoadoutMenu._build`): name / race / gender / hand edits and the job switch, level select, refills, Oro, filling consumable stacks, materials, every armor piece and augment, Lumidium (bank or satchel), add any weapon to the pack, learn tools, Infinite LP, **No pack limit**, free feeding, debug readout, hitboxes, resets, clear all palettes |
 
-Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Levels tab turns it on.
+Show hitboxes (Debug tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Debug tab turns it on.
 
 ## Controls
 | Action | Gamepad | Keyboard / mouse |
@@ -224,9 +242,9 @@ Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on th
 | Use HP Gel / LP Cell / Cure Salt / Trap Scanner | D-pad left / up / right / down | 1 / 2 / 3 / 4 |
 | Activate a teleporter / pick up an item (when the prompt shows; otherwise jump) | A | Space |
 | Sync Burst | L3 | R |
-| Cycle loadouts | LB / RB | Z / C |
+| Cycle palettes | LB / RB | Z / C |
 | Block / powerstance | LT | F |
-| Loadout menu | Start | Tab |
+| Menu | Start | Tab |
 | Toggle debug panel | Select | F3 |
 
 Click to capture the mouse, Esc to release it.
@@ -245,12 +263,12 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 ## Known limits (deliberate for now)
 - No animation: capsules, with weapons swung by simple tweens. Melee hitboxes show as red boxes (`show_hitboxes`).
 - Normal attacks fire when the button is released, so tap and hold can share one button.
-- Only the arena has Lumidium nodes and teleporters. Teleporters only bank Lumidium; travel arrives with the hub.
+- Only the arena has Lumidium nodes. There's no bank to store items yet (Nomad-2's counter is a placeholder), so a full pack means dropping something.
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
 - EXP is counted but there are no levels yet.
 - Revive has nothing to revive until co-op. Teleportal goes to the gym until the ship exists.
 - Party bursts (several Seekers firing together) wait for co-op. SyncAIDa have no feeding cooldown and no personalities yet.
-- The game pauses while the loadout menu is open. Co-op will need a non-pausing version.
+- The game pauses while the menu is open. Co-op will need a non-pausing version.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
 - No step-up for small ledges yet. Input is bound to all devices until couch co-op.
 
@@ -270,6 +288,7 @@ godot --headless --path . --script res://tests/magic_test.gd
 godot --headless --path . --script res://tests/materials_test.gd
 godot --headless --path . --script res://tests/armor_test.gd
 godot --headless --path . --script res://tests/flow_test.gd
+godot --headless --path . --script res://tests/inventory_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
@@ -285,7 +304,7 @@ godot --headless --path . --script res://tests/flow_test.gd
 
 - `syncaida_test.gd` (in the arena): no SyncAIDa until a starter is chosen, the four starters at level 5 in their stat and the instant bonus, level-10 forms following stats rather than job, feeding from inventory and bank, the stat math, the Seeker stat bonus following the paired SyncAIDa, every evolution (job, strongest stat, top two, Prime), burst unlocks, the 200 cap, the gauge from damage dealt and taken, L3 firing Lumen Nova (in range only), Aegis Pulse in both directions, Mending Bloom, feeding from the menu, and a save round-trip.
 
-- `menu_test.gd` (in the arena): drives every tab with real joypad button events: Start opens, starter pick with the d-pad and A, re-pressing the paired SyncAIDa, feeding, RB / LB tab switching with focus following, the weapon picker (B backs out, a job-locked weapon explains itself, A equips), the Character tab's New name and dropdowns, a Levels tool, B closing the menu, and switching levels.
+- `menu_test.gd` (in the arena): drives every tab with real joypad button and trigger events: Start opens, starter pick with the d-pad and A, re-pressing the paired SyncAIDa, feeding, RB / LB tab switching with focus following (the six tabs in order), the Palette picker (only the pack's weapons, B backs out, a job-locked weapon explains itself, A equips), LT / RT switching the Equip sections, the Debug tab's New name, dropdowns and tools, Options, B closing the menu, and switching levels.
 
 The tests always use a fresh save and never write yours.
 
@@ -293,8 +312,10 @@ The tests always use a fresh save and never write yours.
 
 - `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, trap devices (untouchable while hidden, even by area spells; the Trap Scanner on D-pad down revealing only the current room; destroyed by a spell once revealed), discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
 
-- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.
+- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Inventory tab with a gamepad, and Reset character forgetting them.
 
 - `armor_test.gd` (in the arena): the armor book (24 tiered pieces, 5 rares, slot rules, job-locked sets), drop rolls (0-4 / 0-1 slots, DEF / EVA bonus), the starter Field Frame, who can wear what (Invokers Light only, job, race and gender locks), swapping pieces with their augments, stat augments, Fire Wards and a Beast Guard in real hits, Double-Heavy from an augment, unwearable armor coming off after a race change, drop rates (Blue emblem 2x), pickups, the save, old saves, and the Armor tab with a gamepad.
 
 - `flow_test.gd`: the old single save moving into slot 1, the title screen with a gamepad (main menu, character select, B back, Start, focus surviving a background click and coming back after it's lost, in the title, the teleporter picker and the pause menu), creation (Goluman can't be Invokers, the preview), the new character's starter kit (Sword, Pistol, Wand; only loadout 1 filled), saved to its slot with its SyncAIDa and Field Frame, Nomad-2's teleporter (pauses, lists the gym, arena and stay; B cancels), travel to the gym and back and to the arena with saves on the way, quitting to the title, Continue, deleting with a double X, and full slots. It uses its own folder, so real characters are never touched.
+
+- `inventory_test.gd` (in the arena): a new Seeker's pack (Sword, Pistol, Wand; palette 1 holding the pack's own Pistol and Sword), worn armor and palette weapons taking slots, stacks of 10 in one slot, a stack pickup taking only what fits and leaving the rest, the 30-slot limit (items refused, Oro still taken, existing stacks still filling), the 15-Lumidium satchel, and the Inventory tab with a gamepad: equip to a palette, equipped and worn gear refusing to drop, use, wear, a material, dropping part of a stack, Oro and Lumidium as one pickup each, dropped Oro and Lumidium waiting for A, and the palette picker listing only the pack.

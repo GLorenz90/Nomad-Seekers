@@ -79,6 +79,9 @@ enum Support { NONE, HEAL, CURE }
 ## enemies ahead are picked, and one projectile flies at each. Each projectile
 ## can only hit its own target, so no enemy is hit twice by one attack.
 @export var multi_target := 0
+## Full width of the cone multi_target picks enemies from, in degrees
+## (0 = CombatController.MULTI_TARGET_CONE each side, the PSO shotgun's).
+@export var multi_target_cone := 0.0
 ## Thrown weapons that scale off a different stat still count as ranged hits.
 @export var ranged_hit := false
 

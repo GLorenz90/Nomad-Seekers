@@ -1,8 +1,25 @@
 class_name Inventory
 extends Resource
-## Everything the Seeker owns: found weapons, consumables, Oro and banked
-## Lumidium. Carried (not yet deposited) Lumidium lives on the Player and is
-## lost on death.
+## Everything the Seeker owns (Part 9, PSO-style; Grayson, 2026-11-09):
+##
+## - The **pack** holds every item and piece of gear: weapons (palette weapons
+##   included), armor (worn pieces included), augments, spell discs and stacks
+##   of consumables and materials. PACK_SLOTS slots, like PSO's 30; a stack of
+##   the same item is one slot and holds up to STACK_MAX.
+## - The **satchel** holds Oro and carried Lumidium, so a full satchel never
+##   stops you picking up a rare. Carried Lumidium is capped at
+##   SATCHEL_LUMIDIUM, all colors together, and lives on the Player (lost on
+##   death until a teleporter banks it).
+##
+## Banked Lumidium (`lumidium`) is the bank, not the pack. Slot counts and
+## pickups that need the worn armor go through SaveData (pack_used, take_*).
+
+const PACK_SLOTS := 30
+const STACK_MAX := 10
+const SATCHEL_LUMIDIUM := 15
+const ORO_MAX := 999999
+## Debug tab: lift the pack's slot limit (stacks still stop at STACK_MAX).
+static var unlimited := false
 
 ## Consumable ids -> display names. SyncAIDa eat these too (Part 6).
 const CONSUMABLES := {
@@ -50,15 +67,45 @@ func add_weapon(w: WeaponData) -> void:
 	weapons.append(w)
 
 
+## Adds to a stack without checking room (SaveData.take_stack checks).
 func add_consumable(id: StringName, count: int = 1) -> void:
 	consumables[id] = int(consumables.get(id, 0)) + count
+	if int(consumables[id]) <= 0:
+		consumables.erase(id)
+
+
+## Removes up to `count` from a stack. Returns how many were removed.
+func remove_consumable(id: StringName, count: int) -> int:
+	var n := mini(count, self.count(id))
+	if n > 0:
+		add_consumable(id, -n)
+	return n
+
+
+## Adds Oro up to ORO_MAX. Returns how much was taken.
+func add_oro(amount: int) -> int:
+	var n := clampi(amount, 0, ORO_MAX - oro)
+	oro += n
+	return n
+
+
+## Slots used by what's in here. Worn armor isn't in here (it's on the
+## character) but still takes slots: SaveData.pack_used adds it.
+func pack_items() -> int:
+	var n := weapons.size() + armors.size() + discs.size()
+	for id in units:
+		n += int(units[id])
+	for id in consumables:
+		if int(consumables[id]) > 0:
+			n += 1
+	return n
 
 
 func use_consumable(id: StringName) -> bool:
 	var have := int(consumables.get(id, 0))
 	if have <= 0:
 		return false
-	consumables[id] = have - 1
+	add_consumable(id, -1)
 	return true
 
 

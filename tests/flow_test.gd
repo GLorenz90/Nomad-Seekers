@@ -148,7 +148,7 @@ func _run() -> void:
 	var header_row: Array = []
 	for child in menu._slot_buttons[0][CombatController.Hand.PRIMARY].get_parent().get_children().slice(0, 4):
 		header_row.append((child as Label).text if child is Label else "")
-	_check("the Loadouts tab reads Primary (X) first, then Off hand (Y) (%s)" % [header_row],
+	_check("the Palette section reads Primary (X) first, then Off hand (Y) (%s)" % [header_row],
 		header_row[1] == "Primary (X)" and header_row[2] == "Off hand (Y)"
 		and menu._slot_buttons[0][CombatController.Hand.PRIMARY].get_index() < menu._slot_buttons[0][CombatController.Hand.OFF].get_index())
 	_check("and the primary slot of loadout 1 shows the Pistol (%s)" % menu._slot_buttons[0][CombatController.Hand.PRIMARY].text,

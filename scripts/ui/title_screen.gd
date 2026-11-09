@@ -302,7 +302,7 @@ func _option(grid: GridContainer, title: String, items: Array) -> OptionButton:
 
 
 func _reset_creation() -> void:
-	_name.text = LoadoutMenu.NAMES[randi() % LoadoutMenu.NAMES.size()]
+	_name.text = CharacterData.NAMES[randi() % CharacterData.NAMES.size()]
 	_race.select(CharacterData.Race.HUMAN)
 	_gender.select(CharacterData.Gender.MALE)
 	_hand.select(0)
@@ -312,8 +312,8 @@ func _reset_creation() -> void:
 
 
 func _next_name() -> void:
-	var i := (LoadoutMenu.NAMES.find(_name.text) + 1) % LoadoutMenu.NAMES.size()
-	_name.text = LoadoutMenu.NAMES[i]
+	var i := (CharacterData.NAMES.find(_name.text) + 1) % CharacterData.NAMES.size()
+	_name.text = CharacterData.NAMES[i]
 	_update_preview()
 
 

@@ -21,6 +21,7 @@ projectile_speed = 28.0
 projectile_radius = 0.16
 projectile_range = 22.0
 multi_target = 1
+multi_target_cone = 40.0
 ranged_hit = true
 
 [sub_resource type="Resource" id="Resource_or1u5"]
@@ -40,6 +41,7 @@ projectile_speed = 28.0
 projectile_radius = 0.16
 projectile_range = 22.0
 multi_target = 2
+multi_target_cone = 40.0
 ranged_hit = true
 
 [sub_resource type="Resource" id="Resource_rlcnv"]
@@ -59,6 +61,7 @@ projectile_speed = 28.0
 projectile_radius = 0.16
 projectile_range = 22.0
 multi_target = 4
+multi_target_cone = 40.0
 ranged_hit = true
 
 [sub_resource type="Resource" id="Resource_decw6"]
@@ -77,6 +80,7 @@ is_projectile = true
 projectile_speed = 28.0
 projectile_range = 22.0
 multi_target = 1
+multi_target_cone = 40.0
 ranged_hit = true
 
 [sub_resource type="Resource" id="Resource_ygmlo"]
@@ -96,6 +100,7 @@ is_projectile = true
 projectile_speed = 28.0
 projectile_range = 22.0
 multi_target = 2
+multi_target_cone = 40.0
 ranged_hit = true
 
 [sub_resource type="Resource" id="Resource_3xdtq"]
@@ -115,6 +120,7 @@ is_projectile = true
 projectile_speed = 28.0
 projectile_range = 22.0
 multi_target = 4
+multi_target_cone = 40.0
 ranged_hit = true
 
 [resource]

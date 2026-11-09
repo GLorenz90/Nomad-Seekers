@@ -127,7 +127,7 @@ func _rebuild_choices(save: SaveData) -> void:
 	_clear(_choices)
 	if _pick.x < 0:
 		_choice_title.text = "Pick a piece or an augment slot"
-		_choices.add_child(_label("Armor and augments drop from enemies\n(the Blue emblem finds armor twice as often).\nLevels tab: one of every piece and augment.", 15))
+		_choices.add_child(_label("Armor and augments drop from enemies\n(the Blue emblem finds armor twice as often).\nDebug tab: one of every piece and augment.", 15))
 		return
 	var slot := _pick.x as ArmorData.Slot
 	if _pick.y < 0:

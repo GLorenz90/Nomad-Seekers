@@ -2,8 +2,8 @@ class_name DebugHud
 extends CanvasLayer
 ## Prototype HUD: HP/LP/Sync bars, combo pips, equipped hands, combo feedback,
 ## wallet and pickups, plus an optional debug readout (off by default; F3 /
-## Select or the menu's Levels tab toggles it). The control reference lives in
-## the menu's Controls tab (HELP).
+## Select or the menu's Debug tab toggles it). The control reference lives in
+## the menu's Options tab (HELP).
 
 const HELP := """Controls (gamepad / keyboard+mouse)
 Move: Left stick / WASD    Camera: Right stick / mouse
@@ -11,14 +11,16 @@ Jump: A / Space    Dash: B / Shift (cancels an attack after it hits)
 Lock on: R3 / Q / middle mouse    Switch target: flick right stick
 Attack: X / left click, Y / right click (tap = Normal, hold = Hard)
 Chain: press again inside the timing window (too early breaks the combo)
-Second spell: hold RT / E while casting    Loadouts: LB/RB / Z,C
+Second spell: hold RT / E while casting    Palettes: LB/RB / Z,C
 Same-type pair (e.g. Sword + Frost Sword): every attack uses both hands
-Block: LT / F    Special: hold RT / E + hand    Loadout menu: Start / Tab
+Block: LT / F    Special: hold RT / E + hand    Menu: Start / Tab
 Items: D-pad left/up/right/down / 1-4 (HP Gel, LP Cell, Cure Salt, Trap Scanner)
-A: activate a teleporter / pick up an item (Oro and Lumidium are picked up by walking over them)
+A: activate a teleporter / pick up an item (Oro and Lumidium are picked up by walking over them;
+    the pack holds 30 slots, stacks of 10; the satchel holds Oro and up to 15 Lumidium)
 Lumidium: hit a crystal 3 times; press A on a teleporter to deposit it
 Sync Burst (gauge full): L3 / R    Feed and pair SyncAIDa: menu, SyncAIDa tab
-Menu: Start / Tab. In menus: d-pad or stick to move, A to accept, B to go back, LB / RB to switch tabs.
+Menu: Start / Tab. In menus: d-pad or stick to move, A to accept, B to go back, LB / RB to switch tabs,
+    LT / RT to switch Equip sections (Palette, Spells, Armor).
 Click to capture the mouse, Esc to release. Debug readout: Select / F3."""
 
 var player: Player
@@ -113,9 +115,9 @@ func _process(_delta: float) -> void:
 	if player.save:
 		var c := player.save.character
 		var inv := player.save.inventory
-		_wallet.text = "%s  %s  (%s emblem)\nEXP %d\nOro %d\nLumidium carried %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d   Trap Scanner %d" % [
-			c.seeker_name, c.job_name(), c.emblem_name(), c.experience, inv.oro,
-			player.carried_lumidium_total(), inv.lumidium_total(),
+		_wallet.text = "%s  %s  (%s emblem)\nEXP %d   Pack %d / %d\nOro %d\nLumidium carried %d / %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d   Trap Scanner %d" % [
+			c.seeker_name, c.job_name(), c.emblem_name(), c.experience, player.save.pack_used(), Inventory.PACK_SLOTS,
+			inv.oro, player.carried_lumidium_total(), Inventory.SATCHEL_LUMIDIUM, inv.lumidium_total(),
 			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt"), inv.count(&"trap_scanner")]
 		_wallet.modulate = c.emblem_text_color()
 	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE

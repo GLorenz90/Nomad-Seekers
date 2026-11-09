@@ -2,7 +2,7 @@ extends SceneTree
 ## Automated test for PSO materials: the ten materials, PSO's usage limits
 ## (+25 on the shared one), Goluman restrictions, stat gains (including max HP
 ## and hit chance), drops and pickups, the save round-trip, the debug reset,
-## and using one from the Character tab with a gamepad. Runs in the arena.
+## and using one from the Inventory tab with a gamepad. Runs in the arena.
 ##
 ## Run from the project folder:
 ##   godot --headless --path . --script res://tests/materials_test.gd
@@ -138,61 +138,69 @@ func _run() -> void:
 	pickup.collect(_player)
 	_check("picking it up puts it in the inventory", inv.count(&"mind_material") == 1)
 
-	# --- Character tab with a gamepad -------------------------------------------------
+	# --- Using one from the Inventory with a gamepad (Part 9) -------------------------
 	var sol_before := s.soul
 	_menu.open()
-	while _menu._tab_name() != "Character":
-		await _pad(JOY_BUTTON_RIGHT_SHOULDER)
+	_menu.show_tab("Inventory")
 	await _frames(3)
-	var mind_button: Button = _menu._material_buttons[&"mind_material"]
+	var tab := _menu._inventory_tab
+	var mind_button: Button = null
+	for b in tab._list.get_children():
+		if b is Button and (b as Button).text.begins_with("Mind Material"):
+			mind_button = b
 	mind_button.grab_focus()
 	await _frames(2)
-	_check("the Character tab lists materials (%s)" % mind_button.text, mind_button.text.begins_with("Mind Material x1"))
+	_check("the Inventory lists materials (%s)" % mind_button.text, mind_button.text == "Mind Material x1")
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)
-	_check("A uses one: SOL +2 (%s)" % _menu._character_message.text, s.soul == sol_before + 2.0 and inv.count(&"mind_material") == 0)
+	_check("A offers Use (%s)" % _focused_text(), _focused_text() == "Use (+2 SOL)")
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)
-	_check("A with none left explains why (%s)" % _menu._character_message.text, _menu._character_message.text.begins_with("No Mind"))
-	_menu._reset_character()
+	_check("A uses one: SOL +2 (%s)" % tab._message.text, s.soul == sol_before + 2.0 and inv.count(&"mind_material") == 0)
+	var still_listed := false
+	for b in tab._list.get_children():
+		if b is Button and not b.is_queued_for_deletion() and (b as Button).text.begins_with("Mind Material"):
+			still_listed = true
+	_check("and the empty stack leaves the pack", not still_listed)
+	_menu.debug_tab._reset_character()
 	_check("Reset character forgets materials used (SOL back to %.0f)" % s.soul, c.materials.is_empty() and s.soul == sol_before)
 	_menu.close()  # the menu pauses the game; regen and LP need it running
 
-	# --- Race perks through the Character tab -----------------------------------------
+	# --- Race perks through the Debug tab -----------------------------------------
 	c.job = CharacterData.Job.RANGER
 	var dex_human := s.dexterity
 	var str_human := s.strength
-	_menu._race.select(CharacterData.Race.GOLUMAN)
-	_menu._apply_character()
+	_menu.debug_tab._race.select(CharacterData.Race.GOLUMAN)
+	_menu.debug_tab._apply_character()
 	_check("Human -> Goluman: DEX +5 more, STR -5 (DEX %.0f -> %.0f)" % [dex_human, s.dexterity],
 		s.dexterity == dex_human + 5.0 and s.strength == str_human - 5.0)
 	_player.health.hp = 100.0
 	await _frames(120)  # 2 s at 0.5% of max HP a second = 3 HP
 	_check("Goluman slowly regenerate HP (100 -> %.1f)" % _player.health.hp,
 		_player.health.hp > 102.0 and _player.health.hp < 104.0)
-	_menu._race.select(CharacterData.Race.HUMAN)
-	_menu._apply_character()
+	_menu.debug_tab._race.select(CharacterData.Race.HUMAN)
+	_menu.debug_tab._apply_character()
 	_player.health.hp = 100.0
 	await _frames(60)
 	_check("and back to Human restores the stats and stops regen (DEX %.0f, HP %.0f)" % [s.dexterity, _player.health.hp],
 		s.dexterity == dex_human and _player.health.hp == 100.0)
 	c.job = CharacterData.Job.INVOKER
-	_menu._race.select(CharacterData.Race.GOLUMAN)
-	_menu._apply_character()
-	_check("an Invoker can't become Goluman (%s)" % _menu._character_message.text, c.race == CharacterData.Race.HUMAN)
+	_menu.debug_tab._race.select(CharacterData.Race.GOLUMAN)
+	_menu.debug_tab._apply_character()
+	_check("an Invoker can't become Goluman (%s)" % _menu.debug_tab._character_message.text, c.race == CharacterData.Race.HUMAN)
 	c.job = CharacterData.Job.STRIKER
 
 	# --- Testing tools ---------------------------------------------------------------------
-	_menu._tool_learn_all_level_1()
+	_menu.debug_tab._tool_learn_all_level_1()
 	var all_one := not c.spells.is_empty()
 	for id in c.spells:
 		all_one = all_one and int(c.spells[id]) == 1
 	_check("Learn everything at level 1 (%d spells, all level 1)" % c.spells.size(), all_one and c.spells.size() == 46)
-	_menu._infinite_lp.button_pressed = true
+	_menu.debug_tab._infinite_lp.button_pressed = true
 	_player.combat.lp = 3.0
 	await _frames(2)
 	_check("Infinite LP keeps LP full", _player.combat.infinite_lp and _player.combat.lp == s.max_lp)
-	_menu._infinite_lp.button_pressed = false
+	_menu.debug_tab._infinite_lp.button_pressed = false
 	_player.combat.lp = 3.0
 	await _frames(2)
 	_check("and turns off", not _player.combat.infinite_lp and _player.combat.lp < 10.0)
@@ -220,3 +228,8 @@ func _pad(button: JoyButton) -> void:
 		Input.parse_input_event(e)
 		await process_frame
 		await process_frame
+
+
+func _focused_text() -> String:
+	var f := root.gui_get_focus_owner()
+	return (f as Button).text.strip_edges() if f is Button else ""

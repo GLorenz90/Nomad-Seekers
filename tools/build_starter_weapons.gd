@@ -602,7 +602,8 @@ func _full_list() -> Array[WeaponData]:
 		a.projectile_radius = 0.18
 		a.move_speed_scale = 0.4 if a.move_speed_scale > 0.0 else 0.0
 	gr.normal_attacks[2].finisher_volley = 2
-	gr.normal_attacks[2].spread_deg = 30.0
+	# Wider fan for the finisher (Grayson, 2026-11-09: was 30°).
+	gr.normal_attacks[2].spread_deg = 50.0
 	list.append(gr)
 	# Grenade Launcher: lobbed, smaller blast, built for statuses (tags).
 	var gl := _weapon("Grenade Launcher", &"grenade_launcher", WeaponData.WeaponClass.RANGED, true, true, 22.0,
@@ -622,7 +623,7 @@ func _full_list() -> Array[WeaponData]:
 	# different enemy (one per enemy): 1, then 3, then 5 targets.
 	var td := _gun(_weapon("Thrown Daggers", &"thrown_daggers", WeaponData.WeaponClass.RANGED, false, false, 10.0,
 		Vector3(0.05, 0.05, 0.35), steel), HANDGUN_N, HANDGUN_H, 1.0, 30.0, 22.0, true, 0.0, 0.0)
-	_multi(td, [1, 3, 5])
+	_multi(td, [1, 3, 5], 40.0)
 	list.append(td)
 	# Boomerang: PSO slicer; homes in on up to 5 enemies, one after another.
 	var bm := _gun(_weapon("Boomerang", &"boomerang", WeaponData.WeaponClass.RANGED, false, false, 12.0,
@@ -681,7 +682,7 @@ func _full_list() -> Array[WeaponData]:
 	# Like Thrown Daggers, but magic (SOL) and 1, 2, then 4 targets.
 	for a in cards.normal_attacks + cards.hard_attacks:
 		a.ranged_hit = true
-	_multi(cards, [1, 2, 4])
+	_multi(cards, [1, 2, 4], 40.0)
 	list.append(cards)
 
 	# --- New types (Grayson, 2026-11-08) ---
@@ -694,11 +695,14 @@ func _full_list() -> Array[WeaponData]:
 	return list
 
 
-## PSO-shotgun targeting per step (normal and hard alike).
-func _multi(w: WeaponData, counts: Array) -> void:
+## PSO-shotgun targeting per step (normal and hard alike). `cone` is the full
+## width in degrees (0 = the PSO shotgun's 100°). Cards and Thrown Daggers use
+## 40° (Grayson, 2026-11-09: they fired too wide).
+func _multi(w: WeaponData, counts: Array, cone: float = 0.0) -> void:
 	for attacks in [w.normal_attacks, w.hard_attacks]:
 		for i in attacks.size():
 			attacks[i].multi_target = counts[mini(i, counts.size() - 1)]
+			attacks[i].multi_target_cone = cone
 			attacks[i].finisher_volley = 0
 			attacks[i].spread_deg = 0.0
 
