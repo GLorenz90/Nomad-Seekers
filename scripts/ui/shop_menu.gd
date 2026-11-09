@@ -44,9 +44,9 @@ func _buy_items() -> Array[Dictionary]:
 			for w in weapons:
 				var price := Prices.weapon_price(w)
 				var item := _gear_item("%s   %s Oro" % [w.display_name, _num(price)],
-					ItemText.weapon_detail(w, job), price, func() -> String:
+					ItemText.weapon_detail(w, job, player.combat.stats), price, func() -> String:
 						return "" if save().take_weapon(w.duplicate()) else "full")
-				if not w.can_be_used_by(job):
+				if not w.can_be_used_by(job) or w.requirement_error(player.combat.stats) != "":
 					item.color = Color(0.6, 0.6, 0.65)
 				list.append(item)
 		Kind.ARMOR:

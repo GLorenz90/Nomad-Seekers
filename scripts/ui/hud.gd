@@ -29,6 +29,13 @@ var camera_rig: CameraRig
 var _hp_bar: ProgressBar
 var _lp_bar: ProgressBar
 var _sync_bar: ProgressBar
+## Part 11: EXP to the next level, with the level beside it.
+var _exp_bar: ProgressBar
+var _level_label: Label
+## Level-up: a quick flash and PSO-style list of what grew.
+var _flash: ColorRect
+var _gains: Label
+var _gains_tween: Tween
 var _sync_label: Label
 var _pips: Label
 var _prompt: Label
@@ -82,6 +89,10 @@ func _process(_delta: float) -> void:
 	_hp_bar.value = player.health.hp
 	_lp_bar.max_value = combat.stats.max_lp
 	_lp_bar.value = combat.lp
+	if player.save:
+		var c := player.save.character
+		_exp_bar.value = Leveling.progress(c.experience)
+		_level_label.text = "Lv %d" % c.level()
 	var companion := player.syncaida
 	if companion and companion.data:
 		var d := companion.data
@@ -115,8 +126,8 @@ func _process(_delta: float) -> void:
 	if player.save:
 		var c := player.save.character
 		var inv := player.save.inventory
-		_wallet.text = "%s  %s  (%s emblem)\nEXP %d   Pack %d / %d\nOro %d\nLumidium carried %d / %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d   Trap Scanner %d" % [
-			c.seeker_name, c.job_name(), c.emblem_name(), c.experience, player.save.pack_used(), Inventory.PACK_SLOTS,
+		_wallet.text = "%s  %s  (%s emblem)\nLv %d  EXP %d   Pack %d / %d\nOro %d\nLumidium carried %d / %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d   Trap Scanner %d" % [
+			c.seeker_name, c.job_name(), c.emblem_name(), c.level(), c.experience, player.save.pack_used(), Inventory.PACK_SLOTS,
 			inv.oro, player.carried_lumidium_total(), Inventory.SATCHEL_LUMIDIUM, inv.lumidium_total(),
 			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt"), inv.count(&"trap_scanner")]
 		_wallet.modulate = c.emblem_text_color()
@@ -140,12 +151,37 @@ func _weapon_label(hand: int) -> String:
 ## Big centered text for room events ("Wave 2 / 3", "Room clear").
 func show_banner(text: String) -> void:
 	_banner.text = text
-	_banner.modulate.a = 1.0
+	_banner.modulate = Color.WHITE
 	if _banner_tween:
 		_banner_tween.kill()
 	_banner_tween = create_tween()
 	_banner_tween.tween_interval(1.4)
 	_banner_tween.tween_property(_banner, "modulate:a", 0.0, 0.6)
+
+
+## Level-up (Part 11): a flash, the banner, and what each stat gained
+## (PSO-style list beside the bars).
+func show_level_up(level: int, gains: Dictionary) -> void:
+	show_banner("LEVEL UP!  Lv %d" % level)
+	_banner.modulate = Color(1.0, 0.88, 0.4, 1.0)
+	var flash := create_tween()
+	_flash.color.a = 0.45
+	flash.tween_property(_flash, "color:a", 0.0, 0.5)
+	var lines := PackedStringArray(["Lv %d" % level])
+	for stat in Leveling.STATS:
+		if gains.has(stat):
+			lines.append("%s  +%d" % [Leveling.STAT_LABELS[stat], roundi(float(gains[stat]))])
+	_gains.text = "\n".join(lines)
+	_gains.modulate.a = 1.0
+	if _gains_tween:
+		_gains_tween.kill()
+	_gains_tween = create_tween()
+	_gains_tween.tween_interval(4.0)
+	_gains_tween.tween_property(_gains, "modulate:a", 0.0, 0.8)
+
+
+func level_up_text() -> String:
+	return _gains.text if _gains else ""
 
 
 ## Small stacked pickup messages (loot, EXP, Lumidium), bottom right.
@@ -177,13 +213,19 @@ func _build_status() -> void:
 	box.anchor_top = 1.0
 	box.anchor_bottom = 1.0
 	box.offset_left = 24.0
-	box.offset_top = -250.0
+	box.offset_top = -276.0
 	box.offset_right = 420.0
 	box.offset_bottom = -20.0
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
 	_hp_bar = _bar(box, "HP", Color(0.35, 0.85, 0.4))
 	_lp_bar = _bar(box, "LP", Color(0.3, 0.6, 1.0))
+	_exp_bar = _bar(box, "EX", Color(1.0, 0.8, 0.3))
+	_exp_bar.max_value = 1.0
+	_exp_bar.step = 0.0001
+	_exp_bar.custom_minimum_size.y = 10.0
+	_level_label = _label(_exp_bar.get_parent(), 16)
+	_level_label.modulate = Color(1.0, 0.9, 0.55)
 	_sync_bar = _bar(box, "SY", Color(0.8, 0.9, 1.0))
 	_sync_bar.max_value = SyncAIDaCompanion.GAUGE_MAX
 	_sync_bar.custom_minimum_size.y = 10.0
@@ -236,6 +278,23 @@ func _build_status() -> void:
 	_feed.alignment = BoxContainer.ALIGNMENT_END
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_feed)
+
+	_flash = ColorRect.new()
+	_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash.color = Color(1.0, 0.95, 0.7, 0.0)
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_flash)
+	move_child(_flash, 0)
+
+	_gains = _label(self, 20)
+	_gains.anchor_top = 1.0
+	_gains.anchor_bottom = 1.0
+	_gains.offset_left = 440.0
+	_gains.offset_right = 640.0
+	_gains.offset_top = -300.0
+	_gains.offset_bottom = -40.0
+	_gains.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_gains.modulate = Color(1.0, 0.92, 0.55, 0.0)
 
 	_banner = _label(self, 44)
 	_banner.anchor_left = 0.5

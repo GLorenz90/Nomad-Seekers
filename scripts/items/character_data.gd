@@ -66,6 +66,11 @@ func emblem_text_color() -> Color:
 	return c.lightened(0.5) if c.get_luminance() > 0.25 else Color(0.62, 0.62, 0.7)
 
 
+## Character level from EXP (Part 11, PSO's curve: Leveling).
+func level() -> int:
+	return Leveling.level_for(experience)
+
+
 func job_code() -> String:
 	return JOB_CODES[job]
 

@@ -20,6 +20,8 @@ signal dash_started(direction: Vector3)
 signal dash_ended
 signal exp_gained(amount: int)
 signal item_collected(text: String)
+## Part 11: a level-up, with what each stat gained.
+signal leveled_up(level: int, gains: Dictionary)
 
 enum State { GROUND, AIR, DASH }
 
@@ -131,7 +133,8 @@ func apply_materials() -> void:
 func apply_bonuses() -> void:
 	var target := Materials.bonuses(save.character) if save else {}
 	if save:
-		for extra in [save.character.race_bonuses(), ArmorBook.bonuses(save.character)]:
+		for extra in [save.character.race_bonuses(), ArmorBook.bonuses(save.character),
+				Leveling.bonuses(save.character)]:
 			for stat in extra:
 				target[stat] = float(target.get(stat, 0.0)) + float(extra[stat])
 		if save.loadouts:
@@ -318,8 +321,22 @@ func save_game() -> void:
 func gain_exp(amount: int) -> void:
 	if save == null or amount <= 0:
 		return
+	var before := save.character.level()
 	save.character.experience += amount
 	exp_gained.emit(amount)
+	var after := save.character.level()
+	if after > before:
+		_level_up(before, after)
+
+
+## Level-up (Part 11): stats grow (apply_bonuses), HP and LP refill like
+## Grayson asked, and the HUD shows the gains.
+func _level_up(from_level: int, to_level: int) -> void:
+	var gains := Leveling.level_up_gains(save.character, from_level, to_level)
+	apply_bonuses()
+	health.restore_full()
+	combat.lp = combat.stats.max_lp
+	leveled_up.emit(to_level, gains)
 
 
 ## Puts Lumidium in the satchel, up to Inventory.SATCHEL_LUMIDIUM carried

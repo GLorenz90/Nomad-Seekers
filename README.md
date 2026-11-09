@@ -227,6 +227,31 @@ Nomad-2's counters work (Grayson, 2026-11-09). Walk up to a counter and press **
 ![The bank](docs/screenshots/bank.png)
 ![The Guild](docs/screenshots/guild.png)
 
+## Part 11: levels
+![A level-up](docs/screenshots/level_up.png)
+
+Characters level up (Grayson, 2026-11-09).
+
+- **PSO's EXP curve, levels 1-200** (83,227,800 EXP to 200). The totals are PSO's own (Ephinea PSO wiki) at every level up to 50, at every 10th level after that, and at levels 141, 161-164 and 199. Levels between those are filled in so each level costs a little more than the last and every anchor is hit exactly.
+- **Seven growth tables: one per race, one per job.** A job table holds what the job gains from level 1 to 200. A race table scales each stat. A new race or job later is one more table, with no combinations to write. `Leveling` (scripts/items/leveling.gd).
+  - **Job tables** are PSO's human classes (level 200 minus level 1): **Striker = HUmar**, **Ranger = RAmar and RAmarl averaged**, **Invoker = FOmar and FOmarl averaged**.
+  - **Race tables** are PSO's other races against the humans, averaged over jobs: **Lumera = Newman** (more SOL, LP, DEF and RES; less HP and STR), **Coresian = CAST** (HUcast / RAcast: more HP, STR and DEF), **Goluman = CASEAL** (HUcaseal / RAcaseal: more HP and DEX, good EVA).
+  - So a **Coresian Striker grows like a HUcast** and a **Lumera Invoker like a Newman Force**.
+  - Things PSO doesn't have, so I picked them: PSO has one ATP stat, so the job's main stat gets it all and the other gets 65% (Invokers get 600 in both). RES is 75% of the average of DFP and MST. CASTs have no MST or TP, so Coresians get half SOL and half LP, and Goluman a quarter SOL and half LP.
+  - **LCK never grows**, like PSO.
+  - Stats grow in PSO's shapes: attack stats, SOL, LP, EVA and ATA early; HP later; DEF and RES latest.
+- **Level-up:** the screen flashes, a **LEVEL UP! Lv N** banner shows, and a PSO-style list of what each stat gained appears beside the bars. **HP and LP refill.**
+- **EXP bar** under the LP bar, with the level beside it. The Status tab shows the level, EXP and EXP to the next level. The character select shows the level.
+- **Armor has level requirements:** tier 1 level 1, tier 2 level 25, tier 3 level 60, tier 4 level 100. The rares have their own: Pathfinder Treads 20, Huntress Treads 30, Veil of the Nomad 40, Warden's Crown 50, Ironclad Shell 70.
+- **Weapons have stat requirements**, like PSO: STR for melee, DEX for ranged, SOL for magic. The amount is 6 per point of base damage above 20, in steps of 5. Pistol, Sword and the casting items need nothing; Great Sword needs STR 85 and Arbalest DEX 240. Rares need 80 more. The palette picker and the Inventory won't equip a weapon your stats can't use, and they say what's missing. Shops show the requirement and grey out what you can't use yet.
+- **Spells and traps** were already limited by stats (SOL, or DEX for traps) and still are.
+- **Shop tiers rise with your level:**
+  - **Armor shop:** tiers within 5 levels of your level, the top two only.
+  - **Augments:** grade II from level 40, grade III from level 100.
+  - **Weapons shop:** higher special-tag tiers every 50 levels, and bigger monster bonuses.
+  - Stock is rolled the first time you open a shop on each visit.
+- **Debug tab:** Level +1 / +10 / +50 / Max, done with EXP so the level-up shows. Reset character now goes back to level 1 and takes off armor above it.
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 
@@ -286,7 +311,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - Normal attacks fire when the button is released, so tap and hold can share one button.
 - Only the arena has Lumidium nodes, and every Guild quest happens there until real levels exist. Shop stock has no character-level tiers yet (armor stops at tier 2).
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
-- EXP is counted but there are no levels yet.
+- Enemies don't scale with level or area yet: past the first few levels, the arena gets easy.
 - Revive has nothing to revive until co-op. Teleportal goes to the gym until the ship exists.
 - Party bursts (several Seekers firing together) wait for co-op. SyncAIDa have no feeding cooldown and no personalities yet.
 - The game pauses while the menu is open. Co-op will need a non-pausing version.
@@ -311,6 +336,7 @@ godot --headless --path . --script res://tests/armor_test.gd
 godot --headless --path . --script res://tests/flow_test.gd
 godot --headless --path . --script res://tests/inventory_test.gd
 godot --headless --path . --script res://tests/services_test.gd
+godot --headless --path . --script res://tests/leveling_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
@@ -343,3 +369,5 @@ The tests always use a fresh save and never write yours.
 - `inventory_test.gd` (in the arena): a new Seeker's pack (Sword, Pistol, Wand; palette 1 holding the pack's own Pistol and Sword), worn armor and palette weapons taking slots, stacks of 10 in one slot, a stack pickup taking only what fits and leaving the rest, the 30-slot limit (items refused, Oro still taken, existing stacks still filling), the 15-Lumidium satchel, and the Inventory tab with a gamepad: equip to a palette, equipped and worn gear refusing to drop, use, wear, a material, dropping part of a stack, Oro and Lumidium as one pickup each, dropped Oro and Lumidium waiting for A, and the palette picker listing only the pack.
 
 - `services_test.gd` (in Nomad-2, then the arena): the five clerks and their prompts, PSO's curative prices, weapon prices, stock (sizes, no rares, armor tiers, rerolled per visit), buying stacks with an amount, gear, armor and augments with a gamepad, not enough Oro, a full pack, selling back at 1/8 (palette weapons refused, stacks by amount), Start leaving without the pause menu, B backing out, the bank (200 slots, items, stacks, Oro both ways, kept in the save), and the Guild (accept, one at a time, reporting early, the teleporter listing the quest first, defeats, room clears and banked Lumidium completing quests, the reward, abandoning).
+
+- `leveling_test.gd` (in the arena): PSO's EXP curve at its anchor levels and rising every level, level lookups, the seven tables (and nothing gained at level 1), Human Striker = HUmar's growth, Coresian Striker above it like HUcast, Lumera Invoker above a Human Invoker like a Newman Force, Rangers' ATA, LCK never growing, a level-up (stats, HP / LP refill, banner, gains list, flash, the EXP bar under LP), a multi-level jump, armor level requirements (tiers and rares), weapon stat requirements (Pistol, Great Sword, Arbalest, rares; the palette refusing), shop tiers by level, the Debug tab's level tools, Reset character, and the save.

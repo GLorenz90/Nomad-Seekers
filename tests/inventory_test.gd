@@ -191,6 +191,8 @@ func _run() -> void:
 		inv.count(&"hp_gel") == 6 and new_pickups.size() == 1 and new_pickups[0].amount() == 3 and new_pickups[0].dropped)
 
 	# Wear armor from the pack; worn armor can't be dropped.
+	save.character.experience = Leveling.exp_for(60)  # the Lumen Hood needs level 60 (Part 11)
+	_player.apply_bonuses()
 	var hood := ArmorBook.make(&"lumen_hood")
 	save.take_armor(hood)
 	_menu._refresh()

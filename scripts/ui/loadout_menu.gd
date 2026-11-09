@@ -190,6 +190,9 @@ func _on_weapon_picked(weapon: WeaponData) -> void:
 	if weapon and combat and not weapon.can_be_used_by(combat.job_code):
 		_message.text = "%s needs %s." % [weapon.display_name, weapon.jobs_text()]
 		return
+	if weapon and combat and weapon.requirement_error(combat.stats) != "":
+		_message.text = "%s: %s." % [weapon.display_name, weapon.requirement_error(combat.stats)]
+		return
 	var error := equip(_editing.x, _editing.y, weapon)
 	if error == "":
 		error = combat.job_error(_set.loadouts[_editing.x])
@@ -437,7 +440,7 @@ func _weapon_button(w: WeaponData) -> Button:
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.tooltip_text = Loot.describe(w)
 	b.modulate = Color(1.0, 0.6, 1.0) if w.rare else Color(0.85, 0.92, 1.0)
-	if combat and not w.can_be_used_by(combat.job_code):
+	if combat and (not w.can_be_used_by(combat.job_code) or w.requirement_error(combat.stats) != ""):
 		# Still focusable (so the d-pad doesn't skip it); A explains the lock.
 		b.modulate = Color(0.55, 0.55, 0.6)
 		b.set_meta("locked", true)
@@ -470,10 +473,12 @@ func _refresh_status() -> void:
 		rares.append(w.display_name)
 	var lines := PackedStringArray()
 	lines.append("[font_size=26]%s[/font_size]" % c.seeker_name)
-	lines.append("%s %s %s   %s-handed   Emblem [color=#%s]%s[/color]   EXP %d" % [
+	lines.append("[b]Level %d[/b]   EXP %d   %s" % [c.level(), c.experience,
+		"next level in %d" % Leveling.to_next(c.experience) if c.level() < Leveling.MAX_LEVEL else "max level"])
+	lines.append("%s %s %s   %s-handed   Emblem [color=#%s]%s[/color]" % [
 		CharacterData.Race.keys()[c.race].capitalize(), CharacterData.Gender.keys()[c.gender].capitalize(),
 		c.job_name(), "Left" if c.left_handed else "Right", c.emblem_text_color().to_html(false),
-		c.emblem_name(), c.experience])
+		c.emblem_name()])
 	lines.append("")
 	lines.append("[b]HP[/b] %d / %d    [b]LP[/b] %d / %d" % [roundi(seeker.health.hp), roundi(s.max_hp),
 		roundi(combat.lp), roundi(s.max_lp)])

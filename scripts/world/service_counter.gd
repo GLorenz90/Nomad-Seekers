@@ -4,8 +4,9 @@ extends Node3D
 ## it and press A to open the shop, the bank or the Guild. Sits in the
 ## "interactables" group like teleporters and items.
 ##
-## Shops roll their stock when the hub loads, so it changes every time you
-## arrive in Nomad-2 (PSO rolls its arms shop each time you enter Pioneer 2).
+## Shops roll their stock once per visit (the first time you open them), so it
+## changes every time you arrive in Nomad-2 (PSO rolls its arms shop each time
+## you enter Pioneer 2), at tiers for the Seeker's level (Part 11).
 
 enum Service { WEAPONS, ARMOR, CURATIVES, BANK, GUILD }
 
@@ -19,23 +20,24 @@ var stock_weapons: Array[WeaponData] = []
 var stock_armor: Array[ArmorData] = []
 var stock_units: Array[StringName] = []
 var rng := RandomNumberGenerator.new()
+var _rolled := false
 
 
 func _ready() -> void:
 	add_to_group("interactables")
 	add_to_group("service_counters")
 	rng.randomize()
-	roll_stock()
 
 
-## New stock for this visit (shops only).
-func roll_stock() -> void:
+## New stock for this visit (shops only), for a Seeker of `level`.
+func roll_stock(level: int = 1) -> void:
+	_rolled = true
 	match service:
 		Service.WEAPONS:
-			stock_weapons = Prices.roll_weapon_stock(rng)
+			stock_weapons = Prices.roll_weapon_stock(rng, level)
 		Service.ARMOR:
-			stock_armor = Prices.roll_armor_stock(rng)
-			stock_units = Prices.roll_unit_stock(rng)
+			stock_armor = Prices.roll_armor_stock(rng, level)
+			stock_units = Prices.roll_unit_stock(rng, level)
 
 
 func display_name() -> String:
@@ -69,6 +71,8 @@ func interact(seeker: Player) -> void:
 
 ## Opens this counter's menu for the Seeker (also used by tests).
 func open_menu(seeker: Player) -> CounterMenu:
+	if not _rolled:
+		roll_stock(seeker.save.character.level() if seeker.save else 1)
 	match service:
 		Service.BANK:
 			menu = BankMenu.new()

@@ -27,7 +27,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_player = _main.get_node("Player")
-	_player.use_save(SaveData.fresh(CombatController.make_default_loadouts()))
+	var data := SaveData.fresh(CombatController.make_default_loadouts())
+	data.character.experience = Leveling.exp_for(100)  # every tier wearable (Part 11 level requirements)
+	_player.use_save(data)
 	_player.autosave = false
 	_menu = _main.loadout_menu
 	_menu.save_on_close = false

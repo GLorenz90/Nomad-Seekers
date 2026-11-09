@@ -120,6 +120,49 @@ func can_be_used_by(job: String) -> bool:
 	return jobs.has(job)
 
 
+# --- Stat requirements (Part 11, Grayson: "weapons have stat requirements,
+# just like PSO") -----------------------------------------------------------------
+
+## Overrides the computed requirement when 0 or more.
+@export var required_stat_value := -1
+
+const REQUIREMENT_STAT := {WeaponClass.MELEE: &"strength", WeaponClass.RANGED: &"dexterity",
+	WeaponClass.MAGIC: &"soul"}
+const REQUIREMENT_LABEL := {&"strength": "STR", &"dexterity": "DEX", &"soul": "SOL"}
+
+
+## The stat this weapon needs: STR for melee, DEX for ranged, SOL for magic.
+func requirement_stat() -> StringName:
+	return REQUIREMENT_STAT[weapon_class]
+
+
+## How much of it: 6 per point of base damage above 20, in steps of 5 (Pistol,
+## Sword and the casting items need nothing; Great Sword STR 85; Arbalest
+## DEX 240). Rares need 80 more. Claude's formula, first pass.
+func requirement_value() -> int:
+	if required_stat_value >= 0:
+		return required_stat_value
+	var need := maxi(snappedi(roundi((base_damage - 20.0) * 6.0), 5), 0)
+	return need + (80 if rare else 0)
+
+
+## "" when the stats are enough, otherwise "Needs STR 85 (you have 40)".
+func requirement_error(stats: Stats) -> String:
+	var need := requirement_value()
+	if need <= 0 or stats == null:
+		return ""
+	var stat := requirement_stat()
+	var have := float(stats.get(stat))
+	if have >= need:
+		return ""
+	return "Needs %s %d (you have %d)" % [REQUIREMENT_LABEL[stat], need, floori(have)]
+
+
+func requirement_text() -> String:
+	var need := requirement_value()
+	return "none" if need <= 0 else "%s %d" % [REQUIREMENT_LABEL[requirement_stat()], need]
+
+
 func jobs_text() -> String:
 	return "All" if jobs.size() >= 3 else ", ".join(jobs)
 

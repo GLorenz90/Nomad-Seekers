@@ -53,6 +53,7 @@ func _ready() -> void:
 			hud.show_banner("Deposited %d Lumidium" % amount))
 	player.item_collected.connect(hud.show_pickup)
 	player.exp_gained.connect(func(amount: int): hud.show_pickup("+%d EXP" % amount))
+	player.leveled_up.connect(hud.show_level_up)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_bake_navmesh()
 

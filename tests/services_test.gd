@@ -49,6 +49,8 @@ func _run() -> void:
 	var curatives: ServiceCounter = clerks[ServiceCounter.Service.CURATIVES]
 	var bank: ServiceCounter = clerks[ServiceCounter.Service.BANK]
 	var guild: ServiceCounter = clerks[ServiceCounter.Service.GUILD]
+	weapons.roll_stock(1)  # shops roll on first open, for the Seeker's level (Part 11)
+	armor.roll_stock(1)
 	await _place(curatives.global_position)
 	_check("standing at a counter shows the A prompt (%s)" % _player.interact_prompt(),
 		_player.interact_prompt() == "A: Shop: Curatives")
@@ -66,8 +68,8 @@ func _run() -> void:
 			rare_count += 1
 	var tiers_ok := true
 	for a in armor.stock_armor:
-		tiers_ok = tiers_ok and a.tier <= 2 and not a.rare
-	_check("stock: %d weapons, %d armor, %d augments, no rares, armor tier 1-2" % [weapons.stock_weapons.size(),
+		tiers_ok = tiers_ok and a.tier == 1 and not a.rare
+	_check("stock: %d weapons, %d armor, %d augments, no rares, armor tier 1 at level 1" % [weapons.stock_weapons.size(),
 		armor.stock_armor.size(), armor.stock_units.size()],
 		weapons.stock_weapons.size() == Prices.WEAPON_STOCK and rare_count == 0 and tiers_ok
 		and armor.stock_armor.size() == Prices.ARMOR_STOCK and armor.stock_units.size() == Prices.UNIT_STOCK)
