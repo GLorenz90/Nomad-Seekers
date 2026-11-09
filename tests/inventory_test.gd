@@ -167,14 +167,22 @@ func _run() -> void:
 	_check("Use heals and takes one (HP %d%%, %d left)" % [roundi(_player.health.hp / _player.health.max_hp * 100.0), inv.count(&"hp_gel")],
 		_player.health.hp > _player.health.max_hp * 0.75 and inv.count(&"hp_gel") == 9)
 
-	# Drop 3 of the stack: +1 twice, then Drop this many.
+	# Drop 3 of the stack with the d-pad alone: down to the amount row (+),
+	# A twice, right and left along the row, down to Drop this many.
 	await _focus_entry("HP Gel")
 	await _pad(JOY_BUTTON_A)
-	await _focus_action("+1")
+	await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("d-pad down from Use reaches + (%s)" % _focused_text(), _focused_text() == "+")
 	await _pad(JOY_BUTTON_A)
 	await _pad(JOY_BUTTON_A)
-	_check("the amount goes up with +1 (%s)" % _tab._amount_label.text, _tab._amount_label.text == "3")
-	await _focus_action("Drop this many")
+	_check("the amount goes up with + (%s)" % _tab._amount_label.text, _tab._amount_label.text == "3")
+	await _pad(JOY_BUTTON_DPAD_LEFT)
+	_check("d-pad left along the row reaches - (%s)" % _focused_text(), _focused_text() == "-")
+	await _pad(JOY_BUTTON_DPAD_RIGHT)
+	await _pad(JOY_BUTTON_DPAD_RIGHT)
+	_check("and right goes back past + to All, not up to Use (%s)" % _focused_text(), _focused_text() == "All")
+	await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("down reaches Drop this many (%s)" % _focused_text(), _focused_text() == "Drop this many")
 	before = _pickups().size()
 	await _pad(JOY_BUTTON_A)
 	await _frames(3)
@@ -231,7 +239,7 @@ func _run() -> void:
 	lum_button.grab_focus()
 	await _frames(2)
 	await _pad(JOY_BUTTON_A)
-	await _focus_action("+1")
+	await _focus_action("+")
 	for i in 3:
 		await _pad(JOY_BUTTON_A)
 	await _focus_action("Drop this many")

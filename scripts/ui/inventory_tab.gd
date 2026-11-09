@@ -362,7 +362,9 @@ func _open_actions(e: Dictionary, _from: Button) -> void:
 		_focus_first(_actions)
 
 
-## Drop with an amount: -/+ buttons (bigger steps for Oro), All, then Drop.
+## Drop with an amount: - / + buttons (Oro also gets bigger steps), All, then
+## Drop. The row's focus neighbors are set by hand: the full-width buttons
+## above and below would otherwise catch d-pad left / right.
 func _amount_actions(e: Dictionary, have: int) -> void:
 	if have <= 0:
 		_action("Nothing to drop", func(): pass, false)
@@ -371,26 +373,44 @@ func _amount_actions(e: Dictionary, have: int) -> void:
 	if have == 1:
 		_action("Drop", _drop.bind(e, 1))
 		return
+	var above: Button = null
+	for child in _actions.get_children():
+		if child is Button:
+			above = child
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 4)
-	var steps := [-1000, -100, -10, -1, 1, 10, 100, 1000] if e.kind == "oro" else [-1, 1]
+	row.add_theme_constant_override("separation", 6)
+	var steps := [-100, -10, -1, 1, 10, 100] if e.kind == "oro" else [-1, 1]
 	_amount_label = _label("", 18)
-	_amount_label.custom_minimum_size.x = 90.0
+	_amount_label.custom_minimum_size.x = 70.0
 	_amount_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var buttons: Array[Button] = []
 	for step in steps:
 		if step > 0 and _amount_label.get_parent() == null:
 			row.add_child(_amount_label)
 		var b := Button.new()
-		b.text = "%+d" % step
+		b.text = ("-" if step < 0 else "+") + (str(absi(step)) if absi(step) > 1 else "")
+		b.custom_minimum_size.x = 44.0
 		b.pressed.connect(func(): _set_amount(_amount + step, have))
 		row.add_child(b)
+		buttons.append(b)
 	var all := Button.new()
 	all.text = "All"
 	all.pressed.connect(func(): _set_amount(have, have))
 	row.add_child(all)
+	buttons.append(all)
 	_actions.add_child(row)
 	_set_amount(_amount, have)
-	_action("Drop this many", func(): _drop(e, _amount))
+	var drop := _action("Drop this many", func(): _drop(e, _amount))
+	var plus: Button = buttons[steps.find(1)]
+	for i in buttons.size():
+		var b := buttons[i]
+		b.focus_neighbor_left = b.get_path_to(buttons[maxi(i - 1, 0)])
+		b.focus_neighbor_right = b.get_path_to(buttons[mini(i + 1, buttons.size() - 1)])
+		b.focus_neighbor_top = b.get_path_to(above if above else b)
+		b.focus_neighbor_bottom = b.get_path_to(drop)
+	drop.focus_neighbor_top = drop.get_path_to(plus)
+	if above:
+		above.focus_neighbor_bottom = above.get_path_to(plus)
 
 
 func _set_amount(value: int, have: int) -> void:
