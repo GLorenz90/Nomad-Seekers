@@ -2,7 +2,7 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 6, SyncAIDa**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 6, magic and combat finalization**.
 
 Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` has two wave rooms full of real enemies (open it and press F6).
 
@@ -86,7 +86,7 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
 - **Menu tabs** (LB/RB in the menu): Loadouts (the picker now lists found weapons first, greyed out if your job can't use them), Inventory, Character.
 - **Save file:** `user://save.tres` holds the character, loadouts and inventory. It's written when the menu closes and at teleporters. Part 3's `loadouts.tres` is imported once.
 
-## Part 6: SyncAIDa
+## SyncAIDa (merged into Part 5)
 - **Your SyncAIDa** floats just over and behind your right shoulder (the camera is centred on the Seeker, so future twin SyncAIDa can take both shoulders). Its color follows its strongest stat and its shape changes with each evolution.
 - **Starter choice:** a new Seeker picks one of four starters in the menu's **SyncAIDa** tab (the menu opens there until you've chosen). Each starts at **level 5 in one stat**, so it boosts what your character needs right away: Aegi (DEF), Kindle (STR), Swift (DEX), Lumi (SOL). You can own several and pair one; with Free feeding on, the tab also lets you adopt more starters for testing.
 - **Feeding** (SyncAIDa tab): consumables come from your inventory and Lumidium from your bank. Each item raises some of **DEF / STR / DEX / SOL** and may lower another, as in PSO, but a lowered stat only loses progress toward its next level: a stat level, once earned, is never lost. Every 100 XP in a stat is one stat level. The SyncAIDa's level is the sum of its stat levels, up to **200**. Each stat level adds to your matching stat: STR and DEF +2, DEX and SOL +1. The SyncAIDa tab shows each stat's level and a bar with its progress to the next level, as in PSO.
@@ -103,6 +103,48 @@ Two scenes: `scenes/main.tscn` is the test room (F5), and `scenes/arena.tscn` ha
   - Firing a burst gives a moment of invulnerability.
 - **Free feeding (debug)** in the SyncAIDa tab feeds without using items, so you can try evolutions quickly.
 
+## Part 6: magic, traps and hit chance
+![Granfajro clearing a wave](docs/screenshots/magic_granfajro.png)
+
+- **Hit chance (ATA vs EVA).** Seekers and enemies now have **ATA** (accuracy) and **EVA** (evasion). Every weapon hit rolls, PSO-style but kinder:
+  - Hit % = 60 + effective ATA − EVA × 0.2 + streak, clamped to 5–100%.
+  - Effective ATA = ATA × attack type × combo step. Combo steps 1 / 2 / 3 give ×1.0 / ×1.3 / ×1.69, so finishers almost always land.
+  - Attack type: Normal ×1.0, Hard ×0.9, but **opening** a combo with a Hard is ×0.7. Specials ×0.8.
+  - **Streak (Chrono Cross):** every hit that lands adds +4% to the next one in the combo, up to +12%.
+  - Frozen targets have 30% less EVA, Shocked or Paralyzed 15% less.
+  - **Spells, traps and hazards never miss.** Misses show "Miss".
+  - Enemy EVA / ATA: Ooze 30 / 40, Drone 50 / 60, Hound 60 / 50, Umbral 70 / 55, Crawler 90 / 55, Sprite 140 / 60. EVA no longer lowers ranged damage; DEF covers both.
+- **Hit reactions.** Light and sustained hits only interrupt an enemy if one hit takes half its max HP. Hard hits **push back and flinch** 90% of the time (bosses 25%), like PSO.
+- **Magic** follows Grayson's spell grid: 6 elements × 7 spell types, plus Heal, Cure, Teleportal and Revive.
+  - Spells live in the **casting item's slots**, set in the menu's **Spells** tab. One-handed items have 2 slots (tap / hold RT + tap), two-handed items 4 (X, Y, RT + X, RT + Y). Hold the button for a **Hard cast**: ×1.6 power and LP, a bit slower, rooted, 25% bigger area.
+  - Damage uses PSO's formula: (SOL + technique power) / 5 × the item's spell power. Fire, Ice and Lightning use the real Foie / Barta / Zonde tables; Nature, Light and Dark are my best guesses in the same shape.
+  - **Shapes:** single target (Fajro, Glacio's piercing line, Fulmo, Arbo's ground thorns, Lumo, Malbo), small bursts (ring, spear fan, chain, 30° and 60° cones, rolling gravity ball), large areas (Granfajro and friends; Granmalbo pulls enemies to the center), sustained channels (hold to keep casting), buffs (+STR / DEF / DEX / SOL / ATA / EVA), debuffs on enemies around you, and auras that pulse damage near you.
+  - Single-target spells and Fire / Ice / Lightning / Nature / Light auras don't inflict status; everything else can. Pasmalbo can.
+  - **Cure** clears one more status per level in order of annoyance (Slow, Burn, Poison, Blind, Drain, Shock, Paralyze, Freeze); level 9 also clears debuffs. **Teleportal** opens a pad to the ship (the gym for now). **Revive** waits for co-op.
+- **Learning.** Each spell needs SOL to learn: its base, +20 a level for the first half, +40 after (Cure +25, Revive +30 / +60). Max spell level: **15**, Lumera 20, Coresian 10. **Invokers reach 30 in everything**, whatever their race. Strikers reach 5 levels less in buff spells, Rangers 5 less in debuff spells (a Human Ranger tops out at 10 in debuffs). Cure, Revive and Teleportal always reach their own max. New Seekers know Fajro, Glacio and Fulmo.
+
+  | Max level | Striker (buffs) | Ranger (debuffs) | Invoker |
+  |---|---|---|---|
+  | Human | 15 (10) | 15 (10) | 30 |
+  | Lumera | 20 (15) | 20 (15) | 30 |
+  | Coresian | 10 (5) | 10 (5) | 30 |
+  | Goluman (traps) | 15 | 15 | can't be Invokers |
+- **Spell discs** drop from enemies (about 6% of kills). A disc you can read is learned; one you can't yet is stored (read it from the Spells tab later); one you already know is sold for Oro.
+- **Race stat bonuses:** Humans +5 STR / DEX / SOL, Coresian +10 STR, Lumera +10 SOL, Goluman +10 DEX.
+- **Goluman** can't cast and can't be Invokers. In return they **slowly regenerate HP** (0.5% of max HP a second). They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
+- **Level hazards.** Six hidden traps sit in the arena. Only Goluman can see them; anyone else finds out by stepping on one (each springs once).
+- **Paralyze** is a new status: 2.5 s, no moving or acting.
+- **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Res (RES, new), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them in the **Character** tab.
+  - PSO's limits: the eight stat materials share one limit: **Humans 275, Lumera and Coresian 175** (PSO's 250 / 150, +25 for the new materials), **Goluman 150**. HP and LP have their own 125 each.
+  - Goluman can't use Mind Materials (no magic), and can use only 75 LP Materials.
+  - They drop from enemies (about 2.4% of kills). Levels tab: +10 of each. Reset character forgets the ones used.
+  - Accuracy has no other source yet; character levels and gear will add to it.
+
+![Materials in the Character tab](docs/screenshots/materials_character_tab.png)
+
+![The Spells tab](docs/screenshots/magic_spells_tab.png)
+![Hazards seen by a Goluman](docs/screenshots/magic_hazards.png)
+
 ## Travel
 The gym (`scenes/main.tscn`) has a teleporter to the arena. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to the gym. Every trip loads the arena fresh. Teleporters save first and bank carried Lumidium.
 
@@ -112,10 +154,11 @@ Fully usable with a gamepad: d-pad or left stick moves, **A** accepts, **B** goe
 | Tab | What's there |
 |---|---|
 | Loadouts | 8 loadouts (X / Delete unequips the highlighted hand, Y / Shift+Delete clears that loadout, plus a Clear all button for testing), weapon picker (found weapons first, then Melee / Ranged / Magic / Shields, A-Z; job-locked weapons are grey and A on one says which job needs it), Double-Heavy augment |
+| Spells | Casting items in your loadouts → their slots → your learned spells (A picks, X clears a slot, B goes back). Also lists stored discs to read |
 | Inventory | Oro, Lumidium, consumables, found weapons (d-pad scrolls) |
-| Character | Name (New name button for gamepads), race, gender, emblem and drop pool, Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
+| Character | Name (New name button for gamepads), race, gender, emblem and drop pool, materials (A uses one), Reset character to level 1 (testing). The job is shown but fixed: it's chosen at character creation (Levels tab has a debug switch) |
 | SyncAIDa | Starter choice, pairing, feeding, active Sync Burst, Reset to base stats (testing) |
-| Levels | Prototype only: level select, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
+| Levels | Prototype only: level select, learn every spell at max or at level 1, or one spell at a level, forget all, Infinite LP, +50 SOL / DEX, refills, Oro / items / Lumidium, respawn, debug readout, hitboxes, free feeding |
 | Controls | The control reference (moved out of the debug overlay) |
 
 Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on the ground: faint during the windup, bright when the strike lands, with the exact reach and arc the hit uses. The debug readout is off by default. Select / F3 or the Levels tab turns it on.
@@ -130,7 +173,8 @@ Show hitboxes (Levels tab, on by default) also draws enemy melee hit areas on th
 | Lock on / recenter | R3 | Q / middle mouse |
 | Switch target | Flick right stick | Sweep mouse |
 | Hand attacks (tap / hold) | X / Y | Left / right click |
-| Second spell (hold while casting) / special | RT | E |
+| Cast (tap) / Hard cast (hold) | X / Y with a casting item | Left / right click |
+| Spell slots 2 / 4 (hold while casting) / special | RT | E |
 | Use HP Gel / LP Cell / Cure Salt | D-pad left / up / right | 1 / 2 / 3 |
 | Sync Burst | L3 | R |
 | Cycle loadouts | LB / RB | Z / C |
@@ -157,6 +201,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - Only the arena has Lumidium nodes and teleporters. Teleporters only bank Lumidium; travel arrives with the hub.
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
 - EXP is counted but there are no levels yet.
+- Revive has nothing to revive until co-op. Teleportal goes to the gym until the ship exists.
 - Party bursts (several Seekers firing together) wait for co-op. SyncAIDa have no feeding cooldown and no personalities yet.
 - The game pauses while the loadout menu is open. Co-op will need a non-pausing version.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
@@ -174,6 +219,8 @@ godot --headless --path . --script res://tests/enemy_test.gd
 godot --headless --path . --script res://tests/loot_test.gd
 godot --headless --path . --script res://tests/syncaida_test.gd
 godot --headless --path . --script res://tests/menu_test.gd
+godot --headless --path . --script res://tests/magic_test.gd
+godot --headless --path . --script res://tests/materials_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, lock-on, orbiting, recentering, camera height return.
@@ -183,7 +230,7 @@ godot --headless --path . --script res://tests/menu_test.gd
 
 - `targeting_test.gd`: default buttons (X = right hand); Sword marks one of two side-by-side enemies and Great Sword marks both, and real swings hit exactly what was marked; blue / yellow / green per hand, and using one hand doesn't hide the other hand's marker; the Pistol and Fire Bolt mark the first enemy in line and Frost Lance marks the whole line; lock-on shows the large ring and hides it on release.
 
-- `enemy_test.gd` (in the arena): all six monster types, DEF / RES / EVA math and miss rate, every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard-hit stagger, a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open).
+- `enemy_test.gd` (in the arena): all six monster types, DEF / RES math, hit chance (ATA vs EVA, combo steps, Hard openers, the streak, statuses lowering EVA, spells never missing), every status (Burn ticks, Slow then Freeze, Shock, Blind, Drain healing its source), a Hound pathing to you and hitting for its damage, Hard hits pushing and flinching (light hits never interrupting), a Frozen enemy standing still, a Drone keeping its distance and shooting, Ward reflecting a Drone bolt into the Drone, and a full three-wave room (doors close, waves follow each other, doors open).
 
 - `loot_test.gd` (in the arena): the full weapon list and every emblem's favored families, job locks, the 7 rares covering all 10 emblems, drop rates and emblem weighting, tag tiers, tag names and RT specials, the +30% vs Beast bonus, Gush / Mind / King's / Hell effects (and Hell never killing a boss), the Charge special paying Oro, Shotgun pellets, a Grenade arc and its blast (and its prediction), the Boomerang lock chain, the Gigarang hitting out and back, the Thrown Daggers finisher, Machine Pistol automatic fire, the Staff's four spells, Heal and Cure, EXP and drops, pickups and an HP Gel, a Lumidium node breaking, losing carried Lumidium on death, a teleporter deposit, and a save round-trip.
 
@@ -194,3 +241,7 @@ godot --headless --path . --script res://tests/menu_test.gd
 The tests always use a fresh save and never write yours.
 
 `tools/build_starter_weapons.gd`, `tools/build_enemies.gd` and `tools/build_arena.gd` regenerate the weapons, enemies and arena with their default values (this overwrites any edits).
+
+- `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
+
+- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Character tab with a gamepad, and Reset character forgetting them.

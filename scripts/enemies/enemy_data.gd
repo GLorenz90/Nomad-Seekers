@@ -17,15 +17,14 @@ enum Shape { CAPSULE, BOX, SPHERE }
 @export var boss := false
 ## EXP for defeating it (0 = max_hp / 5).
 @export var experience := 0
-@export var defense := 10.0   ## vs melee
+@export var defense := 10.0   ## vs melee and ranged
 @export var resolve := 10.0   ## vs magic
-@export var evasion := 10.0   ## vs ranged + miss chance
+@export var evasion := 60.0   ## EVA: how often Seeker weapon attacks miss (Accuracy)
+@export var accuracy := 50.0  ## ATA: how often its attacks land on the Seeker
 ## Takes double damage of this type (GENERIC = none).
 @export var weak_to: Element.Type = Element.Type.GENERIC
 ## Takes half damage of this type (GENERIC = none).
 @export var resists: Element.Type = Element.Type.GENERIC
-## A single hit dealing at least this fraction of max HP staggers it.
-@export_range(0.0, 1.0) var stagger_fraction := 0.12
 
 @export_group("Movement")
 @export var move_speed := 3.5

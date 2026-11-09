@@ -16,6 +16,12 @@ signal defeated(enemy: Enemy)
 enum State { IDLE, CHASE, WINDUP, RECOVER, STAGGER, DEAD }
 
 const ENEMY_LAYER := 4
+## Hit reactions (Part 6).
+const HARD_FLINCH_CHANCE := 0.9
+const HARD_FLINCH_CHANCE_BOSS := 0.25
+const HARD_FLINCH_SECONDS := 0.35
+const HARD_PUSH_SPEED := 4.5  # about 0.6 m of push-back
+const LIGHT_STAGGER_FRACTION := 0.5
 const WORLD_MASK := 1
 
 var data: EnemyData
@@ -64,24 +70,46 @@ func is_dead() -> bool:
 func receive_hit(info: DamageInfo, attacker: Node3D, _projectile: Node = null) -> float:
 	if state == State.DEAD:
 		return 0.0
-	if randf() < Defense.miss_chance(info.kind, data.evasion):
-		DamageNumber.spawn_text(get_parent(), get_lock_point() + Vector3.UP * 0.5, "Miss")
+	if not Accuracy.roll(info, data.evasion * status.stat_scale(&"evasion"), self, status):
 		return 0.0
-	info.amount *= Defense.scale_for(info.kind, data.defense, data.resolve, data.evasion)
+	info.amount *= Defense.scale_for(info.kind, data.defense * status.stat_scale(&"defense"), data.resolve)
 	# PSO-style monster-type bonus on the weapon (e.g. +20% vs Beast).
 	if info.weapon and info.weapon.type_bonus.has(data.enemy_type):
 		info.amount *= 1.0 + float(info.weapon.type_bonus[data.enemy_type])
 	var amount := health.take_damage(info)
 	status.add_buildup(info, attacker)
 	_aggro = true
-	if state != State.DEAD and (info.is_hard or amount >= data.max_hp * data.stagger_fraction):
-		_stagger(0.45)
+	_react(info, attacker, amount)
 	return amount
+
+
+## Part 6 (PSO feel): light and sustained hits almost never interrupt; only a
+## single huge hit (LIGHT_STAGGER_FRACTION of max HP) does. Hard hits almost
+## always push the enemy back a little and cut its windup short.
+func _react(info: DamageInfo, attacker: Node3D, amount: float) -> void:
+	if state == State.DEAD or amount <= 0.0:
+		return
+	if info.is_hard:
+		if randf() < (HARD_FLINCH_CHANCE_BOSS if data.boss else HARD_FLINCH_CHANCE):
+			var away := global_position - (attacker.global_position if attacker else global_position)
+			away.y = 0.0
+			if away.length_squared() < 0.001:
+				away = global_basis.z
+			_knockback = away.normalized() * HARD_PUSH_SPEED
+			_stagger(HARD_FLINCH_SECONDS)
+	elif amount >= data.max_hp * LIGHT_STAGGER_FRACTION:
+		_stagger(HARD_FLINCH_SECONDS)
 
 
 func on_parried() -> void:
 	_stagger(1.5)
 	_glow(Color(0.3, 0.6, 1.0), 1.5)
+
+
+## Gravity pull (Granmalbo): moves it without interrupting.
+func apply_pull(velocity_add: Vector3) -> void:
+	velocity_add.y = 0.0
+	_knockback = velocity_add
 
 
 func apply_knockback(push: Vector3) -> void:
@@ -200,10 +228,11 @@ func _flat_step() -> Vector3:
 
 func _attack(seeker: Player) -> void:
 	var info := DamageInfo.new()
-	info.amount = data.attack_damage
+	info.amount = data.attack_damage * status.stat_scale(_attack_stat())
 	info.damage_type = data.attack_element
 	info.status_power = data.status_power
 	info.source = self
+	info.accuracy = data.accuracy * status.stat_scale(&"accuracy")
 	match data.attack_style:
 		EnemyData.AttackStyle.MELEE:
 			info.kind = DamageInfo.Kind.MELEE
@@ -227,6 +256,16 @@ func _attack(seeker: Player) -> void:
 			var aim := (seeker.global_position + Vector3.UP * 1.1 - from).normalized()
 			Projectile.spawn(get_parent(), from, aim, shot, info, _element_color(), self, null,
 				Projectile.PLAYER_MASK)
+
+
+## Which of its stats a debuff lowers: melee STR, ranged DEX, casters SOL.
+func _attack_stat() -> StringName:
+	match data.attack_style:
+		EnemyData.AttackStyle.MELEE:
+			return &"strength"
+		EnemyData.AttackStyle.RANGED:
+			return &"dexterity"
+	return &"soul"
 
 
 func _has_line_of_sight(seeker: Player) -> bool:

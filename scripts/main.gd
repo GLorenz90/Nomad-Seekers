@@ -73,7 +73,8 @@ func _physics_process(_delta: float) -> void:
 func on_enemy_defeated(enemy: Enemy) -> void:
 	player.gain_exp(enemy.data.exp_value())
 	var emblem := player.save.character.emblem_index() if player.save else 0
-	var drop := Loot.roll_drop(enemy.data, emblem, rng)
+	var traps := player.save != null and player.save.character.can_use_traps()
+	var drop := Loot.roll_drop(enemy.data, emblem, rng, traps)
 	if not drop.is_empty():
 		spawn_drop(drop, enemy.global_position)
 

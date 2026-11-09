@@ -24,6 +24,11 @@ const JOB_CODES := ["S", "R", "I"]
 @export var gender: Gender = Gender.MALE
 @export var job: Job = Job.STRIKER
 @export var experience := 0
+## Learned spells and traps: id -> level (Part 6). Learned levels are kept even
+## if SOL later drops (like PSO).
+@export var spells: Dictionary = {}
+## Materials used: id -> count (PSO materials, see Materials).
+@export var materials: Dictionary = {}
 
 
 ## PSO-style: the name's character codes plus race, gender and job, mod 12.
@@ -58,3 +63,115 @@ func job_name() -> String:
 
 func race_name() -> String:
 	return Race.keys()[race].capitalize()
+
+
+# --- Magic (Part 6) ---------------------------------------------------------------
+
+## Highest spell level this Seeker can learn (Grayson, 2026-11-08): 20, +5 for an
+## Invoker, +5 for a Lumera, -5 for a Striker, -5 for a Coresian. Goluman can't
+## use magic at all (0); their traps use the same cap from Goluman's base.
+## Goluman perks (Grayson, 2026-11-08): more DEX to start, and slow HP regen.
+const GOLUMAN_DEX_BONUS := 10.0
+const GOLUMAN_HP_REGEN := 0.005  # of max HP per second
+## Spells that level to 30 follow the caps below; the rest (Cure, Revive,
+## Teleportal) always reach their own max.
+const FULL_SPELL_LEVEL := 30
+
+
+## Max level for ordinary spells (Grayson, 2026-11-08): 15, +5 Lumera,
+## -5 Coresian. Invokers reach 30 whatever their race.
+func spell_level_cap() -> int:
+	if job == Job.INVOKER:
+		return FULL_SPELL_LEVEL
+	match race:
+		Race.LUMERA:
+			return 20
+		Race.CORESIAN:
+			return 10
+	return 15
+
+
+## Strikers reach 5 levels less in buff spells, Rangers in debuff spells.
+func buff_level_cap() -> int:
+	return spell_level_cap() - (5 if job == Job.STRIKER else 0)
+
+
+func debuff_level_cap() -> int:
+	return spell_level_cap() - (5 if job == Job.RANGER else 0)
+
+
+## "Max spell level 15 (buffs 10)" and the like, for menus.
+func spell_cap_text() -> String:
+	var text := "Max spell level %d" % spell_level_cap()
+	if buff_level_cap() != spell_level_cap():
+		text += " (buffs %d)" % buff_level_cap()
+	if debuff_level_cap() != spell_level_cap():
+		text += " (debuffs %d)" % debuff_level_cap()
+	return text
+
+
+## Goluman can't be Invokers.
+static func job_allowed(for_race: Race, for_job: Job) -> bool:
+	return not (for_race == Race.GOLUMAN and for_job == Job.INVOKER)
+
+
+## Flat stat bonuses from race (Grayson, 2026-11-08): Goluman +10 DEX,
+## Coresian +10 STR, Lumera +10 SOL, Humans +5 to all three.
+const RACE_BONUSES := {
+	Race.HUMAN: {&"strength": 5.0, &"dexterity": 5.0, &"soul": 5.0},
+	Race.GOLUMAN: {&"dexterity": GOLUMAN_DEX_BONUS},
+	Race.LUMERA: {&"soul": 10.0},
+	Race.CORESIAN: {&"strength": 10.0},
+}
+
+
+## Stats property -> amount.
+func race_bonuses() -> Dictionary:
+	return RACE_BONUSES.get(race, {}).duplicate()
+
+
+func hp_regen_fraction() -> float:
+	return GOLUMAN_HP_REGEN if race == Race.GOLUMAN else 0.0
+
+
+func can_use_magic() -> bool:
+	return race != Race.GOLUMAN
+
+
+func can_use_traps() -> bool:
+	return race == Race.GOLUMAN
+
+
+## Max level for one spell or trap: its own maximum and the Seeker's cap.
+func level_cap_for(spell: SpellDef) -> int:
+	if spell.is_trap() and not can_use_traps():
+		return 0
+	if not spell.is_trap() and not can_use_magic():
+		return 0
+	if spell.max_level < FULL_SPELL_LEVEL:
+		return spell.max_level
+	var cap := spell_level_cap()
+	if spell.kind == SpellDef.Kind.BUFF:
+		cap = buff_level_cap()
+	elif spell.kind == SpellDef.Kind.DEBUFF:
+		cap = debuff_level_cap()
+	return clampi(cap, 0, spell.max_level)
+
+
+func spell_level(id: StringName) -> int:
+	return int(spells.get(id, 0))
+
+
+## "" when this level can be learned with the given stat (SOL, or DEX for traps).
+func learn_error(spell: SpellDef, level: int, stat_value: float) -> String:
+	if spell.is_trap() and not can_use_traps():
+		return "Only Goluman can use traps."
+	if not spell.is_trap() and not can_use_magic():
+		return "Goluman can't use magic."
+	if level > level_cap_for(spell):
+		return "%s can reach level %d at most." % [seeker_name, level_cap_for(spell)]
+	if stat_value < spell.requirement(level):
+		return "Needs %d %s (you have %d)." % [spell.requirement(level), spell.requirement_stat(), roundi(stat_value)]
+	if spell_level(spell.id) >= level:
+		return "Already known at level %d." % spell_level(spell.id)
+	return ""

@@ -89,6 +89,11 @@ const MAX_AIM_YAW := 8.0
 const MULTI_TARGET_CONE := 50.0
 ## Heal and Cure reach every Seeker this close to the caster.
 const SUPPORT_RANGE := 10.0
+const STAT_FOR_CLASS := {
+  WeaponData.WeaponClass.MELEE: &"strength",
+  WeaponData.WeaponClass.RANGED: &"dexterity",
+  WeaponData.WeaponClass.MAGIC: &"soul",
+}
 const WEAPON_DIR := "res://data/weapons/"
 ## Default loadouts as [left hand, right hand]; "" is empty. Two-handed weapons
 ## go in the right hand, and both buttons use them.
@@ -163,6 +168,8 @@ var _last_weapon: WeaponData
 var _weapon_streak := 0
 var _time := 0.0
 var _lp_regen_delay := 0.0
+## Testing (Levels tab): LP never runs out.
+var infinite_lp := false
 var _held: Array[float] = [-1.0, -1.0]
 var _hard_fired: Array[bool] = [false, false]
 ## Whether each hand's current press landed in the chain window (judged at press).
@@ -174,6 +181,8 @@ var _block_time := 0.0
 var _parry_until := -1.0
 var _lt_was_down := false
 var _aegis_until := -1.0
+## Weapon hits landed in the current combo (Accuracy streak bonus).
+var _hit_streak := 0
 
 var _player: Player
 var _pivots: Array[Node3D] = []
@@ -232,6 +241,9 @@ static func make_default_loadouts() -> LoadoutSet:
   for pair in DEFAULT_LOADOUTS:
     defaults.loadouts.append(Loadout.make(load_weapon(pair[0]), load_weapon(pair[1])))
   defaults.ensure_slots()
+  # The starter Wand (loadout 5, left hand) holds a new Seeker's first spells.
+  defaults.loadouts[4].set_spell(0, 0, &"fajro")
+  defaults.loadouts[4].set_spell(0, 1, &"glacio")
   return defaults
 
 
@@ -275,10 +287,35 @@ func set_job(code: String) -> void:
     apply_loadout_set(loadout_set)
 
 
+## The attack for the spell in this hand's slot (Part 6), or null with a
+## message when the slot is empty, the spell isn't learned, or the Seeker
+## can't use it (Goluman can't cast; only Goluman set traps).
+func _spell_attack(hand: int, slot: int, hard: bool, speak: bool) -> AttackData:
+  var holder := _holding_hand(hand)
+  var item := get_loadout().get_hand(holder)
+  var id := get_loadout().get_spell(holder, slot)
+  var character := _player.save.character if _player and _player.save else null
+  var spell := SpellBook.get_spell(id) if id != &"" else null
+  var problem := ""
+  if spell == null:
+    problem = "No spell in this slot (menu > Spells)"
+  elif character == null or character.spell_level(id) <= 0:
+    problem = "%s isn't learned" % spell.display_name
+  elif spell.is_trap() and not character.can_use_traps():
+    problem = "Only Goluman can set traps"
+  elif not spell.is_trap() and not character.can_use_magic():
+    problem = "Goluman can't use magic"
+  if problem != "":
+    if speak:
+      combo_feedback.emit(problem)
+    return null
+  return SpellCaster.make_attack(spell, character.spell_level(id), hard, item)
+
+
 ## Which spell a casting item uses: slot 0/1 with two spells (RT = the second);
 ## a 4-spell item (Staff) gives X and Y one each, and RT + X / RT + Y two more.
 func spell_slot(weapon: WeaponData, hand: int, special: bool) -> int:
-  if weapon and weapon.casting and weapon.spells.size() > 2:
+  if weapon and weapon.casting and weapon.two_handed:
     var button := 0 if button_for(hand) == "X" else 1
     return button + (2 if special else 0)
   return 1 if special else 0
@@ -435,7 +472,14 @@ func aegis_time_left() -> float:
   return maxf(_aegis_until - _time, 0.0)
 
 
+## Buff / debuff multiplier on one of the Seeker's stats.
+func _stat_scale(stat: StringName) -> float:
+  return _player.status.stat_scale(stat) if _player and _player.status else 1.0
+
+
 func report_hit(target: Node, info: DamageInfo, amount: float) -> void:
+  if amount > 0.0 and not info.missed and info.accuracy >= 0.0:
+    _hit_streak += 1  # Chrono Cross ramp: each landed hit helps the next
   if info.special and info.weapon and info.weapon.tag and amount > 0.0 and not info.missed:
     _apply_tag_effect(target, info, amount)
   hit_landed.emit(target, info, amount)
@@ -467,8 +511,8 @@ func get_debug_text() -> String:
       var w := current_weapon(hand)
       var label := w.display_name if w else "-"
       if w and w.casting:
-        var first := spell_slot(w, hand, false)
-        label += " [%s / Shift: %s]" % [w.get_spell_name(first), w.get_spell_name(spell_slot(w, hand, true))]
+        label += " [%s / Shift: %s]" % [spell_name_in(hand, spell_slot(w, hand, false)),
+          spell_name_in(hand, spell_slot(w, hand, true))]
       lines.append("%s (%s hand): %s" % [button_for(hand), "left" if hand == Hand.LEFT else "right", label])
   lines.append(get_lt_text() + ("  [BLOCKING]" if _blocking else ""))
   if _current:
@@ -588,23 +632,31 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
   var same_weapon := streak_id == _last_hand or (weapon.two_handed and weapon == _last_weapon)
   if continuing and same_weapon:
     next_streak = _weapon_streak + 1
-  # Twin sustained works too (two Machine Pistols both fire while held).
-  var sustained := hard and weapon.sustained
-  if weapon.no_combo or weapon.casting or sustained:
+  if weapon.no_combo or weapon.casting or (hard and weapon.sustained):
     next_step = 0
     next_streak = 1
 
   # The pressed hand may use its special; the other twin hand swings normally.
   var locked := _player.get_lock_target() != null  # Gunblade: gun while locked on
-  var attack := weapon.get_attack(next_streak, hard, slot, special, locked)
+  var attack: AttackData
+  if weapon.casting:
+    attack = _spell_attack(hand, slot, hard, true)
+  else:
+    attack = weapon.get_attack(next_streak, hard, slot, special, locked)
   if attack == null:
     return
+  # Held: sustained weapons, and Sustained spells, keep going while the button is down.
+  # Twin sustained works too (two Machine Pistols both fire while held).
+  var sustained := hard and (weapon.sustained or attack.channel)
   var other_weapon: WeaponData = null
   var other_attack: AttackData = null
   var cost := attack.lp_cost
   if twin:
     other_weapon = current_weapon(1 - hand)
-    other_attack = other_weapon.get_attack(next_streak, hard, 0, false, locked)
+    if other_weapon.casting:
+      other_attack = _spell_attack(1 - hand, slot, hard, false)
+    else:
+      other_attack = other_weapon.get_attack(next_streak, hard, 0, false, locked)
     if other_attack:
       cost += other_attack.lp_cost
   var uses_special := special and not weapon.casting and weapon.get_special() != null
@@ -630,6 +682,8 @@ func _begin(hand: int, weapon: WeaponData, hard: bool, slot: int, continuing: bo
     _chain_locked = false
   if get_lt_mode() != Loadout.LTMode.SHIELD:
     _blocking = false
+  if next_step == 1:
+    _hit_streak = 0  # a new combo starts its accuracy ramp over
   chain_step = next_step
   _weapon_streak = next_streak
   _last_hand = streak_id
@@ -676,7 +730,14 @@ func _update_attack(delta: float) -> void:
     if weapon:
       _begin(q[0], weapon, q[1], q[2], true, q[3], q[4])
       return
-  if a.support != AttackData.Support.NONE:
+  if a.spell:
+    if not cur.fired and cur.elapsed >= a.active_start:
+      cur.fired = true
+      for strike in _strikes(cur):
+        var strike_attack: AttackData = strike[1]
+        if strike_attack and strike_attack.spell:
+          SpellCaster.cast(self, strike[0], strike_attack, cur.hard, cur.target, cur.direction)
+  elif a.support != AttackData.Support.NONE:
     if not cur.fired and cur.elapsed >= a.active_start:
       cur.fired = true
       _cast_support(cur)
@@ -715,7 +776,13 @@ func _update_sustained(cur: ActiveAttack, delta: float) -> void:
         cur.tick = a.sustained_tick
         if a.lp_cost > 0.0:
           _lp_regen_delay = 0.75
-        if a.is_projectile:
+        if a.spell:
+          _aim(cur)
+          for strike in _strikes(cur):
+            var strike_attack: AttackData = strike[1]
+            if strike_attack and strike_attack.spell:
+              SpellCaster.channel_tick(self, strike[0], strike_attack, true, cur.direction)
+        elif a.is_projectile:
           _aim(cur)  # automatic fire tracks the target while held
           _fire_projectiles(cur)
         else:
@@ -790,15 +857,80 @@ func predict_targets(hand: int) -> Array[Node3D]:
   var attack: AttackData
   if _current and _current.sustained:
     attack = _current.attack
+  elif weapon.casting:
+    attack = _spell_attack(hand, spell_slot(weapon, hand, special), false, false)
   else:
     attack = weapon.get_attack(_predicted_step(hand), false, spell_slot(weapon, hand, special), special,
       _player.get_lock_target() != null)
   if attack == null or attack.support != AttackData.Support.NONE:
     return []
+  if attack.spell:
+    return _predict_spell(attack, hand)
   var aim := _choose_aim(attack)
   if attack.is_projectile:
     return _predict_projectile(attack, aim[0], aim[1])
   return _predict_melee(attack, aim[1])
+
+
+## Spells: who the cast would hit, using the same target rules as SpellCaster.
+func _predict_spell(attack: AttackData, _hand: int) -> Array[Node3D]:
+  var spell := attack.spell
+  var aim := _choose_aim(attack)
+  var target: Node3D = aim[0]
+  var dir: Vector3 = aim[1]
+  var level := attack.spell_level
+  var r := spell.radius + spell.radius_growth * (level - 1)
+  match spell.shape:
+    SpellDef.Shape.SKY_STRIKE, SpellDef.Shape.HOMING_ORB:
+      var t := target if target else SpellCaster._nearest_ahead(_player, dir, spell.reach, 60.0)
+      return [t] if t else []
+    SpellDef.Shape.CHAIN:
+      var first := target if target else SpellCaster._nearest_ahead(_player, dir, spell.reach, 60.0)
+      if first == null:
+        return []
+      var chain: Array[Node3D] = [first]
+      while chain.size() < spell.max_targets:
+        var next := SpellCaster._nearest_to(chain[-1].global_position, r, chain)
+        if next == null:
+          break
+        chain.append(next)
+      return chain
+    SpellDef.Shape.CONE_STRIKE, SpellDef.Shape.CHANNEL:
+      return SpellCaster._in_cone(_player.global_position, dir, spell.reach, spell.cone_deg, spell.max_targets)
+    SpellDef.Shape.TARGET_AREA, SpellDef.Shape.GRAVITY_PIT:
+      return SpellCaster._in_radius(SpellCaster._area_center(_player, target, dir, spell.reach), r, spell.max_targets)
+    SpellDef.Shape.RING_OUT, SpellDef.Shape.AROUND_CASTER:
+      if spell.kind == SpellDef.Kind.DEBUFF:
+        return SpellCaster._in_radius(_player.global_position, r, 99)
+      return SpellCaster._in_radius(_player.global_position, r, spell.max_targets)
+    SpellDef.Shape.PROJECTILE, SpellDef.Shape.PIERCE_LINE, SpellDef.Shape.BIG_ORB, SpellDef.Shape.GROUND_LINE:
+      var shot := AttackData.new()
+      shot.is_projectile = true
+      shot.projectile_speed = spell.speed
+      shot.projectile_radius = maxf(spell.radius, 0.6 if spell.shape == SpellDef.Shape.GROUND_LINE else 0.0)
+      shot.projectile_range = spell.reach + 6.0
+      shot.projectile_pierce = spell.pierce or spell.shape == SpellDef.Shape.GROUND_LINE
+      return _predict_projectile(shot, target, dir)
+    SpellDef.Shape.SPEAR_FAN:
+      var fan := AttackData.new()
+      fan.is_projectile = true
+      fan.projectile_count = spell.max_targets
+      fan.spread_deg = spell.cone_deg
+      fan.projectile_radius = spell.radius
+      fan.projectile_range = spell.reach + 6.0
+      fan.projectile_pierce = true
+      return _predict_projectile(fan, target, dir)
+  return []
+
+
+## Display name of the spell in a hand's slot ("-" when empty).
+func spell_name_in(hand: int, slot: int) -> String:
+  var id := get_loadout().get_spell(_holding_hand(hand), slot)
+  var spell := SpellBook.get_spell(id) if id != &"" else null
+  if spell == null:
+    return "-"
+  var level := _player.save.character.spell_level(id) if _player and _player.save else 0
+  return "%s %d" % [spell.display_name, level] if level > 0 else spell.display_name + " (not learned)"
 
 
 func _predicted_step(hand: int) -> int:
@@ -997,7 +1129,7 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   var cls := weapon.weapon_class
   if attack.is_projectile and cls == WeaponData.WeaponClass.MELEE:
     cls = WeaponData.WeaponClass.RANGED
-  var stat := stats.attack_stat(cls)
+  var stat := stats.attack_stat(cls) * _stat_scale(STAT_FOR_CLASS[cls])
   info.amount = weapon.base_damage * attack.damage_mult * (1.0 + stat / 100.0) * scale
   if _blocking:
     info.amount *= shield_attack_damage_scale
@@ -1006,7 +1138,16 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
   info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(cls)
   info.status_power = attack.status_power
-  info.is_hard = hard
+  # Sustained ticks count as light hits (no push-back), whatever the button.
+  var sustained := hard and weapon.sustained
+  info.is_hard = hard and not sustained
+  # Hit chance (Accuracy): spells never miss; weapons roll ATA vs EVA.
+  if weapon.casting:
+    info.accuracy = -1.0
+  else:
+    info.accuracy = Accuracy.effective_ata(stats.accuracy * _stat_scale(&"accuracy"), hard, special,
+      sustained, maxi(chain_step, 1))
+    info.hit_bonus = Accuracy.streak_bonus(_hit_streak)
   if randf() < stats.crit_chance():
     info.is_crit = true
     info.amount *= 1.5
@@ -1202,6 +1343,9 @@ func _apply_tag_effect(target: Node, info: DamageInfo, amount: float) -> void:
 
 
 func _regen_lp(delta: float) -> void:
+  if infinite_lp:
+    lp = stats.max_lp
+    return
   if _lp_regen_delay > 0.0:
     _lp_regen_delay -= delta
     return

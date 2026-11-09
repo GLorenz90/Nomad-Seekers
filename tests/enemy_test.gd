@@ -43,20 +43,48 @@ func _run() -> void:
 			types[data.enemy_type] = data.display_name
 	_check("all six monster types have an enemy (%s)" % [types.values()], types.size() == 6)
 
-	# --- Defense: DEF / RES / EVA scale damage, EVA can make attacks miss ---
-	_check("DEF 20 takes 83%% of a melee hit", is_equal_approx(Defense.scale_for(DamageInfo.Kind.MELEE, 20, 0, 0), 100.0 / 120.0))
-	_check("RES applies to magic, EVA to ranged",
-		is_equal_approx(Defense.scale_for(DamageInfo.Kind.MAGIC, 0, 50, 0), 100.0 / 150.0)
-		and is_equal_approx(Defense.scale_for(DamageInfo.Kind.RANGED, 0, 0, 100), 0.5))
-	_check("spells never miss", Defense.miss_chance(DamageInfo.Kind.MAGIC, 200) == 0.0)
-	_combat.stats.evasion = 140.0  # 35% miss cap
-	var misses := 0
+	# --- Defense: DEF covers melee and ranged, RES magic ---
+	_check("DEF 20 takes 83%% of a melee hit", is_equal_approx(Defense.scale_for(DamageInfo.Kind.MELEE, 20, 0), 100.0 / 120.0))
+	_check("RES applies to magic, DEF to ranged (EVA no longer reduces damage)",
+		is_equal_approx(Defense.scale_for(DamageInfo.Kind.MAGIC, 0, 50), 100.0 / 150.0)
+		and is_equal_approx(Defense.scale_for(DamageInfo.Kind.RANGED, 100, 0), 0.5))
+
+	# --- Hit chance (Accuracy): PSO-based, kinder, with a combo ramp ---
+	var ata := 40.0
+	var pct := func(hard: bool, step: int, eva: float, streak: int = 0, special := false) -> float:
+		var info := DamageInfo.new()
+		info.accuracy = Accuracy.effective_ata(ata, hard, special, false, step)
+		info.hit_bonus = Accuracy.streak_bonus(streak)
+		return Accuracy.hit_percent(info, eva)
+	var n1: float = pct.call(false, 1, 60.0)
+	var n2: float = pct.call(false, 2, 60.0)
+	var h1: float = pct.call(true, 1, 60.0)
+	var h2: float = pct.call(true, 2, 60.0)
+	_check("normal hits land often (88%%) and the combo raises it (step 2: %.0f%%)" % n2, is_equal_approx(n1, 88.0) and n2 > n1)
+	_check("opening with a Hard hit is penalised (%.0f%%), Hard later in a combo much less (%.0f%%)" % [h1, h2],
+		is_equal_approx(h1, 76.0) and h2 > n1)
+	var sprite_eva := 140.0
+	var s1: float = pct.call(false, 1, sprite_eva)
+	var s1_streak: float = pct.call(false, 1, sprite_eva, 2)
+	_check("evasive enemies are harder (Lumen Sprite: %.0f%%) and each landed hit helps the next (+%.0f)" % [s1, s1_streak - s1],
+		s1 < n1 and is_equal_approx(s1_streak - s1, 8.0) and is_equal_approx(pct.call(false, 1, sprite_eva, 9) - s1, 12.0))
+	var spell := DamageInfo.new()
+	_check("spells never miss", Accuracy.hit_percent(spell, 999.0) == 100.0)
+	var frozen := StatusEffects.new()
+	frozen.apply(StatusEffects.Status.FREEZE)
+	var frozen_info := DamageInfo.new()
+	frozen_info.accuracy = Accuracy.effective_ata(ata, false, false, false, 1)
+	_check("Frozen targets are easier to hit (EVA x0.7)", Accuracy.hit_percent(frozen_info, sprite_eva, frozen) > s1)
+	frozen.free()
+	_combat.stats.evasion = 400.0  # 60 + 50 - 80 = 30% for a typical enemy ATA of 50
+	var lands := 0
 	for i in 400:
 		var info := _hit(10.0, DamageInfo.Kind.MELEE)
-		if _player.receive_hit(info, null) == 0.0:
-			misses += 1
+		info.accuracy = 50.0
+		if _player.receive_hit(info, null) > 0.0:
+			lands += 1
 		_player.health.restore_full()
-	_check("high EVA dodges ~35%% of attacks (%d / 400)" % misses, misses > 100 and misses < 180)
+	_check("a very evasive Seeker gets hit ~30%% of the time (%d / 400)" % lands, lands > 85 and lands < 155)
 	_combat.stats.evasion = 0.0
 	_combat.stats.defense = 20.0
 	var taken := _player.receive_hit(_hit(18.0, DamageInfo.Kind.MELEE), null)
@@ -119,11 +147,31 @@ func _run() -> void:
 	_check("Grub Hound closes in (%.1f m -> %.1f m) and hits for its damage (took %.0f)" % [
 		d0, hound.global_position.distance_to(_player.global_position), hp - _player.health.hp],
 		hound.global_position.distance_to(_player.global_position) < d0 and is_equal_approx(hp - _player.health.hp, 18.0))
-	# Big hits stagger.
-	var info := _hit(40.0, DamageInfo.Kind.MELEE)
-	info.is_hard = true
-	hound.receive_hit(info, _player)
-	_check("a Hard hit staggers it", hound.state == Enemy.State.STAGGER)
+	# Hit reactions: Hard hits almost always push back; light hits don't interrupt.
+	var flinches := 0
+	var pushed := false
+	for i in 20:
+		hound.state = Enemy.State.CHASE
+		hound._knockback = Vector3.ZERO
+		var info := _hit(5.0, DamageInfo.Kind.MELEE)
+		info.is_hard = true
+		hound.receive_hit(info, _player)
+		if hound.state == Enemy.State.STAGGER:
+			flinches += 1
+			pushed = pushed or hound._knockback.length() > 1.0
+		hound.health.restore_full()
+	_check("Hard hits almost always push it back and flinch it (%d / 20)" % flinches, flinches >= 14 and pushed)
+	hound.state = Enemy.State.WINDUP
+	hound._timer = 5.0
+	var interrupted := false
+	for i in 20:
+		hound.receive_hit(_hit(10.0, DamageInfo.Kind.MELEE), _player)
+		interrupted = interrupted or hound.state != Enemy.State.WINDUP
+		hound.health.restore_full()
+	_check("light hits never interrupt a windup (20 hits)", not interrupted)
+	hound.state = Enemy.State.CHASE
+	hound._knockback = Vector3.ZERO
+	await _frames(2)
 	hound.status.apply(StatusEffects.Status.FREEZE, 2.0)
 	var frozen_at := hound.global_position
 	hp = _player.health.hp

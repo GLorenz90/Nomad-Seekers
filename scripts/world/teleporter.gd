@@ -21,6 +21,8 @@ const COLOR_LOCKED := Color(0.25, 0.3, 0.35)
 ## Label shown above the pad for travel pads, e.g. "To the arena".
 @export var destination_name := ""
 @export var requires_rooms_cleared := false
+## Seconds until it closes on its own (Teleportal spell); 0 = permanent.
+@export var lifetime := 0.0
 
 var _material: StandardMaterial3D
 var _label: Label3D
@@ -61,7 +63,12 @@ func _ready() -> void:
 	_refresh()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if lifetime > 0.0:
+		lifetime -= delta
+		if lifetime <= 0.0:
+			queue_free()
+			return
 	if requires_rooms_cleared:
 		var cleared := _rooms_cleared()
 		if cleared != _active:

@@ -56,6 +56,10 @@ var _race: OptionButton
 var _gender: OptionButton
 var _job: OptionButton
 var _sync_owned: VBoxContainer
+var _spells_tab: SpellsTab
+var _learn_pick: OptionButton
+var _learn_level := 1
+var _learn_level_label: Label
 var _sync_starter_title: Label
 var _sync_starters: VBoxContainer
 var _sync_info: Label
@@ -65,6 +69,9 @@ var _sync_feeds: GridContainer
 var _sync_burst: OptionButton
 var _sync_message: Label
 var _character_message: Label
+var _infinite_lp: CheckButton
+var _material_buttons := {}  # id -> Button
+var _material_info: Label
 ## Debug: feeding doesn't use up items (for trying evolutions quickly).
 var free_feeding := false
 var _free_feeding_toggle: CheckButton
@@ -139,6 +146,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		var step := 1 if event.is_action_pressed("loadout_next") else -1
 		_close_picker()
 		_tabs.current_tab = posmod(_tabs.current_tab + step, _tabs.get_tab_count())
+		get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Spells" and _clear_input(event) == 1:
+		if _spells_tab.clear_focused_slot():
+			get_viewport().set_input_as_handled()
+	elif visible and _tab_name() == "Spells" and event.is_action_pressed("ui_cancel") and _spells_tab.back():
 		get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Loadouts" and not _picker.visible and _clear_input(event) != 0:
 		_clear_focused_slot(_clear_input(event) == 2)
@@ -231,6 +243,8 @@ func _refresh() -> void:
 	_refresh_character()
 	_refresh_syncaida()
 	_refresh_levels()
+	if _spells_tab:
+		_spells_tab.refresh()
 
 
 func _lt_short(l: Loadout) -> String:
@@ -317,6 +331,8 @@ func _build() -> void:
 	columns.name = "Loadouts"
 	columns.add_theme_constant_override("separation", 24)
 	_tabs.add_child(columns)
+	_spells_tab = SpellsTab.new(self)
+	_tabs.add_child(_spells_tab)
 	_build_inventory_tab()
 	_build_character_tab()
 	_build_syncaida_tab()
@@ -471,6 +487,11 @@ func _refresh_inventory() -> void:
 	for id in Inventory.CONSUMABLES:
 		items.append("%s x%d" % [Inventory.CONSUMABLES[id], inv.count(id)])
 	lines.append("[b]Consumables[/b]  " + "   ".join(items))
+	var mats := PackedStringArray()
+	for id in Materials.ALL:
+		if inv.count(id) > 0:
+			mats.append("%s x%d" % [Materials.display_name(id), inv.count(id)])
+	lines.append("[b]Materials[/b]  " + ("   ".join(mats) if not mats.is_empty() else "none (use them in the Character tab)"))
 	lines.append("")
 	lines.append("[b]Found weapons[/b] (%d)" % inv.weapons.size())
 	if inv.weapons.is_empty():
@@ -521,6 +542,22 @@ func _build_character_tab() -> void:
 	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	reset.pressed.connect(_reset_character)
 	box.add_child(reset)
+	# PSO materials: each use raises a stat by 2, up to the race's limits.
+	box.add_child(_label("Materials", 20))
+	_material_info = _label("", 15)
+	box.add_child(_material_info)
+	var mats := GridContainer.new()
+	mats.columns = 3
+	mats.add_theme_constant_override("h_separation", 10)
+	mats.add_theme_constant_override("v_separation", 6)
+	box.add_child(mats)
+	for id in Materials.ALL:
+		var b := Button.new()
+		b.custom_minimum_size.x = 330.0
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.pressed.connect(_use_material.bind(id))
+		mats.add_child(b)
+		_material_buttons[id] = b
 	_character_message = _label("", 15)
 	_character_message.modulate = Color(1.0, 0.85, 0.5)
 	box.add_child(_character_message)
@@ -554,7 +591,13 @@ func _apply_character() -> void:
 		return
 	var c := seeker.save.character
 	c.seeker_name = _name_edit.text if _name_edit.text.strip_edges() != "" else "Seeker"
-	c.race = _race.selected as CharacterData.Race
+	var new_race := _race.selected as CharacterData.Race
+	if not CharacterData.job_allowed(new_race, c.job):
+		_race.select(c.race)
+		_character_message.text = "Goluman can't be Invokers."
+	elif new_race != c.race:
+		c.race = new_race
+		seeker.apply_materials()  # race stat bonuses (Goluman DEX)
 	c.gender = _gender.selected as CharacterData.Gender
 	_refresh_character()
 
@@ -564,6 +607,8 @@ func _tool_cycle_job() -> void:
 	var seeker := _player()
 	var c := seeker.save.character
 	c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
+	if not CharacterData.job_allowed(c.race, c.job):  # Goluman skip Invoker
+		c.job = ((c.job + 1) % CharacterData.Job.size()) as CharacterData.Job
 	combat.job_code = c.job_code()
 	_job.select(c.job)
 	_rebuild_picker()
@@ -584,6 +629,25 @@ func _refresh_character() -> void:
 		c.emblem_name(), c.experience, String(favored[0]).capitalize(), String(favored[1]).capitalize(),
 		", ".join(rares) if not rares.is_empty() else "none"]
 	_character_info.modulate = c.emblem_text_color()
+	if _material_info:
+		_material_info.text = "Used: stat materials %s   HP %s   LP %s   (A uses one: +%d to its stat, permanent)" % [
+			Materials.limit_text(c, &"stat"), Materials.limit_text(c, &"hp"), Materials.limit_text(c, &"lp"),
+			int(Materials.PER_USE)]
+		for id in _material_buttons:
+			var b: Button = _material_buttons[id]
+			var have := seeker.save.inventory.count(id)
+			b.text = "%s x%d  (%s +2, used %d)" % [Materials.display_name(id), have, Materials.stat_label(id),
+				int(c.materials.get(id, 0))]
+			# Greyed but still pressable, so A explains why it can't be used.
+			b.modulate = Color(1, 1, 1, 0.45) if have <= 0 or Materials.use_error(c, id) != "" else Color.WHITE
+
+
+func _use_material(id: StringName) -> void:
+	var seeker := _player()
+	if seeker == null:
+		return
+	_character_message.text = seeker.use_material(id)
+	_refresh_character()
 
 
 # --- SyncAIDa tab (Part 6) -------------------------------------------------------
@@ -833,6 +897,9 @@ func _focus_tab() -> void:
 		return
 	if page.name == "SyncAIDa" and _focus_paired():
 		return
+	if page == _spells_tab:
+		_spells_tab.focus_default()
+		return
 	var first := page if page.focus_mode == Control.FOCUS_ALL else _first_focusable(page)
 	if first:
 		first.grab_focus()
@@ -912,13 +979,43 @@ func _build_levels_tab() -> void:
 	right.add_child(_label("Testing tools", 22))
 	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
 			["+1000 Oro", _tool_oro], ["+5 of each consumable", _tool_items],
+			["+10 of each material", _tool_materials],
 			["+10 of each Lumidium (banked)", _tool_lumidium], ["Respawn at start", _tool_respawn],
-			["Change job (debug; fixed at creation)", _tool_cycle_job]]:
+			["Change job (debug; fixed at creation)", _tool_cycle_job],
+			["Learn every spell or trap your race can use, at your max level", _tool_learn_all],
+			["Learn every spell or trap your race can use, at level 1", _tool_learn_all_level_1],
+			["Forget every spell and trap", _tool_forget_all],
+			["+50 SOL and +50 DEX (until you leave the level)", _tool_stats_up]]:
 		var b := Button.new()
 		b.text = spec[0]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.pressed.connect(spec[1])
 		right.add_child(b)
+	_infinite_lp = CheckButton.new()
+	_infinite_lp.text = "Infinite LP (until you leave the level)"
+	_infinite_lp.toggled.connect(_toggle_infinite_lp)
+	right.add_child(_infinite_lp)
+	# Learn one spell or trap at any level, ignoring requirements (testing).
+	var learn_row := HBoxContainer.new()
+	_learn_pick = OptionButton.new()
+	for spell in SpellBook.all():
+		_learn_pick.add_item("%s (%s)" % [spell.display_name, spell.element_name()])
+	learn_row.add_child(_learn_pick)
+	var minus := Button.new()
+	minus.text = " - "
+	minus.pressed.connect(func(): _set_learn_level(_learn_level - 1))
+	learn_row.add_child(minus)
+	_learn_level_label = _label("Lv 1", 16)
+	learn_row.add_child(_learn_level_label)
+	var plus := Button.new()
+	plus.text = " + "
+	plus.pressed.connect(func(): _set_learn_level(_learn_level + 1))
+	learn_row.add_child(plus)
+	var learn := Button.new()
+	learn.text = "Learn"
+	learn.pressed.connect(_tool_learn_one)
+	learn_row.add_child(learn)
+	right.add_child(learn_row)
 	_debug_toggle = CheckButton.new()
 	_debug_toggle.text = "Debug readout (Select / F3)"
 	_debug_toggle.toggled.connect(func(on: bool):
@@ -947,6 +1044,8 @@ func _hud() -> DebugHud:
 func _refresh_levels() -> void:
 	if _debug_toggle == null:
 		return
+	if _infinite_lp and _player():
+		_infinite_lp.set_pressed_no_signal(_player().combat.infinite_lp)
 	var current := get_tree().current_scene.scene_file_path if get_tree().current_scene else ""
 	for b in _level_buttons:
 		var here: bool = b.get_meta("scene") == current
@@ -990,6 +1089,12 @@ func _tool_items() -> void:
 	for id in Inventory.CONSUMABLES:
 		_player().save.inventory.add_consumable(id, 5)
 	_level_message.text = "+5 of each consumable."
+
+
+func _tool_materials() -> void:
+	for id in Materials.ALL:
+		_player().save.inventory.add_consumable(id, 10)
+	_level_message.text = "+10 of each material (use them in the Character tab)."
 
 
 func _tool_lumidium() -> void:
@@ -1079,7 +1184,72 @@ func _reset_character() -> void:
 	if seeker == null or seeker.save == null:
 		return
 	seeker.save.character.experience = 0
+	seeker.reset_materials()
 	seeker.health.restore_full()
 	combat.lp = combat.stats.max_lp
 	_refresh_character()
-	_character_message.text = "Back to level 1 (EXP 0). Character levels aren't in yet, so EXP is all this resets for now."
+	_character_message.text = "Back to level 1 (EXP 0). Materials used are forgotten too. Character levels aren't in yet."
+
+
+# --- Spell testing tools (Levels tab) ------------------------------------------
+
+func _set_learn_level(level: int) -> void:
+	var spell: SpellDef = SpellBook.all()[maxi(_learn_pick.selected, 0)]
+	_learn_level = clampi(level, 1, spell.max_level)
+	_learn_level_label.text = "Lv %d" % _learn_level
+
+
+func _tool_learn_one() -> void:
+	var spell: SpellDef = SpellBook.all()[maxi(_learn_pick.selected, 0)]
+	_set_learn_level(_learn_level)
+	_player().save.character.spells[spell.id] = _learn_level
+	SpellCaster.clear_cache()
+	_level_message.text = "Learned %s %d (requirements ignored for testing)." % [spell.display_name, _learn_level]
+	if not _player().save.character.can_use_traps() and spell.is_trap() \
+			or _player().save.character.can_use_traps() and not spell.is_trap():
+		_level_message.text += " Your race can't use it, though."
+	_refresh()
+
+
+func _tool_learn_all() -> void:
+	var c := _player().save.character
+	var n := 0
+	for spell in SpellBook.all():
+		var cap := c.level_cap_for(spell)
+		if cap > 0:
+			c.spells[spell.id] = cap
+			n += 1
+	SpellCaster.clear_cache()
+	_level_message.text = "Learned %d at your max level (%s)." % [n, c.spell_cap_text()]
+	_refresh()
+
+
+func _tool_learn_all_level_1() -> void:
+	var c := _player().save.character
+	var n := 0
+	for spell in SpellBook.all():
+		if c.level_cap_for(spell) > 0:
+			c.spells[spell.id] = 1
+			n += 1
+	SpellCaster.clear_cache()
+	_level_message.text = "Learned %d at level 1 (requirements ignored)." % n
+	_refresh()
+
+
+func _toggle_infinite_lp(on: bool) -> void:
+	_player().combat.infinite_lp = on
+	_level_message.text = "Infinite LP %s." % ("on" if on else "off")
+
+
+func _tool_forget_all() -> void:
+	_player().save.character.spells.clear()
+	SpellCaster.clear_cache()
+	_level_message.text = "Every spell and trap forgotten."
+	_refresh()
+
+
+func _tool_stats_up() -> void:
+	combat.stats.soul += 50.0
+	combat.stats.dexterity += 50.0
+	_level_message.text = "SOL %d, DEX %d (resets when the level reloads)." % [roundi(combat.stats.soul), roundi(combat.stats.dexterity)]
+	_refresh()

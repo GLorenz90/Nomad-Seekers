@@ -21,6 +21,11 @@ var missed := false
 var weapon: WeaponData
 ## True for an RT special: the weapon's tag effect applies on hit.
 var special := false
+## Effective ATA of the attack (Accuracy.effective_ata). Negative = never
+## misses (spells, traps, hazards).
+var accuracy := -1.0
+## Chrono Cross-style bonus from hits already landed in this combo (percent).
+var hit_bonus := 0.0
 
 
 static func kind_for(weapon_class: WeaponData.WeaponClass) -> Kind:
@@ -45,4 +50,6 @@ func duplicate_info() -> DamageInfo:
 	d.hit_position = hit_position
 	d.weapon = weapon
 	d.special = special
+	d.accuracy = accuracy
+	d.hit_bonus = hit_bonus
 	return d

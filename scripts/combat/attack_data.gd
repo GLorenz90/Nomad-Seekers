@@ -86,3 +86,9 @@ enum Support { NONE, HEAL, CURE }
 @export var support: Support = Support.NONE
 ## HEAL: fraction of the caster's max HP restored.
 @export var support_amount := 0.0
+
+## Spells (Part 6): set by SpellCaster.make_attack; null for weapon attacks.
+var spell: SpellDef
+var spell_level := 0
+## Held Sustained spell: channels every sustained_tick while the button is down.
+var channel := false

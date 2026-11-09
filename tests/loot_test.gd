@@ -60,7 +60,9 @@ func _run() -> void:
 	_check("Bow, Crossbow and Bladestaff are open to Invokers (%s / %s / %s)" % [_w("bow").jobs_text(), _w("crossbow").jobs_text(), _w("bladestaff").jobs_text()],
 		_w("bow").can_be_used_by("I") and _w("crossbow").can_be_used_by("I") and _w("bladestaff").can_be_used_by("I")
 		and not _w("burstbow").can_be_used_by("I"))
-	_check("Staff is a 2h Invoker item with 4 spells", _w("staff").two_handed and _w("staff").spells.size() == 4 and _w("staff").jobs_text() == "I")
+	_check("Staff is a 2h Invoker casting item with 4 spell slots",
+		_w("staff").two_handed and _w("staff").casting and Loadout.make(null, _w("staff")).spell_slot_count(1) == 4
+		and _w("staff").jobs_text() == "I")
 	var rare_emblems := {}
 	for r in Loot.rare_weapons():
 		for e in r.get_meta("emblems", []):
@@ -421,6 +423,11 @@ func _run() -> void:
 	# --- Staff, Heal and Cure ----------------------------------------------
 	_combat.set_job("I")
 	_equip(null, _w("staff"))
+	for id in [&"heal", &"cure", &"mezfulmo"]:
+		_player.save.character.spells[id] = 1
+	var staff_slots := [&"fajro", &"glacio", &"mezfulmo", &"heal"]
+	for i in 4:
+		_combat.get_loadout().set_spell(1, i, staff_slots[i])
 	await _place(ARENA)
 	_started.clear()
 	for press in [["hand_x", false], ["hand_y", false], ["hand_x", true], ["hand_y", true]]:
@@ -430,18 +437,28 @@ func _run() -> void:
 		Input.action_release("shift")
 		await _idle()
 	_check("Staff: X, Y, RT+X, RT+Y cast four spells (%s)" % [_started],
-		_started == ["Fire Bolt", "Frost Lance", "Spark", "Heal"])
+		_started == ["Fajro", "Glacio", "Mezfulmo", "Heal"])
 	_equip(null, _w("talisman"))
+	_combat.get_loadout().set_spell(1, 0, &"heal")
+	_combat.get_loadout().set_spell(1, 1, &"cure")
 	_player.health.hp = 50.0
 	await _tap("hand_x")
 	await _idle()
 	_check("Heal restores HP (50 -> %.0f)" % _player.health.hp, _player.health.hp > 100.0)
+	# Cure levels go through statuses least annoying first: Slow, Burn, Poison...
 	_player.status.apply(StatusEffects.Status.POISON, 10.0)
 	Input.action_press("shift")
 	await _tap("hand_x")
 	Input.action_release("shift")
 	await _idle()
-	_check("Cure clears statuses", _player.status.active.is_empty())
+	var cure_1_left_poison := _player.status.is_active(StatusEffects.Status.POISON)
+	_player.save.character.spells[&"cure"] = 3
+	_combat.lp = _combat.stats.max_lp
+	Input.action_press("shift")
+	await _tap("hand_x")
+	Input.action_release("shift")
+	await _idle()
+	_check("Cure 1 only clears Slow; Cure 3 clears Poison", cure_1_left_poison and _player.status.active.is_empty())
 	_combat.set_job("S")
 	_equip(_w("sword"), _w("pistol"))
 

@@ -20,6 +20,12 @@ enum Weight { LIGHT, HEAVY }
 @export var no_combo := false
 ## Exists only to cast spells. Spells never build a chain.
 @export var casting := false
+## Casting items (Part 6): damage-spell power, support-spell power (heal,
+## buffs, traps) and cast time (2.0 = twice as slow). Spells are assigned per
+## loadout hand (Loadout.left_spells / right_spells).
+@export var spell_power := 1.0
+@export var support_power := 1.0
+@export var cast_speed := 1.0
 ## Holding the button runs sustained_attack for as long as it's held, in place
 ## of a Hard attack (North Star "Sustained" tag).
 @export var sustained := false

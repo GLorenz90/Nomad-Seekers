@@ -109,6 +109,69 @@ func use_save(data: SaveData) -> void:
 	combat.apply_loadout_set(save.loadouts)
 	if syncaida:
 		syncaida.pair(save.paired_syncaida())
+	apply_materials()
+
+
+# --- Materials (PSO) --------------------------------------------------------------------
+
+var _material_applied := {}
+
+
+## Moves the material stat bonus to the current save's counts (like the
+## SyncAIDa bonus, only the difference is applied).
+func apply_materials() -> void:
+	var target := Materials.bonuses(save.character) if save else {}
+	if save:  # race bonuses ride along with materials (Goluman DEX)
+		var race_bonus := save.character.race_bonuses()
+		for stat in race_bonus:
+			target[stat] = float(target.get(stat, 0.0)) + float(race_bonus[stat])
+	var s := combat.stats
+	var stats_touched: Array = Materials.ALL.values().map(func(m: Array) -> StringName: return m[1])
+	for stat in _material_applied:
+		if not stat in stats_touched:
+			stats_touched.append(stat)
+	for stat in stats_touched:
+		var delta := float(target.get(stat, 0.0)) - float(_material_applied.get(stat, 0.0))
+		if delta != 0.0:
+			s.set(stat, float(s.get(stat)) + delta)
+	_material_applied = target
+	if health.max_hp != s.max_hp:
+		var gained := s.max_hp - health.max_hp
+		health.max_hp = s.max_hp
+		health.hp = clampf(health.hp + maxf(gained, 0.0), 0.0, health.max_hp)
+	combat.lp = minf(combat.lp, s.max_lp)
+
+
+## Goluman slowly regenerate HP (quietly: no heal numbers every frame).
+func _regen_hp(delta: float) -> void:
+	if save == null or health.is_dead() or health.hp >= health.max_hp:
+		return
+	var rate := save.character.hp_regen_fraction()
+	if rate > 0.0:
+		health.hp = minf(health.hp + health.max_hp * rate * delta, health.max_hp)
+
+
+## Uses one material from the inventory. Returns the message to show.
+func use_material(id: StringName) -> String:
+	if save == null:
+		return ""
+	if save.inventory.count(id) <= 0:
+		return "No %s left" % Materials.display_name(id)
+	var error := Materials.use_error(save.character, id)
+	if error != "":
+		return error
+	save.inventory.use_consumable(id)
+	save.character.materials[id] = int(save.character.materials.get(id, 0)) + 1
+	apply_materials()
+	var stat := Materials.stat_of(id)
+	return "%s +%d (now %d)" % [Materials.stat_label(id), int(Materials.PER_USE), roundi(float(combat.stats.get(stat)))]
+
+
+## Debug: forgets every material used.
+func reset_materials() -> void:
+	if save:
+		save.character.materials.clear()
+		apply_materials()
 
 
 ## Takes one of the four starter SyncAIDa (SyncAIDaData.STARTERS) and pairs it.
@@ -126,6 +189,53 @@ func pair_syncaida(index: int) -> void:
 		return
 	save.paired = index
 	syncaida.pair(save.paired_syncaida())
+
+
+# --- Spell discs (Part 6) -------------------------------------------------------------
+
+## SOL (or DEX for traps) counted for learning: base stats plus SyncAIDa.
+func learning_stat(spell: SpellDef) -> float:
+	return combat.stats.dexterity if spell.is_trap() else combat.stats.soul
+
+
+## Reads a disc. Learns it when allowed; otherwise, from a pickup, it's stored
+## to read later, or sold for Oro if it can never be useful (already known
+## at that level or higher). Returns a message for the player.
+func read_disc(id: StringName, level: int, from_pickup: bool) -> String:
+	var spell := SpellBook.get_spell(id)
+	if spell == null or save == null:
+		return "Unknown disc"
+	var c := save.character
+	var error := c.learn_error(spell, level, learning_stat(spell))
+	if error == "":
+		c.spells[id] = level
+		SpellCaster.clear_cache()
+		return "Learned %s %d" % [spell.display_name, level]
+	if not from_pickup:
+		return error
+	if c.spell_level(id) >= level or c.level_cap_for(spell) == 0:
+		var oro := 20 * level
+		save.inventory.oro += oro
+		return "%s %d: %s Sold for %d Oro." % [spell.display_name, level, error, oro]
+	save.inventory.discs.append({"id": String(id), "level": level})
+	return "%s %d stored: %s" % [spell.display_name, level, error]
+
+
+## Reads a disc from the stash (menu). Removes it once learned.
+func read_stored_disc(index: int) -> String:
+	if save == null or index < 0 or index >= save.inventory.discs.size():
+		return ""
+	var disc: Dictionary = save.inventory.discs[index]
+	var result := read_disc(StringName(disc.id), int(disc.level), false)
+	if result.begins_with("Learned"):
+		save.inventory.discs.remove_at(index)
+	return result
+
+
+## Revive spell: back on its feet with this fraction of max HP.
+func revive(fraction: float) -> void:
+	health.hp = maxf(health.max_hp * fraction, 1.0)
+	status.clear_all()
 
 
 func grant_invulnerability(seconds: float) -> void:
@@ -194,6 +304,7 @@ func use_consumable(id: StringName) -> bool:
 func _physics_process(delta: float) -> void:
 	_recalculate_jump()
 	_tick_timers(delta)
+	_regen_hp(delta)
 
 	if Input.is_action_just_pressed("jump"):
 		_jump_buffer = jump_buffer_time
@@ -231,21 +342,21 @@ func is_invulnerable() -> bool:
 	return _invuln_timer > 0.0
 
 
-## Every incoming enemy hit goes through here: dash i-frames, an EVA miss
-## roll, blocking / parrying / reflecting (CombatController.resolve_incoming),
-## then DEF / RES / EVA reduction, Health, and status buildup.
+## Every incoming enemy hit goes through here: dash i-frames, the hit roll
+## (enemy ATA vs your EVA, Accuracy), blocking / parrying / reflecting
+## (CombatController.resolve_incoming), then DEF / RES reduction, Health, and
+## status buildup.
 func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) -> float:
 	if is_invulnerable():
 		combat.combo_feedback.emit("Dodged")
 		return 0.0
 	var s := combat.stats
-	if randf() < Defense.miss_chance(info.kind, s.evasion):
-		DamageNumber.spawn_text(get_parent(), global_position + Vector3.UP * 1.9, "Miss")
+	if not Accuracy.roll(info, s.evasion * status.stat_scale(&"evasion"), self, status):
 		return 0.0
 	var block_scale := combat.resolve_incoming(attacker, projectile)
 	if block_scale <= 0.0:
 		return 0.0
-	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense, s.resolve, s.evasion)
+	info.amount *= block_scale * Defense.scale_for(info.kind, s.defense * status.stat_scale(&"defense"), s.resolve)
 	if combat.aegis_active():
 		info.amount *= CombatController.AEGIS_GUARD
 	var amount := health.take_damage(info)

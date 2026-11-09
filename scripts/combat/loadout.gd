@@ -19,6 +19,11 @@ const ARMS_UP_BLOCK := 0.25
 
 @export var left: WeaponData
 @export var right: WeaponData
+## Spells (or Goluman traps) on each hand's casting item (Part 6), by slot:
+## slot 0 = the hand's button, 1 = RT + it; a two-handed casting item (in the
+## right hand) has 4: X, Y, RT + X, RT + Y. "" = empty.
+@export var left_spells: PackedStringArray = PackedStringArray()
+@export var right_spells: PackedStringArray = PackedStringArray()
 
 
 static func make(left_weapon: WeaponData, right_weapon: WeaponData) -> Loadout:
@@ -37,6 +42,32 @@ func set_hand(hand: int, weapon: WeaponData) -> void:
 		left = weapon
 	else:
 		right = weapon
+
+
+## How many spell slots the casting item in this hand has (0 if none).
+func spell_slot_count(hand: int) -> int:
+	var w := get_hand(hand)
+	if w == null or not w.casting:
+		return 0
+	return 4 if w.two_handed else 2
+
+
+func get_spell(hand: int, slot: int) -> StringName:
+	var list := left_spells if hand == 0 else right_spells
+	if slot < 0 or slot >= list.size():
+		return &""
+	return StringName(list[slot])
+
+
+func set_spell(hand: int, slot: int, id: StringName) -> void:
+	var list := left_spells if hand == 0 else right_spells
+	while list.size() <= slot:
+		list.append("")
+	list[slot] = String(id)
+	if hand == 0:
+		left_spells = list
+	else:
+		right_spells = list
 
 
 func is_empty() -> bool:

@@ -171,6 +171,7 @@ func _make_hit(kind: DamageInfo.Kind = DamageInfo.Kind.MELEE) -> DamageInfo:
 	info.amount = attack_damage
 	info.damage_type = attack_element
 	info.source = self
+	info.accuracy = 50.0  # same ATA as a typical enemy (Accuracy)
 	return info
 
 
