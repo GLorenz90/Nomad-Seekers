@@ -95,6 +95,12 @@ const GOLUMAN_HP_REGEN := 0.005  # of max HP per second
 ## goes to traps, specials and gear) and Lumera. Nobody else regenerates LP,
 ## like PSO's TP. 1% of max LP a second is Claude's rate.
 const LP_REGEN_RACES := {Race.GOLUMAN: 0.01, Race.LUMERA: 0.01}
+## Statuses a race never suffers (Grayson 2026-11-09: Goluman, like PSO's
+## androids, are immune to Poison and Stun, PSO's paralysis).
+const STATUS_IMMUNITIES := {Race.GOLUMAN: [StatusEffects.Status.POISON, StatusEffects.Status.STUN]}
+## Races Shock stops in place (PSO's androids are more vulnerable to shock).
+## Everyone else can still move while shocked; they just can't attack.
+const SHOCK_STUNS_RACES: Array[Race] = [Race.GOLUMAN]
 ## Spells that level to 30 follow the caps below; the rest (Cure, Revive,
 ## Teleportal) always reach their own max.
 const FULL_SPELL_LEVEL := 30
@@ -163,6 +169,16 @@ func hp_regen_fraction() -> float:
 ## Fraction of max LP regenerated per second (0 for most races).
 func lp_regen_fraction() -> float:
 	return float(LP_REGEN_RACES.get(race, 0.0))
+
+
+func status_immunities() -> Array[int]:
+	var out: Array[int] = []
+	out.assign(STATUS_IMMUNITIES.get(race, []))
+	return out
+
+
+func shock_stuns() -> bool:
+	return race in SHOCK_STUNS_RACES
 
 
 func can_use_magic() -> bool:

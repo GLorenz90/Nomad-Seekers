@@ -1,9 +1,12 @@
 class_name DestinationPicker
 extends CanvasLayer
-## The teleporter's destination list (Part 8, PSU-style): pauses the game and
-## lists where the pad can go. A picks, B cancels (step off and back on to
+## The teleporter's destination list (Part 8, PSU-style): lists where the pad
+## can go. Doesn't pause (Part 12): the Seeker who opened it just stops taking
+## game input; picking a place takes the whole party. A picks, B cancels (step off and back on to
 ## open it again).
 
+## The Seeker choosing.
+var player: Player
 var _box: VBoxContainer
 var _done: Callable
 
@@ -14,10 +17,14 @@ func _init() -> void:
 	add_to_group("modal_menus")
 
 
-func open(names: PackedStringArray, on_done: Callable) -> void:
+func open(names: PackedStringArray, on_done: Callable, seeker: Player = null) -> void:
 	_done = on_done
-	get_tree().paused = true
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	player = seeker
+	if player:
+		player.input_locked = true
+		player.set_mouse_captured(false)
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.55)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -62,10 +69,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Index of the destination chosen, or -1 to stay.
 func _finish(index: int) -> void:
-	get_tree().paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	for p in get_tree().get_nodes_in_group("player"):
-		(p as Player).hold_input()
+	if player and is_instance_valid(player):
+		player.input_locked = player.downed
+		player.set_mouse_captured(true)
+		player.hold_input()
 	var done := _done
 	queue_free()
 	if done.is_valid():

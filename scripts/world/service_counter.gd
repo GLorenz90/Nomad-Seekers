@@ -82,6 +82,6 @@ func open_menu(seeker: Player) -> CounterMenu:
 			var shop := ShopMenu.new()
 			shop.setup(int(service) as ShopMenu.Kind, stock_weapons, stock_armor, stock_units)
 			menu = shop
-	get_tree().root.add_child(menu)
+	seeker.ui_root().add_child(menu)
 	menu.open(seeker)
 	return menu

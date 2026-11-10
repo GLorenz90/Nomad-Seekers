@@ -21,6 +21,8 @@ Lumidium: hit a crystal 3 times; press A on a teleporter to deposit it
 Sync Burst (gauge full): L3 / R    Feed and pair SyncAIDa: menu, SyncAIDa tab
 Menu: Start / Tab. In menus: d-pad or stick to move, A to accept, B to go back, LB / RB to switch tabs,
     LT / RT to switch Equip sections (Palette, Spells, Armor).
+Co-op: press Start on another controller to join with a saved character (split screen);
+    a fallen Seeker waits for a partner's Revive or presses A to go back to the start.
 Click to capture the mouse, Esc to release. Debug readout: Select / F3."""
 
 var player: Player
@@ -147,7 +149,7 @@ func _weapon_label(hand: int) -> String:
 	if w == null:
 		return "-"
 	if w.casting:
-		var slot := player.combat.spell_slot(w, hand, Input.is_action_pressed("shift"))
+		var slot := player.combat.spell_slot(w, hand, player.input.pressed("shift"))
 		return "%s (%s)" % [w.display_name, player.combat.spell_name_in(hand, slot)]
 	return w.display_name
 

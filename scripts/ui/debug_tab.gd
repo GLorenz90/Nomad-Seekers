@@ -394,7 +394,7 @@ func _tool_satchel() -> void:
 
 
 func _tool_respawn() -> void:
-	get_tree().call_group("respawner", "respawn_player")
+	get_tree().call_group("respawner", "respawn_player", menu._player())
 	_message.text = "Back at the start."
 
 

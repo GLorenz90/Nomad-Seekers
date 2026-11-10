@@ -69,6 +69,18 @@ var autosave := true
 ## The paired SyncAIDa following the Seeker (Part 6).
 var syncaida: SyncAIDaCompanion
 
+## Part 12: this Seeker's controls. Shared (every device) when playing alone;
+## its own controller in a party (see PlayerInput, Party).
+var input: PlayerInput = PlayerInput.shared()
+## Party guests: the controller that plays this Seeker (set before it enters
+## the tree; it then plays that guest's character). -1 = the leader.
+var guest_device := -1
+## Part 12: down in co-op, waiting for a partner's Revive (or A to go back
+## to the start).
+var downed := false
+## Where this Seeker's menus go: its split-screen pane, or the window.
+var ui_parent: Node = null
+
 var _jump_velocity := 0.0
 var _gravity_up := 0.0
 var _gravity_down := 0.0
@@ -97,7 +109,10 @@ func _ready() -> void:
 	add_child(syncaida)
 	syncaida.setup(self)
 	var defaults := CombatController.make_default_loadouts()
-	if combat.use_saved_loadouts:
+	var guest := Party.guest_for(guest_device) if guest_device >= 0 else {}
+	if not guest.is_empty():
+		use_save(guest.save as SaveData)
+	elif combat.use_saved_loadouts:
 		use_save(Session.current_save(defaults))
 	else:
 		use_save(SaveData.fresh(defaults))
@@ -150,6 +165,12 @@ func apply_bonuses() -> void:
 			s.set(stat, float(s.get(stat)) + delta)
 	_material_applied = target
 	combat.lp_regen_fraction = save.character.lp_regen_fraction() if save else 0.0
+	status.immune = save.character.status_immunities() if save else []
+	status.shock_stuns = save.character.shock_stuns() if save else false
+	status.stun_breaks_on_hit = true
+	for gone in status.immune:
+		if status.is_active(gone):
+			status.active.erase(gone)
 	if health.max_hp != s.max_hp:
 		var gained := s.max_hp - health.max_hp
 		health.max_hp = s.max_hp
@@ -304,6 +325,46 @@ func read_stored_disc(index: int) -> String:
 func revive(fraction: float) -> void:
 	health.hp = maxf(health.max_hp * fraction, 1.0)
 	status.clear_all()
+	set_downed(false)
+
+
+## Co-op (Part 12): a fallen Seeker stays down where they fell until a partner
+## casts Revive (or they press A to go back to the start).
+func set_downed(on: bool) -> void:
+	downed = on
+	input_locked = on
+	combat.cancel()
+	_visual.rotation.z = PI / 2.0 if on else 0.0
+	_visual.position.y = 0.4 if on else 0.0
+
+
+## The closest Seeker to a point (Part 12: there can be several). Skips
+## fallen ones unless `include_down`. null when there's none.
+static func nearest(tree_node: Node, at: Vector3, include_down: bool = false) -> Player:
+	var best: Player = null
+	var best_dist := INF
+	for node in tree_node.get_tree().get_nodes_in_group("player"):
+		var seeker := node as Player
+		if seeker == null or (not include_down and (seeker.downed or seeker.health.is_dead())):
+			continue
+		var dist := seeker.global_position.distance_squared_to(at)
+		if dist < best_dist:
+			best_dist = dist
+			best = seeker
+	return best
+
+
+## The node this Seeker's menus are added to.
+func ui_root() -> Node:
+	if ui_parent and is_instance_valid(ui_parent):
+		return ui_parent
+	return get_tree().root
+
+
+## Menus capture or free the mouse only for the keyboard-and-mouse Seeker.
+func set_mouse_captured(on: bool) -> void:
+	if input.uses_mouse():
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if on else Input.MOUSE_MODE_VISIBLE
 
 
 func grant_invulnerability(seconds: float) -> void:
@@ -429,19 +490,19 @@ func _physics_process(delta: float) -> void:
 		_input_hold -= delta
 	elif input_locked:
 		pass
-	elif Input.is_action_just_pressed("jump"):
-		if interact_target and is_on_floor() and status.can_act() and not health.is_dead():
+	elif input.just_pressed("jump"):
+		if interact_target and is_on_floor() and status.can_move() and not health.is_dead():
 			interact_target.interact(self)
 			interact_target = null
 		else:
 			_jump_buffer = jump_buffer_time
 	for i in QUICK_ITEMS.size():
-		if not input_locked and Input.is_action_just_pressed(&"item_%d" % (i + 1)):
+		if not input_locked and input.just_pressed(&"item_%d" % (i + 1)):
 			use_consumable(QUICK_ITEMS[i])
 
 	var move_dir := _get_move_direction()
 
-	if not input_locked and Input.is_action_just_pressed("dash") and _can_dash() and status.can_act() and _input_hold <= 0.0:
+	if not input_locked and input.just_pressed("dash") and _can_dash() and status.can_move() and _input_hold <= 0.0:
 		combat.cancel()
 		_start_dash(move_dir)
 
@@ -491,6 +552,8 @@ func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) ->
 	if combat.aegis_active():
 		info.amount *= CombatController.AEGIS_GUARD
 	var amount := health.take_damage(info)
+	if amount > 0.0:
+		status.on_hit()  # a hit ends Stun (Grayson, 2026-11-09)
 	status.add_buildup(info, attacker)
 	DamageNumber.spawn(get_parent(), global_position + Vector3.UP * 1.9, amount, info.damage_type, false)
 	return amount
@@ -521,13 +584,13 @@ func _process_movement(delta: float, move_dir: Vector3, speed_scale: float = 1.0
 		can_jump: bool = true) -> void:
 	var on_floor := is_on_floor()
 
-	if can_jump and status.can_act() and _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
+	if can_jump and status.can_move() and _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
 		_do_jump()
 		on_floor = false
 
 	if not on_floor:
 		var gravity := _gravity_up if velocity.y > 0.0 else _gravity_down
-		if velocity.y > 0.0 and not Input.is_action_pressed("jump"):
+		if velocity.y > 0.0 and not input.pressed("jump"):
 			gravity *= jump_cut_gravity_scale
 		velocity.y = maxf(velocity.y - gravity * delta, -max_fall_speed)
 
@@ -584,8 +647,8 @@ func _update_ground_state() -> void:
 
 
 func _get_move_direction() -> Vector3:
-	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if input == Vector2.ZERO or input_locked:
+	var stick := input.vector("move_left", "move_right", "move_forward", "move_back")
+	if stick == Vector2.ZERO or input_locked:
 		return Vector3.ZERO
 
 	var forward := _camera_forward()
@@ -597,7 +660,7 @@ func _get_move_direction() -> Vector3:
 			forward = to_target.normalized()
 
 	var right := forward.cross(Vector3.UP)
-	return right * input.x + forward * -input.y
+	return right * stick.x + forward * -stick.y
 
 
 func _camera_forward() -> Vector3:

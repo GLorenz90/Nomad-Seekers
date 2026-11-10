@@ -378,7 +378,8 @@ const TRAPS := [
 	["poison_trap", "Poison Trap", Element.Type.NATURE, StatusEffects.Status.POISON, 60],
 	["confuse_trap", "Confuse Trap", Element.Type.LIGHT, StatusEffects.Status.BLIND, 80],
 	["freeze_trap", "Freeze Trap", Element.Type.ICE, StatusEffects.Status.FREEZE, 100],
-	["paralyze_trap", "Paralyze Trap", Element.Type.GENERIC, StatusEffects.Status.PARALYZE, 120],
+	# The id keeps its old name so saves that learned it still have it.
+	["paralyze_trap", "Stun Trap", Element.Type.GENERIC, StatusEffects.Status.STUN, 120],
 ]
 
 
