@@ -19,11 +19,12 @@ extends Node
 signal status_started(status: Status)
 signal status_ended(status: Status)
 
-enum Status { BURN, SLOW, FREEZE, SHOCK, POISON, BLIND, DRAIN, PARALYZE }
+## STUN was Paralyze (renamed by Grayson, 2026-11-09).
+enum Status { BURN, SLOW, FREEZE, SHOCK, POISON, BLIND, DRAIN, STUN }
 
 const DURATIONS := {
 	Status.BURN: 4.0, Status.SLOW: 3.0, Status.FREEZE: 1.5, Status.SHOCK: 1.0,
-	Status.POISON: 6.0, Status.BLIND: 4.0, Status.DRAIN: 4.0, Status.PARALYZE: 2.5,
+	Status.POISON: 6.0, Status.BLIND: 4.0, Status.DRAIN: 4.0, Status.STUN: 2.5,
 }
 ## Stats that buffs / debuffs scale (Part 6 spells): percent changes over time.
 const MODIFIED_STATS: Array[StringName] = [&"strength", &"dexterity", &"soul", &"defense", &"accuracy", &"evasion"]
@@ -44,12 +45,16 @@ var _drain_source: Node
 ## One per stat; a stronger or longer cast replaces a weaker one.
 var modifiers: Dictionary = {}
 var _tick := 0.0
-## Statuses that never take hold (Goluman: Poison and Paralyze, like PSO's
-## androids).
+## Statuses that never take hold (Goluman: Poison and Stun, like PSO's
+## androids and paralysis).
 var immune: Array[int] = []
 ## Shock stops movement too. True for enemies and Goluman (who are weak to it:
-## it's a short paralysis for them); other Seekers can still move.
+## it's a short stun for them); other Seekers can still move.
 var shock_stuns := true
+## Stun ends when a hit lands (Seekers; Grayson 2026-11-09: so it isn't as
+## punishing as Freeze). Damage over time and hazard drains don't break it.
+## Off for enemies, so a stun trap still holds them while you hit them.
+var stun_breaks_on_hit := false
 
 
 static func find(node: Node) -> StatusEffects:
@@ -101,6 +106,13 @@ func apply(status: int, seconds: float = -1.0) -> void:
 		status_started.emit(status)
 
 
+## Called when a hit lands on whoever this belongs to.
+func on_hit() -> void:
+	if stun_breaks_on_hit and active.has(Status.STUN):
+		active.erase(Status.STUN)
+		status_ended.emit(Status.STUN)
+
+
 func clear_all() -> void:
 	for status in active.keys():
 		status_ended.emit(status)
@@ -126,7 +138,7 @@ func cure(count: int) -> void:
 
 ## Statuses in order of annoyance, least first (Cure level 1 clears the first).
 const CURE_ORDER: Array[int] = [Status.SLOW, Status.BURN, Status.POISON, Status.BLIND,
-	Status.DRAIN, Status.SHOCK, Status.PARALYZE, Status.FREEZE]
+	Status.DRAIN, Status.SHOCK, Status.STUN, Status.FREEZE]
 
 
 func _element_for(status: int) -> int:
@@ -179,16 +191,16 @@ func move_scale() -> float:
 	return 0.5 if is_active(Status.SLOW) else 1.0
 
 
-## Frozen, paralyzed and (for anyone shock stuns) shocked targets can't move,
+## Frozen, stunned and (for anyone shock stuns) shocked targets can't move,
 ## jump or dodge.
 func can_move() -> bool:
-	return not (is_active(Status.FREEZE) or is_active(Status.PARALYZE)
+	return not (is_active(Status.FREEZE) or is_active(Status.STUN)
 		or (shock_stuns and is_active(Status.SHOCK)))
 
 
-## Frozen, paralyzed or shocked targets can't attack.
+## Frozen, stunned or shocked targets can't attack.
 func can_act() -> bool:
-	return not (is_active(Status.FREEZE) or is_active(Status.SHOCK) or is_active(Status.PARALYZE))
+	return not (is_active(Status.FREEZE) or is_active(Status.SHOCK) or is_active(Status.STUN))
 
 
 ## Chance that this target's own attacks land (Blind halves it).

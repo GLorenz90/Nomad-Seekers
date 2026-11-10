@@ -7,7 +7,7 @@ extends RefCounted
 ##   Attack type: Normal 1.0, Hard 0.9 (0.7 when it opens a combo), RT special
 ##   0.8, sustained ticks 1.0.
 ##   Combo step: 1.0, 1.3, 1.69 for steps 1, 2, 3 (PSO).
-## Defender: effective EVA = EVA x status (Frozen 0.7, Shocked / Paralyzed 0.85).
+## Defender: effective EVA = EVA x status (Frozen 0.7, Shocked / Stunned 0.85).
 ## Hit % = BASE + effective ATA - effective EVA x 0.2 + streak bonus, 5..100.
 ##   BASE (60) is the kindness: PSO has none, and needs ATA in the hundreds.
 ##   Streak bonus: +4 per hit already landed in this combo, up to +12.
@@ -24,7 +24,7 @@ const STREAK_STEP := 4.0
 const STREAK_MAX := 12.0
 const MIN_CHANCE := 5.0
 const MAX_CHANCE := 100.0
-## Frozen enemies are easier to hit; Shocked / Paralyzed a little (PSO).
+## Frozen enemies are easier to hit; Shocked / Stunned a little (PSO).
 const FROZEN_EVA := 0.7
 const STUNNED_EVA := 0.85
 
@@ -52,7 +52,7 @@ static func hit_percent(info: DamageInfo, eva: float, defender_status: StatusEff
 		if defender_status.is_active(StatusEffects.Status.FREEZE):
 			eff_eva *= FROZEN_EVA
 		elif defender_status.is_active(StatusEffects.Status.SHOCK) \
-				or defender_status.is_active(StatusEffects.Status.PARALYZE):
+				or defender_status.is_active(StatusEffects.Status.STUN):
 			eff_eva *= STUNNED_EVA
 	var chance := BASE + info.accuracy - eff_eva * EVA_WEIGHT + info.hit_bonus
 	return clampf(chance, MIN_CHANCE, MAX_CHANCE)

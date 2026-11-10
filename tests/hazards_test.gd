@@ -64,8 +64,8 @@ func _run() -> void:
 
 	# --- Goluman statuses (Grayson: like PSO's androids) ---------------------------------------
 	_player.status.apply(StatusEffects.Status.POISON)
-	_player.status.apply(StatusEffects.Status.PARALYZE)
-	_check("Goluman are immune to Poison and Paralysis", _player.status.active.is_empty())
+	_player.status.apply(StatusEffects.Status.STUN)
+	_check("Goluman are immune to Poison and Stun", _player.status.active.is_empty())
 	_player.status.apply(StatusEffects.Status.SHOCK, 2.0)
 	_check("Shock stops a Goluman in place (no moving, no attacking)",
 		not _player.status.can_move() and not _player.status.can_act())
@@ -77,6 +77,23 @@ func _run() -> void:
 	_player.status.apply(StatusEffects.Status.POISON)
 	_check("and can be poisoned", _poisoned())
 	_player.status.clear_all()
+
+	# --- Stun (was Paralyze; Grayson: ends when cured or hit) -------------------------------
+	_player.status.apply(StatusEffects.Status.STUN)
+	_check("Stun stops you in place", not _player.status.can_move() and not _player.status.can_act())
+	_player.status.cure(7)
+	_check("Cure ends it", not _player.status.is_active(StatusEffects.Status.STUN))
+	_player.status.apply(StatusEffects.Status.STUN)
+	_player.status.apply(StatusEffects.Status.POISON, 3.0)
+	await _frames(40)
+	_check("damage over time doesn't end it", _player.status.is_active(StatusEffects.Status.STUN))
+	var poke := DamageInfo.new()
+	poke.amount = 5.0
+	poke.accuracy = -1.0
+	_player.receive_hit(poke, null)
+	_check("a hit ends it", not _player.status.is_active(StatusEffects.Status.STUN))
+	_player.status.clear_all()
+	_player.health.restore_full()
 	_player.health.restore_full()
 
 	_check("the east door starts locked", not poison_door.is_open)

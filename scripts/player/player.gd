@@ -167,6 +167,7 @@ func apply_bonuses() -> void:
 	combat.lp_regen_fraction = save.character.lp_regen_fraction() if save else 0.0
 	status.immune = save.character.status_immunities() if save else []
 	status.shock_stuns = save.character.shock_stuns() if save else false
+	status.stun_breaks_on_hit = true
 	for gone in status.immune:
 		if status.is_active(gone):
 			status.active.erase(gone)
@@ -551,6 +552,8 @@ func receive_hit(info: DamageInfo, attacker: Node3D, projectile: Node = null) ->
 	if combat.aegis_active():
 		info.amount *= CombatController.AEGIS_GUARD
 	var amount := health.take_damage(info)
+	if amount > 0.0:
+		status.on_hit()  # a hit ends Stun (Grayson, 2026-11-09)
 	status.add_buildup(info, attacker)
 	DamageNumber.spawn(get_parent(), global_position + Vector3.UP * 1.9, amount, info.damage_type, false)
 	return amount
