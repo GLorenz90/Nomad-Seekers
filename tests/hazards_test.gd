@@ -2,8 +2,10 @@ extends SceneTree
 ## Automated test for Part 11's hazards and buttons (Grayson, 2026-11-09:
 ## "hazards and buttons like PSO") and the menu that no longer pauses.
 ##
-## - Poison mist: poisons anyone inside (the room and its corridor: one
-##   hazard, two boxes); the button opens the door and clears it.
+## - Poison mist: drains HP from anyone inside, Goluman too (the room and its
+##   corridor: one hazard, two boxes); the button opens the door and clears it.
+## - Goluman: immune to Poison and Paralysis; Shock stops them in place, while
+##   anyone else can still move while shocked.
 ## - Four floor plates: alone, three stay down and the fourth needs you on
 ##   it; then the alcove door opens. With two Seekers, two latch and the last
 ##   two need someone on each.
@@ -38,16 +40,45 @@ func _run() -> void:
 	var hall_door: SwitchDoor = _main.get_node("SwitchDoors/HallDoor")
 
 	# --- Poison mist --------------------------------------------------------------------
+	_player.health.restore_full()
 	await _place(Vector3(30, 0.1, -30))
-	await _frames(20)
-	_check("standing in the poison mist poisons you", _poisoned())
-	_player.status.clear_all()
+	await _frames(62)  # ~1 s
+	var drained := _player.health.max_hp - _player.health.hp
+	_check("the poison mist drains about 2%% of max HP a second (%.1f of %.0f)" % [drained, _player.health.max_hp],
+		drained > _player.health.max_hp * 0.01 and drained < _player.health.max_hp * 0.035)
+	_check("it isn't the Poisoned status", not _poisoned())
+	_player.health.hp = 2.0
 	await _frames(70)
-	_check("and keeps poisoning you while you stay (cured, poisoned again)", _poisoned())
-	_player.status.clear_all()
+	_check("it never takes you below 1 HP (%.1f)" % _player.health.hp, _player.health.hp >= 1.0 and not _player.health.is_dead())
+	_player.health.restore_full()
 	await _place(Vector3(15, 0.1, -30))
-	await _frames(20)
-	_check("the mist spans the corridor too (one hazard, two boxes)", _poisoned())
+	await _frames(40)
+	_check("the mist spans the corridor too (one hazard, two boxes)", _player.health.hp < _player.health.max_hp)
+	var human_save := _player.save
+	_player.use_save(SaveData.create("Gol", CharacterData.Race.GOLUMAN, CharacterData.Gender.MALE,
+		CharacterData.Job.RANGER, 1))
+	_player.autosave = false
+	_player.health.restore_full()
+	await _frames(40)
+	_check("it drains Goluman too", _player.health.hp < _player.health.max_hp)
+
+	# --- Goluman statuses (Grayson: like PSO's androids) ---------------------------------------
+	_player.status.apply(StatusEffects.Status.POISON)
+	_player.status.apply(StatusEffects.Status.PARALYZE)
+	_check("Goluman are immune to Poison and Paralysis", _player.status.active.is_empty())
+	_player.status.apply(StatusEffects.Status.SHOCK, 2.0)
+	_check("Shock stops a Goluman in place (no moving, no attacking)",
+		not _player.status.can_move() and not _player.status.can_act())
+	_player.status.clear_all()
+	_player.use_save(human_save)
+	_player.status.apply(StatusEffects.Status.SHOCK, 2.0)
+	_check("anyone else can still move while shocked, but can't attack",
+		_player.status.can_move() and not _player.status.can_act() and _player.status.move_scale() > 0.0)
+	_player.status.apply(StatusEffects.Status.POISON)
+	_check("and can be poisoned", _poisoned())
+	_player.status.clear_all()
+	_player.health.restore_full()
+
 	_check("the east door starts locked", not poison_door.is_open)
 	await _place(Vector3(38, 0.1, -23.4))
 	_check("A at the button (%s)" % _player.interact_prompt(), _player.interact_prompt() == "A: Press the button")
@@ -55,10 +86,10 @@ func _run() -> void:
 	await _tap("jump")
 	await _frames(5)
 	_check("pressing it opens the door and clears the mist", poison_door.is_open and not mist.active)
-	_player.status.clear_all()
+	_player.health.restore_full()
 	await _place(Vector3(30, 0.1, -30))
 	await _frames(80)
-	_check("no more poison in the room", not _poisoned())
+	_check("no more drain in the room", _player.health.hp == _player.health.max_hp)
 
 	# --- Four floor plates ------------------------------------------------------------------
 	var plates: Array[RoomButton] = []

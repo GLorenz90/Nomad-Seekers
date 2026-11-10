@@ -5,16 +5,18 @@ extends Node3D
 ## several rooms or a room and its corridor) and is switched off or on by a
 ## button (SwitchGroup -> switch_action).
 ##
-## - POISON_MIST: anyone inside is Poisoned, refreshed every second, so the
-##   DoT keeps ticking until you leave or the mist is turned off.
+## - POISON_MIST: drains 2% of max HP a second from anyone inside, Goluman
+##   included (Grayson 2026-11-09: it isn't the Poisoned status). Like PSO's
+##   poison it never takes you below 1 HP (Claude's pick); enemies do the rest.
 ## - DARKNESS: the screen goes dark around you (HUD vignette) while you're
 ##   inside, and the room's own volume reads black from outside.
 
 enum Kind { POISON_MIST, DARKNESS }
 
 const COLORS := {Kind.POISON_MIST: Color(0.45, 0.85, 0.25, 0.16), Kind.DARKNESS: Color(0.0, 0.0, 0.02, 0.6)}
-const POISON_REFRESH := 1.0
-const POISON_SECONDS := 2.5
+## Drain per second as a fraction of max HP, applied every POISON_TICK.
+const POISON_DRAIN := 0.02
+const POISON_TICK := 0.5
 
 @export var kind: Kind = Kind.POISON_MIST
 @export var active := true
@@ -107,7 +109,7 @@ func _physics_process(delta: float) -> void:
 	if not active or kind != Kind.POISON_MIST or _inside.is_empty():
 		return
 	_tick += delta
-	if _tick < POISON_REFRESH:
+	if _tick < POISON_TICK:
 		return
 	_tick = 0.0
 	for seeker in _inside.keys():
@@ -116,5 +118,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _poison(seeker: Player) -> void:
-	if not seeker.health.is_dead():
-		seeker.status.apply(StatusEffects.Status.POISON, POISON_SECONDS)
+	var health := seeker.health
+	if health.is_dead() or health.hp <= 1.0:
+		return
+	var info := DamageInfo.new()
+	info.amount = minf(health.max_hp * POISON_DRAIN * POISON_TICK, health.hp - 1.0)
+	info.accuracy = -1.0
+	info.hit_position = seeker.global_position + Vector3.UP * 1.6
+	health.take_damage(info)

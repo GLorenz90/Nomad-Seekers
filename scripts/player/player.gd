@@ -165,6 +165,11 @@ func apply_bonuses() -> void:
 			s.set(stat, float(s.get(stat)) + delta)
 	_material_applied = target
 	combat.lp_regen_fraction = save.character.lp_regen_fraction() if save else 0.0
+	status.immune = save.character.status_immunities() if save else []
+	status.shock_stuns = save.character.shock_stuns() if save else false
+	for gone in status.immune:
+		if status.is_active(gone):
+			status.active.erase(gone)
 	if health.max_hp != s.max_hp:
 		var gained := s.max_hp - health.max_hp
 		health.max_hp = s.max_hp
@@ -485,7 +490,7 @@ func _physics_process(delta: float) -> void:
 	elif input_locked:
 		pass
 	elif input.just_pressed("jump"):
-		if interact_target and is_on_floor() and status.can_act() and not health.is_dead():
+		if interact_target and is_on_floor() and status.can_move() and not health.is_dead():
 			interact_target.interact(self)
 			interact_target = null
 		else:
@@ -496,7 +501,7 @@ func _physics_process(delta: float) -> void:
 
 	var move_dir := _get_move_direction()
 
-	if not input_locked and input.just_pressed("dash") and _can_dash() and status.can_act() and _input_hold <= 0.0:
+	if not input_locked and input.just_pressed("dash") and _can_dash() and status.can_move() and _input_hold <= 0.0:
 		combat.cancel()
 		_start_dash(move_dir)
 
@@ -576,7 +581,7 @@ func _process_movement(delta: float, move_dir: Vector3, speed_scale: float = 1.0
 		can_jump: bool = true) -> void:
 	var on_floor := is_on_floor()
 
-	if can_jump and status.can_act() and _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
+	if can_jump and status.can_move() and _jump_buffer > 0.0 and (on_floor or _coyote_timer > 0.0):
 		_do_jump()
 		on_floor = false
 

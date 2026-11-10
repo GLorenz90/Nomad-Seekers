@@ -8,7 +8,9 @@ extends Node
 ##   Fire      Burn    damage over time
 ##   Ice       Slow    half speed; Ice buildup while already slowed = Freeze
 ##   Freeze            can't move or act
-##   Lightning Shock   stunned: can't move or act (short)
+##   Lightning Shock   stunned: can't move or act (short). Seekers who aren't
+##                     Goluman can still move while shocked, they just can't
+##                     attack (shock_stuns = false; Grayson 2026-11-09)
 ##   Nature    Poison  damage over time (longer, weaker than Burn)
 ##   Light     Blind   own attacks miss half the time
 ##   Dark      Drain   damage over time that heals whoever applied it
@@ -42,6 +44,12 @@ var _drain_source: Node
 ## One per stat; a stronger or longer cast replaces a weaker one.
 var modifiers: Dictionary = {}
 var _tick := 0.0
+## Statuses that never take hold (Goluman: Poison and Paralyze, like PSO's
+## androids).
+var immune: Array[int] = []
+## Shock stops movement too. True for enemies and Goluman (who are weak to it:
+## it's a short paralysis for them); other Seekers can still move.
+var shock_stuns := true
 
 
 static func find(node: Node) -> StatusEffects:
@@ -85,6 +93,8 @@ func add_buildup(info: DamageInfo, source: Node = null) -> void:
 
 
 func apply(status: int, seconds: float = -1.0) -> void:
+	if status in immune:
+		return
 	var fresh := not active.has(status)
 	active[status] = seconds if seconds > 0.0 else float(DURATIONS[status])
 	if fresh:
@@ -164,12 +174,19 @@ func clear_debuffs() -> void:
 
 ## Movement speed multiplier from statuses.
 func move_scale() -> float:
-	if is_active(Status.FREEZE) or is_active(Status.SHOCK) or is_active(Status.PARALYZE):
+	if not can_move():
 		return 0.0
 	return 0.5 if is_active(Status.SLOW) else 1.0
 
 
-## Frozen or shocked targets can't attack.
+## Frozen, paralyzed and (for anyone shock stuns) shocked targets can't move,
+## jump or dodge.
+func can_move() -> bool:
+	return not (is_active(Status.FREEZE) or is_active(Status.PARALYZE)
+		or (shock_stuns and is_active(Status.SHOCK)))
+
+
+## Frozen, paralyzed or shocked targets can't attack.
 func can_act() -> bool:
 	return not (is_active(Status.FREEZE) or is_active(Status.SHOCK) or is_active(Status.PARALYZE))
 
