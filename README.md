@@ -300,7 +300,7 @@ Couch co-op for up to four, split-screen.
 - **Split screen is left / right** for two Seekers (widescreen first), with 10° more vertical FOV in a half-width pane. Menus scale to fit.
 - **Each Seeker travels on their own.** One can go to Nomad-2 to sell while the other explores. A map nobody else is on runs in its own world beside yours (`CoopDirector`), and each pane looks into its Seeker's map. Maps nobody is on are closed.
 - **EXP:** every party member on the same map gets the full EXP of every kill, whoever made it and even while down. Members on other maps get none.
-- **Enemies have +50% HP per extra Seeker on the map** when they appear.
+- **Enemy stats don't change in co-op**, like PSO.
 - **Discs go into the pack** when picked up, to be read from the Inventory tab. Nothing is learned or sold on the spot.
 - **Lock-on is gentler:** it, and the retarget after a kill, only pick targets in front of the camera and within 75% of the way from the screen centre to the edge, so the lock never swings to something behind you. Switching targets is unchanged.
 - **Boomerangs** skip targets that die before they arrive (this used to throw an error), and fly back to the thrower when done.

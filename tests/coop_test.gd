@@ -10,8 +10,7 @@ extends SceneTree
 ## - Falling in co-op: down until a partner's Revive (or A back to the start);
 ##   everyone down sends everyone back. EXP goes to everyone on the map.
 ## - Each Seeker travels on their own: a guest goes to Nomad-2 (a hosted map
-##   in its own world) while the leader stays; EXP stays on its map; enemy HP
-##   grows with Seekers on the map; the leader follows (the window's level
+##   in its own world) while the leader stays; EXP stays on its map; the leader follows (the window's level
 ##   becomes a placeholder); the guest leaves; the leader travels back and
 ##   it's plain single player again.
 ##
@@ -145,8 +144,8 @@ func _run() -> void:
 
 	# --- EXP for everyone on the map --------------------------------------------------------------
 	var hound := _enemy("grub_hound", leader.global_position + Vector3(0, 0, -6))
-	_check("enemies get more HP with two Seekers on the map (%.0f)" % hound.health.max_hp,
-		is_equal_approx(hound.health.max_hp, hound.data.max_hp * 1.5))
+	_check("enemies keep their normal HP in co-op, like PSO (%.0f)" % hound.health.max_hp,
+		is_equal_approx(hound.health.max_hp, hound.data.max_hp))
 	_kill(guest)
 	await _frames(2)
 	var exp_leader := leader.save.character.experience
@@ -177,7 +176,6 @@ func _run() -> void:
 	_check("each map only sees its own Seekers",
 		Scope.group(leader, "player") == [leader] and Scope.group(guest, "player") == [guest])
 	var solo := _enemy("grub_hound", leader.global_position + Vector3(0, 0, -6))
-	_check("alone on the map, enemies have their normal HP", is_equal_approx(solo.health.max_hp, solo.data.max_hp))
 	exp_leader = leader.save.character.experience
 	exp_guest = guest.save.character.experience
 	_main.on_enemy_defeated(solo)

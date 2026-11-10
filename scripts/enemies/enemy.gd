@@ -57,16 +57,6 @@ func _ready() -> void:
 	_build()
 
 
-## Co-op (Grayson, 2026-11-09: fine for co-op to raise enemy HP): +50% max HP
-## for each extra Seeker on this map when the enemy appears (Claude's number).
-const HP_PER_EXTRA_SEEKER := 0.5
-
-
-func party_hp_scale() -> float:
-	var seekers := Scope.group(self, "player").size() if is_inside_tree() else 1
-	return 1.0 + HP_PER_EXTRA_SEEKER * maxi(seekers - 1, 0)
-
-
 func get_lock_point() -> Vector3:
 	return global_position + Vector3.UP * (data.size.y * 0.6 + data.hover_height)
 
@@ -416,7 +406,7 @@ func _build() -> void:
 
 	health = Health.new()
 	health.name = "Health"
-	health.max_hp = data.max_hp * party_hp_scale()
+	health.max_hp = data.max_hp  # same in co-op, like PSO (Grayson, 2026-11-09)
 	add_child(health)
 	health.hp = health.max_hp
 	if data.weak_to != Element.Type.GENERIC:
