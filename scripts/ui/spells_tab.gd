@@ -95,6 +95,9 @@ func refresh() -> void:
 	_rebuild_hands()
 	_rebuild_slots()
 	_rebuild_spells()
+	# Up from the top of any column reaches the section buttons.
+	for box in [_hands, _slots, _spells]:
+		menu._equip_tab.link_up(_first_button(box))
 
 
 func _clear(box: Container) -> void:
@@ -280,11 +283,13 @@ func back() -> bool:
 	return false
 
 
+## Focus goes to the casting items; with none, to the learned spells (to read
+## them), and with nothing at all, to the section buttons, never nowhere.
 func focus_default() -> void:
 	if _hand.x >= 0:
 		_focus_hand()
-	elif not _focus_first(_hands):
-		menu.get_viewport().gui_release_focus()
+	elif not _focus_first(_hands) and not _focus_first(_spells):
+		menu._equip_tab.focus_bar()
 
 
 func _focus_hand() -> void:
@@ -301,6 +306,13 @@ func _focus_slot() -> void:
 			(b as Button).grab_focus.call_deferred()
 			return
 	_focus_first(_slots)
+
+
+func _first_button(box: Container) -> Button:
+	for child in box.get_children():
+		if child is Button and not child.is_queued_for_deletion():
+			return child
+	return null
 
 
 func _focus_first(box: Container) -> bool:

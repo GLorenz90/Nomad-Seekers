@@ -398,6 +398,90 @@ func _run() -> void:
 	await _pad(JOY_BUTTON_B)
 	_check("B again closes the menu", not _menu.visible)
 
+	# --- Spells section with nothing to pick (Grayson: controller got stuck) ---------------
+	var save2 := _player.save
+	save2.character.race = CharacterData.Race.HUMAN
+	_player.apply_bonuses()
+	for i in _combat.loadout_set.loadouts.size():
+		_combat.loadout_set.loadouts[i] = Loadout.make(null, null)
+	_menu.open()
+	_menu.show_tab("Spells")
+	await _frames(3)
+	_check("with no casting items, focus lands on a learned spell, not nowhere (%s)" % _focused_text(),
+		_focused() != null and _focused_text().begins_with("Fajro"))
+	await _pad(JOY_BUTTON_DPAD_UP)
+	_check("up from the top reaches the section buttons (%s)" % _focused_text(), _focused_text().strip_edges() == "Spells")
+	await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("and down goes back in (%s)" % _focused_text(), _focused_text().begins_with("Fajro"))
+	_check("everyone but Goluman has Spells and a D-pad section",
+		_menu._equip_tab.sections() == ["Palette", "Spells", "Armor", "D-pad"])
+
+	# --- D-pad palette (Grayson: 4 slots, RT shifts to 4 more) -------------------------------
+	_menu.show_tab("D-pad")
+	await _frames(3)
+	_check("the D-pad section opens on the first slot (%s)" % _focused_text(), _focused_text().contains("Left:  HP Gel"))
+	for i in 4:
+		await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("past the four, the RT slots (%s)" % _focused_text(), _focused_text().contains("RT + Left:  -"))
+	await _pad(JOY_BUTTON_A)
+	for i in 3:
+		await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("A opens the choices (%s)" % _focused_text(), _focused_text().begins_with("Cure Salt"))
+	await _pad(JOY_BUTTON_A)
+	await _frames(2)
+	_check("A puts it on RT + Left, moving it off d-pad right",
+		save2.quick(4) == &"cure_salt" and save2.quick(2) == &"" and _focused_text().contains("RT + Left:  Cure Salt"))
+	await _pad(JOY_BUTTON_X)
+	_check("X clears a slot", save2.quick(4) == &"")
+	save2.set_quick(4, &"cure_salt")
+	_menu.close()
+	await _frames(3)
+	save2.inventory.add_consumable(&"cure_salt", 1)
+	var salts := save2.inventory.count(&"cure_salt")
+	_feedback.clear()
+	await _tap("item_3")
+	_check("d-pad right is empty now and says so (%s)" % [_feedback], "Nothing on Right (Equip tab)" in _feedback)
+	Input.action_press("shift")
+	await _frames(2)
+	_check("the HUD shows the RT page while RT is held (%s)" % DebugHud.quick_text(_player),
+		DebugHud.quick_text(_player).begins_with("RT + D-pad") and DebugHud.quick_text(_player).contains("Cure Salt"))
+	await _tap("item_1")
+	Input.action_release("shift")
+	_check("RT + d-pad left uses the Cure Salt", save2.inventory.count(&"cure_salt") == salts - 1)
+
+	# --- Goluman: Traps in place of Spells, set from the d-pad ------------------------------
+	save2.character.race = CharacterData.Race.GOLUMAN
+	save2.character.spells[&"freeze_trap"] = 5
+	_player.apply_bonuses()
+	_menu.open()
+	_menu.show_tab("Spells")
+	await _frames(3)
+	_check("Goluman have Traps in place of Spells",
+		_menu._equip_tab.sections() == ["Palette", "Traps", "Armor"] and _menu._tab_name() == "Traps")
+	_menu._quick_tab._pick_slot(3)
+	await _frames(2)
+	for i in 12:
+		if _focused_text().begins_with("Freeze Trap"):
+			break
+		await _pad(JOY_BUTTON_DPAD_DOWN)
+	_check("their traps are among the choices (%s)" % _focused_text(), _focused_text().begins_with("Freeze Trap 5"))
+	await _pad(JOY_BUTTON_A)
+	_check("and go on the d-pad (down)", save2.quick(3) == &"freeze_trap")
+	_menu.close()
+	await _frames(3)
+	for t in get_nodes_in_group("traps"):
+		t.free()
+	await _place(ARENA)
+	var lp_before := _combat.lp
+	await _tap("item_4")
+	await _frames(2)
+	_check("d-pad down sets the trap at their feet for its LP (%.0f -> %.0f)" % [lp_before, _combat.lp],
+		get_nodes_in_group("traps").size() == 1 and _combat.lp < lp_before)
+	_combat.lp = 0.0
+	_feedback.clear()
+	await _tap("item_4")
+	_check("not without the LP (%s)" % [_feedback], "Not enough LP" in _feedback and get_nodes_in_group("traps").size() == 1)
+
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
 

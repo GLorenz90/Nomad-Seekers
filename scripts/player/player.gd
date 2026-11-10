@@ -25,8 +25,9 @@ signal leveled_up(level: int, gains: Dictionary)
 
 enum State { GROUND, AIR, DASH }
 
-## Quick-use slots: item_1 HP Gel, item_2 LP Cell, item_3 Cure Salt.
-const QUICK_ITEMS: Array[StringName] = [&"hp_gel", &"lp_cell", &"cure_salt", &"trap_scanner"]
+## The d-pad palette (Grayson, 2026-11-09): item_1-4 are d-pad left / up /
+## right / down; holding RT shifts to slots 5-8. What's in them is the save's
+## (SaveData.quick_slots): consumables, and traps for Goluman.
 
 @export_group("Ground")
 @export var move_speed := 7.0
@@ -328,6 +329,47 @@ func revive(fraction: float) -> void:
 	set_downed(false)
 
 
+## The d-pad page: 1 while RT is held, else 0.
+func quick_page() -> int:
+	return 1 if input.pressed("shift") else 0
+
+
+## Uses whatever is in a d-pad slot: a consumable, or sets a trap.
+func use_quick(index: int) -> bool:
+	if save == null:
+		return false
+	var id := save.quick(index)
+	if id == &"":
+		combat.combo_feedback.emit("Nothing on %s (Equip tab)" % SaveData.QUICK_NAMES[index])
+		return false
+	var spell := SpellBook.get_spell(id)
+	if spell and spell.is_trap():
+		return set_trap(id)
+	return use_consumable(id)
+
+
+## Sets a trap at the Seeker's feet from the d-pad, paying its LP.
+func set_trap(id: StringName) -> bool:
+	var spell := SpellBook.get_spell(id)
+	var c := save.character if save else null
+	if spell == null or c == null or not spell.is_trap():
+		return false
+	if not c.can_use_traps():
+		combat.combo_feedback.emit("Only Goluman can set traps")
+		return false
+	var level := c.spell_level(id)
+	if level <= 0:
+		combat.combo_feedback.emit("%s isn't learned" % spell.display_name)
+		return false
+	if not status.can_act() or health.is_dead():
+		return false
+	if not combat.spend_lp(spell.lp_cost(level)):
+		combat.combo_feedback.emit("Not enough LP")
+		return false
+	Trap.place(combat, null, spell, level, false, global_position)
+	return true
+
+
 ## Co-op (Part 12): a fallen Seeker stays down where they fell until a partner
 ## casts Revive (or they press A to go back to the start).
 func set_downed(on: bool) -> void:
@@ -496,9 +538,9 @@ func _physics_process(delta: float) -> void:
 			interact_target = null
 		else:
 			_jump_buffer = jump_buffer_time
-	for i in QUICK_ITEMS.size():
+	for i in 4:
 		if not input_locked and input.just_pressed(&"item_%d" % (i + 1)):
-			use_consumable(QUICK_ITEMS[i])
+			use_quick(quick_page() * 4 + i)
 
 	var move_dir := _get_move_direction()
 

@@ -1570,3 +1570,15 @@ func _in() -> PlayerInput:
 
 
 static var _SHARED_INPUT := PlayerInput.shared()
+
+
+## Pays LP for something outside an attack (d-pad traps). False when short.
+func spend_lp(cost: float) -> bool:
+  if infinite_lp:
+    return true
+  if lp < cost:
+    return false
+  lp -= cost
+  if cost > 0.0:
+    _lp_regen_delay = 0.75
+  return true
