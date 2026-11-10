@@ -286,6 +286,15 @@ Couch co-op for up to four, split-screen.
 ![Split screen](docs/screenshots/coop_split.png)
 ![A guest's menu in their pane](docs/screenshots/coop_menu.png)
 
+
+## Part 12 (continued): the d-pad palette and Goluman traps
+- **D-pad palette:** the d-pad is four slots (left, up, right, down), and **holding RT shifts to four more**, ready for more items. Fill them in **Equip > D-pad**: A on a slot, A on an item (X clears; an item moves if it was already on another slot). It starts with HP Gel, LP Cell, Cure Salt and Trap Scanner where they used to be. The HUD shows the current page (the RT page while RT is held).
+- **Goluman: Traps replaces Spells.** The same palette, plus their learned traps. A trap on the d-pad is set at their feet for its LP (up to 4 at once).
+- **Spells section on a controller:** with no casting item equipped, focus goes to your learned spells (or the section buttons) instead of nowhere. Up from the top of any column reaches the section buttons, and down from them goes back in.
+
+![Traps section](docs/screenshots/traps_section.png)
+![The RT page on the HUD](docs/screenshots/dpad_rt_page.png)
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 
@@ -319,7 +328,7 @@ Show hitboxes (Debug tab, on by default) also draws enemy melee hit areas on the
 | Hand attacks (tap / hold) | X / Y | Left / right click |
 | Cast (tap) / Hard cast (hold) | X / Y with a casting item | Left / right click |
 | Spell slots 2 / 4 (hold while casting) / special | RT | E |
-| Use HP Gel / LP Cell / Cure Salt / Trap Scanner | D-pad left / up / right / down | 1 / 2 / 3 / 4 |
+| D-pad palette (items; traps for Goluman) | D-pad left / up / right / down, hold RT for 4 more | 1 / 2 / 3 / 4, hold E |
 | Activate a teleporter / pick up an item (when the prompt shows; otherwise jump) | A | Space |
 | Sync Burst | L3 | R |
 | Cycle palettes | LB / RB | Z / C |

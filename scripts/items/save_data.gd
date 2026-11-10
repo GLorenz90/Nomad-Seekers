@@ -24,6 +24,10 @@ const OLD_LOADOUTS_PATH := "user://loadouts.tres"
 @export var quest: Dictionary = {}
 ## Quest id -> times completed.
 @export var quests_cleared: Dictionary = {}
+## The d-pad item palette (Grayson, 2026-11-09): 8 slots. 0-3 are d-pad left
+## / up / right / down, 4-7 the same with RT held. Each holds a consumable id
+## or, for Goluman, a trap's id; &"" is empty. See quick() / set_quick().
+@export var quick_slots: Array[StringName] = []
 
 ## PSO's bank: 200 items and up to 999,999,999 Meseta (Ephinea's numbers).
 const BANK_SLOTS := 200
@@ -47,7 +51,43 @@ static func fresh(default_loadouts: LoadoutSet) -> SaveData:
 		s.character.spells[id] = 1
 	s.give_starter_armor()
 	s.pack_palette_weapons()
+	s.ensure_quick_slots()
 	return s
+
+
+# --- D-pad palette ------------------------------------------------------------------
+
+const QUICK_SLOTS := 8
+## What the d-pad held before it became a palette (left, up, right, down).
+const DEFAULT_QUICK: Array[StringName] = [&"hp_gel", &"lp_cell", &"cure_salt", &"trap_scanner"]
+## Slot names, in slot order.
+const QUICK_NAMES: Array[String] = ["Left", "Up", "Right", "Down",
+	"RT + Left", "RT + Up", "RT + Right", "RT + Down"]
+
+
+func ensure_quick_slots() -> void:
+	if quick_slots.is_empty():
+		quick_slots.assign(DEFAULT_QUICK)
+	while quick_slots.size() < QUICK_SLOTS:
+		quick_slots.append(&"")
+
+
+func quick(index: int) -> StringName:
+	ensure_quick_slots()
+	return quick_slots[index] if index >= 0 and index < QUICK_SLOTS else &""
+
+
+## Puts an item or trap in a d-pad slot (&"" empties it). Anything already in
+## another slot moves here, so each item sits in one slot.
+func set_quick(index: int, id: StringName) -> void:
+	ensure_quick_slots()
+	if index < 0 or index >= QUICK_SLOTS:
+		return
+	if id != &"":
+		for i in QUICK_SLOTS:
+			if quick_slots[i] == id:
+				quick_slots[i] = &""
+	quick_slots[index] = id
 
 
 ## Every Seeker starts in a Field Frame with one augment slot (PSO's Frame).
@@ -140,6 +180,7 @@ func _fill_missing(default_loadouts: LoadoutSet) -> void:
 	loadouts.ensure_slots()
 	give_starter_armor()
 	pack_palette_weapons()
+	ensure_quick_slots()
 
 
 

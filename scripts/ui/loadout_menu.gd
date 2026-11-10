@@ -42,6 +42,7 @@ var _inventory_tab: InventoryTab
 var _equip_tab: EquipTab
 var _spells_tab: SpellsTab
 var _armor_tab: ArmorTab
+var _quick_tab: QuickTab
 var debug_tab: DebugTab
 var _status_text: RichTextLabel
 var _to_title: Button
@@ -160,6 +161,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Spells" and event.is_action_pressed("ui_cancel") and _spells_tab.back():
 		get_viewport().set_input_as_handled()
+	elif visible and _tab_name() in ["Traps", "D-pad"] and _clear_input(event) == 1:
+		if _quick_tab.clear_focused():
+			get_viewport().set_input_as_handled()
+	elif visible and _tab_name() in ["Traps", "D-pad"] and event.is_action_pressed("ui_cancel") and _quick_tab.back():
+		get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Armor" and _clear_input(event) == 1:
 		if _armor_tab.clear_focused():
 			get_viewport().set_input_as_handled()
@@ -267,6 +273,11 @@ func _refresh() -> void:
 		_spells_tab.refresh()
 	if _armor_tab:
 		_armor_tab.refresh()
+	var seeker_now := _player()
+	if _equip_tab and seeker_now and seeker_now.save:
+		_equip_tab.set_goluman(seeker_now.save.character.can_use_traps())
+	if _quick_tab:
+		_quick_tab.refresh()
 
 
 func _lt_short(l: Loadout) -> String:
@@ -339,7 +350,8 @@ func _build() -> void:
 	_armor_tab = ArmorTab.new(self)
 	_inventory_tab = InventoryTab.new(self)
 	_tabs.add_child(_inventory_tab)
-	_equip_tab = EquipTab.new(self, columns, _spells_tab, _armor_tab)
+	_quick_tab = QuickTab.new(self)
+	_equip_tab = EquipTab.new(self, columns, _spells_tab, _armor_tab, _quick_tab)
 	_tabs.add_child(_equip_tab)
 	_build_status_tab()
 	_build_syncaida_tab()
@@ -760,6 +772,8 @@ func _focus_tab() -> void:
 					(_slot_buttons[combat.loadout_index][CombatController.Hand.PRIMARY] as Button).grab_focus()
 			"Spells":
 				_spells_tab.focus_default()
+			"Traps", "D-pad":
+				_quick_tab.focus_default()
 			"Armor":
 				_armor_tab.focus_default()
 		return

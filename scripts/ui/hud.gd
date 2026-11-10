@@ -14,7 +14,7 @@ Chain: press again inside the timing window (too early breaks the combo)
 Second spell: hold RT / E while casting    Palettes: LB/RB / Z,C
 Same-type pair (e.g. Sword + Frost Sword): every attack uses both hands
 Block: LT / F    Special: hold RT / E + hand    Menu: Start / Tab
-Items: D-pad left/up/right/down / 1-4 (HP Gel, LP Cell, Cure Salt, Trap Scanner)
+Items: D-pad left/up/right/down / 1-4, hold RT for 4 more (set them in Equip > D-pad; Goluman: Equip > Traps)
 A: activate a teleporter / pick up an item (Oro and Lumidium are picked up by walking over them;
     the pack holds 30 slots, stacks of 10; the satchel holds Oro and up to 15 Lumidium)
 Lumidium: hit a crystal 3 times; press A on a teleporter to deposit it
@@ -64,6 +64,29 @@ func _ready() -> void:
 	_help.visible = false
 	_panel.visible = false
 	_build_status()
+
+
+## The d-pad palette's current page ("RT" while RT is held), e.g.
+## "D-pad  ←HP Gel 3  ↑LP Cell 2  →Cure Salt 1  ↓Trap Scanner 2".
+static func quick_text(seeker: Player) -> String:
+	if seeker == null or seeker.save == null:
+		return ""
+	var page := seeker.quick_page()
+	var parts := PackedStringArray(["D-pad" if page == 0 else "RT + D-pad"])
+	var arrows := ["←", "↑", "→", "↓"]
+	for i in 4:
+		parts.append("%s%s" % [arrows[i], quick_label(seeker.save, seeker.save.quick(page * 4 + i))])
+	return "  ".join(parts)
+
+
+## "HP Gel 3", "Freeze Trap 4" (its level), or "-" for an empty slot.
+static func quick_label(save: SaveData, id: StringName) -> String:
+	if id == &"":
+		return "-"
+	var spell := SpellBook.get_spell(id)
+	if spell and spell.is_trap():
+		return "%s %d" % [spell.display_name, save.character.spell_level(id)]
+	return "%s %d" % [Inventory.CONSUMABLES.get(id, String(id)), save.inventory.count(id)]
 
 
 func set_debug_visible(on: bool) -> void:
@@ -132,10 +155,10 @@ func _process(delta: float) -> void:
 	if player.save:
 		var c := player.save.character
 		var inv := player.save.inventory
-		_wallet.text = "%s  %s  (%s emblem)\nLv %d  EXP %d   Pack %d / %d\nOro %d\nLumidium carried %d / %d   banked %d\nHP Gel %d   LP Cell %d   Cure Salt %d   Trap Scanner %d" % [
+		_wallet.text = "%s  %s  (%s emblem)\nLv %d  EXP %d   Pack %d / %d\nOro %d\nLumidium carried %d / %d   banked %d\n%s" % [
 			c.seeker_name, c.job_name(), c.emblem_name(), c.level(), c.experience, player.save.pack_used(), Inventory.PACK_SLOTS,
 			inv.oro, player.carried_lumidium_total(), Inventory.SATCHEL_LUMIDIUM, inv.lumidium_total(),
-			inv.count(&"hp_gel"), inv.count(&"lp_cell"), inv.count(&"cure_salt"), inv.count(&"trap_scanner")]
+			quick_text(player)]
 		_wallet.modulate = c.emblem_text_color()
 	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE
 	if _panel.visible:
