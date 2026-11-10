@@ -307,6 +307,15 @@ Couch co-op for up to four, split-screen.
 
 ![Two maps at once](docs/screenshots/coop_two_maps.png)
 
+
+## Part 12 (continued): second playtest round
+- **Traps take 3 seconds to arm**, like PSO, blinking faster as they get close. **Any Seeker can hit a set trap to spring it early**, armed or not: lock on to it (enemies are preferred) and shoot, swing or blast it. A Ranger can pop a Goluman's bomb as enemies close in. Traps don't set each other off.
+- **The palette in use is remembered** across maps (it's in the save).
+- **Nomad-2 is peaceful:** no attacks, spells, traps or Sync Bursts there (`peaceful` on the level).
+- **Bladestaff's last step hits all around you**, matching its spin.
+- **Lumidium depots:** teleporters no longer bank Lumidium. Depots do, and only when you press A at one. There's one at the start and at each exit of the arena, one in the gym, and one by Nomad-2's bank. Carried Lumidium now stays in your satchel across maps (it's in the save) and is still lost if you fall.
+- **The bank's Oro counter is now Resources:** Oro, plus deposit and withdraw for each Lumidium color, so you can take Lumidium out to trade. The bank holds up to 99,999 Lumidium. The satchel's size is saved per character (15 for now), so quests can raise it later.
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 

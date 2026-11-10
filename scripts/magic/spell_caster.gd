@@ -105,7 +105,7 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 					_damage(ctrl, item, spell, level, hard, victim, 1.0))
 		SpellDef.Shape.RING_OUT:
 			SpellFx.ring(world, player.global_position, r, color, 0.5)
-			var hits := _in_radius(player.global_position, r, spell.max_targets)
+			var hits := _in_radius(player.global_position, r, spell.max_targets, player)
 			for v in hits:
 				var d := v.global_position.distance_to(player.global_position)
 				_later(player, 0.5 * d / maxf(r, 0.1), func():
@@ -118,7 +118,7 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 				return
 			var chain: Array[Node3D] = [first]
 			while chain.size() < spell.max_targets:
-				var next := _nearest_to(chain[-1].global_position, r, chain)
+				var next := _nearest_to(chain[-1].global_position, r, chain, player)
 				if next == null:
 					break
 				chain.append(next)
@@ -134,7 +134,7 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 		SpellDef.Shape.CONE_STRIKE:
 			var reach := spell.reach * area_scale
 			SpellFx.cone(world, player.global_position, direction, reach, spell.cone_deg, color, 0.3)
-			for v in _in_cone(player.global_position, direction, reach, spell.cone_deg, spell.max_targets):
+			for v in _in_cone(player.global_position, direction, reach, spell.cone_deg, spell.max_targets, player):
 				if spell.element == Element.Type.LIGHT:
 					SpellFx.beam(world, v.global_position, color, 0.3)
 				else:
@@ -146,7 +146,7 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 				SpellFx.burst(world, center + Vector3.UP * 0.5, r, color)
 			else:
 				SpellFx.ring(world, center, r, color, 0.4)
-			for v in _in_radius(center, r, spell.max_targets):
+			for v in _in_radius(center, r, spell.max_targets, player):
 				if spell.element != Element.Type.FIRE:
 					SpellFx.beam(world, v.global_position, color, 0.25)
 				_damage(ctrl, item, spell, level, hard, v, 1.0)
@@ -154,7 +154,7 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 			SpellFx.ring(world, player.global_position, r, color, 0.4)
 			if spell.kind == SpellDef.Kind.DEBUFF:
 				var n := 0
-				for v in _in_radius(player.global_position, r, 99):
+				for v in _in_radius(player.global_position, r, 99, player):
 					var st := StatusEffects.find(v)
 					if st:
 						st.apply_modifier(spell.stat, SpellBook.debuff_fraction(level) * (1.25 if hard else 1.0),
@@ -164,7 +164,7 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 						n += 1
 				ctrl.combo_feedback.emit("%s: %d enem%s" % [spell.display_name, n, "y" if n == 1 else "ies"])
 			else:
-				for v in _in_radius(player.global_position, r, spell.max_targets):
+				for v in _in_radius(player.global_position, r, spell.max_targets, player):
 					SpellFx.spike(world, v.global_position, color, 0.3)
 					_damage(ctrl, item, spell, level, hard, v, 1.0)
 		SpellDef.Shape.GRAVITY_PIT:
@@ -172,7 +172,7 @@ static func cast(ctrl: CombatController, item: WeaponData, attack: AttackData, h
 			SpellFx.burst(world, center + Vector3.UP * 0.3, r, color, 2.0)
 			for i in 8:
 				_later(player, 0.25 * i, func():
-					for v in _in_radius(center, r * 1.3, spell.max_targets):
+					for v in _in_radius(center, r * 1.3, spell.max_targets, player):
 						var enemy := v as Enemy
 						if enemy:
 							var pull := center - enemy.global_position
@@ -192,7 +192,7 @@ static func channel_tick(ctrl: CombatController, item: WeaponData, attack: Attac
 	var player := ctrl.get_parent() as Player
 	SpellFx.cone(player.get_parent(), player.global_position, direction, spell.reach, spell.cone_deg,
 		_color(spell), CHANNEL_TICK)
-	for v in _in_cone(player.global_position, direction, spell.reach, spell.cone_deg, 10):
+	for v in _in_cone(player.global_position, direction, spell.reach, spell.cone_deg, 10, player):
 		_damage(ctrl, item, spell, attack.spell_level, false, v, 1.0, 0.5)
 
 
@@ -330,10 +330,12 @@ static func _targets(tree_node: Node) -> Array[Node3D]:
 	return out
 
 
-static func _in_radius(center: Vector3, radius: float, limit: int) -> Array[Node3D]:
+## `from`: a node on the map to search (party members can be on different
+## maps; see Scope). Defaults to the window's own level.
+static func _in_radius(center: Vector3, radius: float, limit: int, from: Node = null) -> Array[Node3D]:
 	var tree := Engine.get_main_loop() as SceneTree
 	var found: Array[Node3D] = []
-	for n in _targets(tree.root):
+	for n in _targets(from if from and from.is_inside_tree() else tree.root):
 		var d := n.global_position - center
 		d.y = 0.0
 		if d.length() <= radius:
@@ -343,10 +345,10 @@ static func _in_radius(center: Vector3, radius: float, limit: int) -> Array[Node
 	return found.slice(0, limit)
 
 
-static func _in_cone(origin: Vector3, direction: Vector3, reach: float, cone_deg: float, limit: int) -> Array[Node3D]:
+static func _in_cone(origin: Vector3, direction: Vector3, reach: float, cone_deg: float, limit: int, from: Node = null) -> Array[Node3D]:
 	var flat := Vector3(direction.x, 0.0, direction.z).normalized()
 	var found: Array[Node3D] = []
-	for n in _in_radius(origin, reach, 99):
+	for n in _in_radius(origin, reach, 99, from):
 		var to := n.global_position - origin
 		to.y = 0.0
 		if to.length() < 0.5 or rad_to_deg(flat.angle_to(to.normalized())) <= cone_deg * 0.5:
@@ -355,12 +357,12 @@ static func _in_cone(origin: Vector3, direction: Vector3, reach: float, cone_deg
 
 
 static func _nearest_ahead(player: Node3D, direction: Vector3, reach: float, cone_deg: float) -> Node3D:
-	var list := _in_cone(player.global_position, direction, reach, cone_deg, 1)
+	var list := _in_cone(player.global_position, direction, reach, cone_deg, 1, player)
 	return list[0] if not list.is_empty() else null
 
 
-static func _nearest_to(point: Vector3, radius: float, exclude: Array[Node3D]) -> Node3D:
-	for n in _in_radius(point, radius, 99):
+static func _nearest_to(point: Vector3, radius: float, exclude: Array[Node3D], from: Node = null) -> Node3D:
+	for n in _in_radius(point, radius, 99, from):
 		if not n in exclude:
 			return n
 	return null

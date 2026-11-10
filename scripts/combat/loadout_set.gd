@@ -7,6 +7,9 @@ const SLOT_COUNT := 8
 const SAVE_PATH := "user://loadouts.tres"
 
 @export var loadouts: Array[Loadout] = []
+## The palette in use, kept in the save so it survives changing maps
+## (Grayson, 2026-11-10).
+@export var current := 0
 ## Set from armor (Part 7): on while a Double-Heavy augment is slotted in any worn
 ## piece (Player.apply_bonuses). Two Heavy one-handed items per loadout.
 @export var double_heavy_augment := false

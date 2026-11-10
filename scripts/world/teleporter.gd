@@ -1,14 +1,14 @@
 class_name Teleporter
 extends Area3D
-## Teleporter pad (North Star §7.1). Standing on it deposits every carried
-## Lumidium into the Seeker's bank, where it's safe from death.
+## Teleporter pad (North Star §7.1). Since 2026-11-10 (Grayson) it no longer
+## banks Lumidium: Lumidium depots do that (LumidiumDepot), and the satchel's
+## Lumidium travels with the Seeker.
 ##
 ## With a destination it also travels there (saving first). Loading a level
 ## always builds it fresh, so a trip back into the arena resets it.
 ## requires_rooms_cleared keeps the pad dark until every WaveRoom is cleared
 ## (the arena's exit back to the gym).
 
-signal deposited(seeker: Player, amount: int)
 signal travelling(destination: String)
 
 const PLAYER_MASK := 2
@@ -105,7 +105,7 @@ func _refresh() -> void:
 		color = COLOR_TRAVEL
 		_label.text = "Teleporter\n(choose a destination)"
 	elif destination == "":
-		_label.text = "Teleporter\n(deposit Lumidium)"
+		_label.text = "Teleporter"
 	elif _active:
 		_label.text = "Teleporter\n%s" % (destination_name if destination_name != "" else destination.get_file().get_basename())
 	else:
@@ -139,17 +139,14 @@ func interact_prompt() -> String:
 	if not destinations.is_empty():
 		return "Teleport..."
 	if destination == "":
-		return "Deposit Lumidium"
+		return "Teleporter (goes nowhere)"
 	if not is_active():
 		return "Teleporter locked (clear every room first)"
 	return destination_name if destination_name != "" else "Teleport"
 
 
-## A on the pad: banks carried Lumidium, then asks where to go or travels.
+## A on the pad: asks where to go, or travels.
 func interact(seeker: Player) -> void:
-	var amount := seeker.deposit_lumidium()
-	if amount > 0:
-		deposited.emit(seeker, amount)
 	if not destinations.is_empty():
 		_open_picker(seeker)
 	elif destination != "" and is_active():

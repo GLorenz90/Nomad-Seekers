@@ -21,6 +21,7 @@ func _initialize() -> void:
 	_root = Node3D.new()
 	_root.name = "Hub"
 	_root.set_script(load("res://scripts/main.gd"))
+	_root.set("peaceful", true)  # no fighting in Nomad-2 (Grayson, 2026-11-10)
 
 	var env := WorldEnvironment.new()
 	env.name = "WorldEnvironment"
@@ -75,6 +76,13 @@ func _initialize() -> void:
 	pad.set("destination_names", PackedStringArray(["The gym (test room)", "The test arena (wave rooms)"]))
 	pad.position = Vector3(0, 0, -10)
 	_add(_root, pad)
+
+	# Lumidium depot by the bank (Grayson, 2026-11-10).
+	var depot := Node3D.new()
+	depot.name = "LumidiumDepot"
+	depot.set_script(load("res://scripts/world/lumidium_depot.gd"))
+	depot.position = Vector3(-10, 0, 7.5)
+	_add(_root, depot)
 
 	var packed := PackedScene.new()
 	var err := packed.pack(_root)

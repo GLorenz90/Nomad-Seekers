@@ -280,12 +280,14 @@ static func make_starter_loadouts() -> LoadoutSet:
 func apply_loadout_set(new_set: LoadoutSet) -> void:
   loadout_set = new_set
   loadout_set.ensure_slots()
+  loadout_index = clampi(loadout_set.current, 0, loadout_set.loadouts.size() - 1)
   if not is_usable(loadout_index):
     loadout_index = 0
     for i in loadout_set.loadouts.size():
       if is_usable(i):
         loadout_index = i
         break
+  loadout_set.current = loadout_index
   cancel()
   _equip_visuals()
   loadout_changed.emit(loadout_index)
@@ -355,6 +357,7 @@ func select_loadout(index: int) -> bool:
   if not is_usable(index):
     return false
   loadout_index = index
+  loadout_set.current = index  # remembered across maps
   cancel()
   _equip_visuals()
   loadout_changed.emit(loadout_index)
@@ -560,7 +563,9 @@ func _action_for(hand: int) -> StringName:
 
 
 func _read_hand(hand: int, delta: float) -> void:
-  if _player and _player.input_locked:  # menu open (Part 11: it doesn't pause)
+  # Menu open (Part 11: it doesn't pause), or a peaceful map like Nomad-2
+  # (Grayson, 2026-11-10: no attacks, spells or traps in the hub).
+  if _player and (_player.input_locked or _player.peaceful):
     _held[hand] = -1.0
     return
   var action := _action_for(hand)
@@ -923,19 +928,19 @@ func _predict_spell(attack: AttackData, _hand: int) -> Array[Node3D]:
         return []
       var chain: Array[Node3D] = [first]
       while chain.size() < spell.max_targets:
-        var next := SpellCaster._nearest_to(chain[-1].global_position, r, chain)
+        var next := SpellCaster._nearest_to(chain[-1].global_position, r, chain, _player)
         if next == null:
           break
         chain.append(next)
       return chain
     SpellDef.Shape.CONE_STRIKE, SpellDef.Shape.CHANNEL:
-      return SpellCaster._in_cone(_player.global_position, dir, spell.reach, spell.cone_deg, spell.max_targets)
+      return SpellCaster._in_cone(_player.global_position, dir, spell.reach, spell.cone_deg, spell.max_targets, _player)
     SpellDef.Shape.TARGET_AREA, SpellDef.Shape.GRAVITY_PIT:
-      return SpellCaster._in_radius(SpellCaster._area_center(_player, target, dir, spell.reach), r, spell.max_targets)
+      return SpellCaster._in_radius(SpellCaster._area_center(_player, target, dir, spell.reach), r, spell.max_targets, _player)
     SpellDef.Shape.RING_OUT, SpellDef.Shape.AROUND_CASTER:
       if spell.kind == SpellDef.Kind.DEBUFF:
-        return SpellCaster._in_radius(_player.global_position, r, 99)
-      return SpellCaster._in_radius(_player.global_position, r, spell.max_targets)
+        return SpellCaster._in_radius(_player.global_position, r, 99, _player)
+      return SpellCaster._in_radius(_player.global_position, r, spell.max_targets, _player)
     SpellDef.Shape.PROJECTILE, SpellDef.Shape.PIERCE_LINE, SpellDef.Shape.BIG_ORB, SpellDef.Shape.GROUND_LINE:
       var shot := AttackData.new()
       shot.is_projectile = true
@@ -1149,6 +1154,8 @@ func _find_soft_target(max_range: float, max_angle_deg: float) -> Node3D:
     if angle > max_angle_deg:
       continue
     var score := angle / max_angle_deg + dist / max_range
+    if n is TrapTrigger:
+      score += 3.0  # aim at enemies before a Seeker's trap
     if score < best_score:
       best_score = score
       best = n

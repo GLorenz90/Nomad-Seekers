@@ -249,7 +249,6 @@ func _build_levels(box: VBoxContainer) -> void:
 func _on_level(scene: String) -> void:
 	var seeker := _player()
 	if seeker:
-		seeker.deposit_lumidium()
 		seeker.save_game()
 	menu.save_on_close = false  # already saved
 	menu.close()

@@ -109,12 +109,14 @@ func _initialize() -> void:
 		node.set("color", spec[1])
 		node.position = spec[2]
 		_add(gather, node)
-	for spec in [["TeleporterStart", Vector3(0, 0, 16.5)], ["TeleporterB", Vector3(-8, 0, -24)]]:
-		var pad := Area3D.new()
-		pad.name = spec[0]
-		pad.set_script(load("res://scripts/world/teleporter.gd"))
-		pad.position = spec[1]
-		_add(gather, pad)
+	# Lumidium depots (Grayson, 2026-11-10): at the start and at each exit.
+	for spec in [["DepotStart", Vector3(0, 0, 16.5)], ["DepotExit", Vector3(3.5, 0, -36)],
+			["DepotEnd", Vector3(63.5, 0, -48)]]:
+		var depot := Node3D.new()
+		depot.name = spec[0]
+		depot.set_script(load("res://scripts/world/lumidium_depot.gd"))
+		depot.position = spec[1]
+		_add(gather, depot)
 	# Part 6: hidden PSO-style floor traps (Goluman see them).
 	var hazards := Node3D.new()
 	hazards.name = "Hazards"

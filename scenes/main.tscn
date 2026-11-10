@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
 [ext_resource type="Shader" uid="uid://2uvuox5ybq6h" path="res://assets/shaders/blockout_grid.gdshader" id="6_grid"]
 [ext_resource type="Script" path="res://scripts/world/teleporter.gd" id="7_teleporter"]
+[ext_resource type="Script" path="res://scripts/world/lumidium_depot.gd" id="8_depot"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.32, 0.45, 0.68, 1)
@@ -327,3 +328,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 25)
 script = ExtResource("7_teleporter")
 destination = "res://scenes/hub.tscn"
 destination_name = "Back to Nomad-2"
+
+[node name="LumidiumDepot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, 25)
+script = ExtResource("8_depot")

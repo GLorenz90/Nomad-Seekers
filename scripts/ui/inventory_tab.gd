@@ -138,8 +138,8 @@ func describe(e: Dictionary) -> String:
 		"oro":
 			return "Oro: %d (up to %d). In the satchel: it never fills your pack." % [save.inventory.oro, Inventory.ORO_MAX]
 		"lumidium":
-			return "Carried Lumidium: %d / %d (all colors together), lost if you fall.\nTeleporters bank it. Banked: %d." % [
-				p.carried_lumidium_total(), Inventory.SATCHEL_LUMIDIUM, save.inventory.lumidium_total()]
+			return "Carried Lumidium: %d / %d (all colors together), lost if you fall.\nBank it at a Lumidium depot. Banked: %d." % [
+				p.carried_lumidium_total(), p.satchel_size(), save.inventory.lumidium_total()]
 	return ItemText.detail(e, p, save.inventory)
 
 
@@ -168,7 +168,7 @@ func refresh() -> void:
 		_satchel.add_child(_entry_button(e, -1))
 	var p := _player()
 	_satchel.add_child(_label("Lumidium carried %d / %d   banked %d" % [p.carried_lumidium_total(),
-		Inventory.SATCHEL_LUMIDIUM, save.inventory.lumidium_total()], 14))
+		p.satchel_size(), save.inventory.lumidium_total()], 14))
 	if _open.is_empty():
 		_close_actions()
 

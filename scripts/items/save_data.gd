@@ -28,6 +28,12 @@ const OLD_LOADOUTS_PATH := "user://loadouts.tres"
 ## / up / right / down, 4-7 the same with RT held. Each holds a consumable id
 ## or, for Goluman, a trap's id; &"" is empty. See quick() / set_quick().
 @export var quick_slots: Array[StringName] = []
+## Lumidium carried in the satchel (color -> count), kept across maps (Grayson,
+## 2026-11-10); lost on death, banked at a Lumidium depot.
+@export var satchel_lumidium: Dictionary = {}
+## How much Lumidium the satchel holds, all colors together. 15 to start;
+## quests will raise it later (Grayson).
+@export var satchel_size := Inventory.SATCHEL_LUMIDIUM
 
 ## PSO's bank: 200 items and up to 999,999,999 Meseta (Ephinea's numbers).
 const BANK_SLOTS := 200
@@ -411,6 +417,37 @@ func deposit_oro(amount: int) -> int:
 	inventory.oro -= n
 	bank.oro += n
 	return n
+
+
+## Bank Resources (Grayson, 2026-11-10): Lumidium from the bank into the
+## satchel, to trade. Returns how many moved (up to the satchel's room).
+func withdraw_lumidium(color: StringName, amount: int) -> int:
+	var room := satchel_size - satchel_total()
+	var n := clampi(amount, 0, mini(int(inventory.lumidium.get(color, 0)), room))
+	if n <= 0:
+		return 0
+	inventory.lumidium[color] = int(inventory.lumidium[color]) - n
+	if int(inventory.lumidium[color]) <= 0:
+		inventory.lumidium.erase(color)
+	satchel_lumidium[color] = int(satchel_lumidium.get(color, 0)) + n
+	return n
+
+
+## Satchel Lumidium into the bank (one color). Returns how many moved.
+func deposit_lumidium(color: StringName, amount: int) -> int:
+	var one := {color: mini(amount, int(satchel_lumidium.get(color, 0)))}
+	var n := inventory.bank_lumidium(one)
+	satchel_lumidium[color] = int(satchel_lumidium.get(color, 0)) - n
+	if int(satchel_lumidium[color]) <= 0:
+		satchel_lumidium.erase(color)
+	return n
+
+
+func satchel_total() -> int:
+	var total := 0
+	for color in satchel_lumidium:
+		total += int(satchel_lumidium[color])
+	return total
 
 
 func withdraw_oro(amount: int) -> int:

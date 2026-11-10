@@ -64,6 +64,6 @@ func _physics_process(delta: float) -> void:
 		return
 	_tick -= TICK
 	var center := (get_parent() as Node3D).global_position
-	for v in SpellCaster._in_radius(center, radius(), 10):
+	for v in SpellCaster._in_radius(center, radius(), 10, self):
 		# Small damage: a fifth of the spell's power per tick.
 		SpellCaster._damage(ctrl, item, spell, level, hard, v, 0.2)

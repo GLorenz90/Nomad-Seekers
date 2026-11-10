@@ -1,11 +1,13 @@
 class_name Trap
 extends Node3D
 ## A Goluman trap (Part 6): set at the feet (tap) or tossed ahead (hold). It
-## arms after ARM_TIME, then springs when an enemy steps close: Damage Traps
+## arms after ARM_TIME (3 s, like PSO: placing traps takes some planning;
+## Grayson 2026-11-10), then springs when an enemy steps close. Any Seeker can
+## hit it (TrapTrigger) to set it off early, armed or not. Damage Traps
 ## explode (PSO technique power), status traps put everything in the blast in
 ## their status. A Seeker can have MAX_TRAPS set at once (oldest goes first).
 
-const ARM_TIME := 0.6
+const ARM_TIME := 3.0
 const TRIGGER_RADIUS := 1.4
 const LIFETIME := 45.0
 
@@ -17,6 +19,8 @@ var hard := false
 var _age := 0.0
 var _mesh: MeshInstance3D
 var _material: StandardMaterial3D
+var _trigger: TrapTrigger
+var _sprung := false
 
 
 static func place(controller: CombatController, casting_item: WeaponData, trap_spell: SpellDef,
@@ -60,6 +64,9 @@ func _ready() -> void:
 	_mesh.mesh = cyl
 	_mesh.position.y = 0.09
 	add_child(_mesh)
+	_trigger = TrapTrigger.new()
+	_trigger.trap = self
+	add_child(_trigger)
 
 
 func is_armed() -> bool:
@@ -72,18 +79,27 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	if not is_armed():
+		# Arming: a slow, dim blink that quickens as it gets close.
+		_material.emission_energy_multiplier = 0.15 + 0.25 * absf(sin(_age * (2.0 + 4.0 * _age / ARM_TIME)))
 		return
 	_material.emission_energy_multiplier = 0.6 + 0.5 * sin(_age * 8.0)
-	if not SpellCaster._in_radius(global_position, TRIGGER_RADIUS, 1).is_empty():
-		spring()
+	for v in SpellCaster._in_radius(global_position, TRIGGER_RADIUS, 4, self):
+		if not v is TrapTrigger and not v is TrapDevice:
+			spring()
+			return
 
 
 ## Goes off: damage or status on everything in the blast.
 func spring() -> void:
+	if _sprung or not is_inside_tree():
+		return
+	_sprung = true
 	var world := get_parent()
 	var r := radius()
 	SpellFx.burst(world, global_position + Vector3.UP * 0.4, r, SpellCaster._color(spell))
-	for v in SpellCaster._in_radius(global_position, r, 10):
+	for v in SpellCaster._in_radius(global_position, r, 12, self):
+		if v is TrapTrigger:
+			continue  # other traps don't chain off this one
 		if spell.trap_status < 0:
 			SpellCaster._damage(ctrl, item, spell, level, hard, v, 1.0)
 		else:

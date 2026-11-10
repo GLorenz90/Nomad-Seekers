@@ -267,6 +267,12 @@ func _run() -> void:
 	for e in ring:
 		e.queue_free()
 
+	# Bladestaff (Grayson, 2026-11-10): the third step spins, hitting all around.
+	var staff := _w("bladestaff")
+	_check("Bladestaff's last step hits all around the Seeker",
+		staff.normal_attacks[2].reach == 0.0 and staff.normal_attacks[2].hitbox_size.x == staff.normal_attacks[2].hitbox_size.z
+		and staff.hard_attacks[2].reach == 0.0 and staff.normal_attacks[0].reach > 0.0)
+
 	# Gigarang: out and back through the same enemy.
 	_equip(null, _w("gigarang"))
 	var target := _spawn("grub_hound", ARENA + Vector3(0, 0, -4))
@@ -544,15 +550,30 @@ func _run() -> void:
 	await _frames(5)
 	_check("dying loses carried Lumidium", _player.carried_lumidium_total() == 0)
 	_player.add_lumidium(&"ice", 4)
-	var pad := _main.get_node("Gathering/TeleporterStart") as Teleporter
-	await _place(pad.global_position + Vector3(0, 0.1, 0))
+	# Grayson, 2026-11-10: depots, not teleporters, bank Lumidium, and only
+	# when the Seeker chooses to.
+	var depot := _main.get_node("Gathering/DepotStart") as LumidiumDepot
+	await _place(depot.global_position + Vector3(0, 0.1, 1.2))
 	await _frames(10)
-	_check("standing on a teleporter does nothing by itself (carried %d)" % _player.carried_lumidium_total(),
+	_check("standing by a depot does nothing by itself (carried %d)" % _player.carried_lumidium_total(),
 		_player.carried_lumidium_total() == 4)
+	_check("A: deposit (%s)" % _player.interact_prompt(), _player.interact_prompt() == "A: Deposit Lumidium in the bank")
 	await _tap("jump")
 	await _frames(5)
-	_check("A on a teleporter deposits it (banked %d, carried %d)" % [_player.save.inventory.lumidium_total(), _player.carried_lumidium_total()],
+	_check("A at a depot banks it (banked %d, carried %d)" % [_player.save.inventory.lumidium_total(), _player.carried_lumidium_total()],
 		_player.save.inventory.lumidium_total() == 4 and _player.carried_lumidium_total() == 0)
+	_check("the arena has depots at its start and both exits",
+		_main.has_node("Gathering/DepotExit") and _main.has_node("Gathering/DepotEnd") and not _main.has_node("Gathering/TeleporterB"))
+	_player.add_lumidium(&"fire", 2)
+	_check("the satchel lives in the save, so it crosses maps", int(_player.save.satchel_lumidium.get(&"fire", 0)) == 2)
+	var bank_before := _player.save.inventory.lumidium.duplicate()
+	_player.save.inventory.lumidium[&"raw"] = Inventory.BANK_LUMIDIUM_MAX - _player.save.inventory.lumidium_total() - 1
+	_player.deposit_lumidium()
+	_check("the bank holds at most 99,999 Lumidium; the rest stays carried",
+		_player.save.inventory.lumidium_total() == Inventory.BANK_LUMIDIUM_MAX and _player.carried_lumidium_total() == 1)
+	_player.save.inventory.lumidium.clear()
+	_player.save.inventory.lumidium.merge(bank_before)
+	_player.carried_lumidium.clear()
 
 	# --- Save file ---------------------------------------------------------
 	var data := _player.save

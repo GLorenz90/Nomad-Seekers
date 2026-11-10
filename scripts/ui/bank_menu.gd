@@ -1,9 +1,10 @@
 class_name BankMenu
 extends CounterMenu
 ## Nomad-2's bank (Part 10, PSO's Check Room): deposit items from the pack
-## and withdraw them, up to SaveData.BANK_SLOTS (200) items; and Oro between
-## the satchel and the bank (up to 999,999,999 banked). Each character has
-## their own bank, like PSO. Banked Lumidium is shown here too.
+## and withdraw them, up to SaveData.BANK_SLOTS (200) items. Resources
+## (Grayson, 2026-11-10; was Oro): Oro and Lumidium between the satchel and
+## the bank (up to 999,999,999 Oro and 99,999 Lumidium banked), so Lumidium
+## can be taken out to trade. Each character has their own bank, like PSO.
 
 
 func _init() -> void:
@@ -13,14 +14,14 @@ func _init() -> void:
 
 
 func commands() -> Array:
-	return [["Deposit", "deposit"], ["Withdraw", "withdraw"], ["Oro", "oro"]]
+	return [["Deposit", "deposit"], ["Withdraw", "withdraw"], ["Resources", "resources"]]
 
 
 func header_text() -> String:
 	var s := save()
-	return "Oro %s  (banked %s)\nPack %d / %d    Bank %d / %d    Lumidium banked %d" % [
+	return "Oro %s  (banked %s)\nPack %d / %d    Bank %d / %d    Lumidium carried %d / %d, banked %s" % [
 		_num(s.inventory.oro), _num(s.bank.oro), s.pack_used(), Inventory.PACK_SLOTS,
-		s.bank_used(), SaveData.BANK_SLOTS, s.inventory.lumidium_total()]
+		s.bank_used(), SaveData.BANK_SLOTS, s.satchel_total(), s.satchel_size, _num(s.inventory.lumidium_total())]
 
 
 func items_for(command_id: String) -> Array[Dictionary]:
@@ -29,8 +30,8 @@ func items_for(command_id: String) -> Array[Dictionary]:
 			return _deposit_items()
 		"withdraw":
 			return _withdraw_items()
-		"oro":
-			return _oro_items()
+		"resources", "oro":
+			return _oro_items() + _lumidium_items()
 	return []
 
 
@@ -72,6 +73,45 @@ func _withdraw_items() -> Array[Dictionary]:
 		elif e.kind != "stack" and s.pack_free() <= 0:
 			item.error = "Your pack is full."
 		list.append(item)
+	return list
+
+
+## Each Lumidium color: deposit from the satchel, withdraw to it (to trade).
+func _lumidium_items() -> Array[Dictionary]:
+	var s := save()
+	var list: Array[Dictionary] = []
+	if s.satchel_total() <= 0 and s.inventory.lumidium_total() <= 0:
+		list.append({"text": "No Lumidium carried or banked", "color": Color(0.6, 0.6, 0.7),
+			"detail": "Lumidium nodes drop it; bank it at a Lumidium depot.", "error": "No Lumidium yet."})
+	for color in Inventory.LUMIDIUM:
+		var carried := int(s.satchel_lumidium.get(color, 0))
+		var banked := int(s.inventory.lumidium.get(color, 0))
+		if carried <= 0 and banked <= 0:
+			continue
+		var name := "%s Lumidium" % String(color).capitalize()
+		var tint: Color = Inventory.LUMIDIUM_COLORS[color]
+		var room := Inventory.BANK_LUMIDIUM_MAX - s.inventory.lumidium_total()
+		var deposit := {"text": "Deposit %s   (carrying %d)" % [name, carried], "color": tint,
+			"detail": "Banked Lumidium is safe, and feeds your SyncAIDa. The bank holds %s in all." % _num(Inventory.BANK_LUMIDIUM_MAX),
+			"max": mini(carried, room), "start": carried,
+			"confirm": func(n: int) -> String: return "Deposit %d %s" % [n, name],
+			"act": func(n: int) -> String: return "Deposited %d %s." % [s.deposit_lumidium(color, n), name]}
+		if carried <= 0:
+			deposit.error = "You aren't carrying any %s." % name
+		elif room <= 0:
+			deposit.error = "The bank can't hold more Lumidium."
+		var space := s.satchel_size - s.satchel_total()
+		var withdraw := {"text": "Withdraw %s   (banked %s)" % [name, _num(banked)], "color": tint,
+			"detail": "Into your satchel (%d / %d), to trade or drop. It's lost if you fall." % [s.satchel_total(), s.satchel_size],
+			"max": mini(banked, space), "start": mini(banked, space),
+			"confirm": func(n: int) -> String: return "Withdraw %d %s" % [n, name],
+			"act": func(n: int) -> String: return "Withdrew %d %s." % [s.withdraw_lumidium(color, n), name]}
+		if banked <= 0:
+			withdraw.error = "There's no %s in your bank." % name
+		elif space <= 0:
+			withdraw.error = "Your satchel is full (%d)." % s.satchel_size
+		list.append(deposit)
+		list.append(withdraw)
 	return list
 
 

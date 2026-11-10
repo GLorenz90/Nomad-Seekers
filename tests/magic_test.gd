@@ -264,19 +264,40 @@ func _run() -> void:
 	await _idle()
 	var set_traps := get_nodes_in_group("traps")
 	_check("a Goluman sets a trap at their feet", set_traps.size() == 1)
-	await _frames(40)  # arms after 0.6 s
-	enemies = _line_up([Vector3(0, 0, 0.6)])  # enemies placed on the plate
+	enemies = _line_up([Vector3(0, 0, 0.6)])  # an enemy on the plate straight away
 	hp_before = enemies[0].health.hp
-	await _frames(40)
-	_check("an enemy stepping on it springs it (%.0f damage)" % (hp_before - enemies[0].health.hp),
+	await _frames(120)  # 2 s
+	_check("traps take 3 s to arm, like PSO (not sprung after 2 s)",
+		get_nodes_in_group("traps").size() == 1 and enemies[0].health.hp == hp_before)
+	await _frames(90)
+	_check("then an enemy on it springs it (%.0f damage)" % (hp_before - enemies[0].health.hp),
 		hp_before - enemies[0].health.hp > 0.0 and get_nodes_in_group("traps").is_empty())
+	_clear_enemies(enemies)
+	# Grayson, 2026-11-10: any Seeker can hit a trap to set it off early.
+	await _place(ARENA)
+	await _tap("hand_x")
+	await _idle()
+	var early := get_nodes_in_group("traps")[0] as Trap if not get_nodes_in_group("traps").is_empty() else null
+	enemies = _line_up([Vector3(0, 0, 1.2)])
+	hp_before = enemies[0].health.hp
+	var trigger: TrapTrigger = null
+	for child in early.get_children():
+		if child is TrapTrigger:
+			trigger = child
+	_check("a set trap is lockable, so Seekers can target it", trigger != null and trigger.is_in_group("lockable"))
+	var shot := DamageInfo.new()
+	shot.amount = 5.0
+	HitResolver.apply(trigger, shot, _player)
+	await _frames(3)
+	_check("a hit sets it off before it arms (%.0f damage)" % (hp_before - enemies[0].health.hp),
+		get_nodes_in_group("traps").is_empty() and enemies[0].health.hp < hp_before)
 	_clear_enemies(enemies)
 	await _place(ARENA)
 	Input.action_press("shift")
 	await _tap("hand_x")
 	Input.action_release("shift")
 	await _idle()
-	await _frames(40)
+	await _frames(190)
 	enemies = _line_up([Vector3(0, 0, 0.6)])
 	await _frames(40)
 	_check("a Freeze Trap freezes what springs it", enemies[0].status.is_active(StatusEffects.Status.FREEZE))
