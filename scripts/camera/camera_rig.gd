@@ -66,11 +66,19 @@ enum FollowMode { LOOSE, RIGID }
 @export var lock_pitch_offset_deg := -18.0
 @export var switch_stick_threshold := 0.7
 @export var switch_mouse_pixels := 80.0
+## Lock-on and the retarget after a kill only pick targets on screen, within
+## this fraction of the way from the centre to each edge (Grayson,
+## 2026-11-09: less aggressive, no turning to something behind you).
+@export_range(0.1, 1.0) var lock_screen_fraction := 0.75
 ## The simple sphere marker. Off when TargetMarkers draws the lock-on ring.
 @export var show_lock_marker := true
 
 var player: Player
 var lock_target: Node3D = null
+## What the player actually sees through this camera (a split-screen pane sets
+## these each frame; 0 = this camera's own FOV and its viewport's shape).
+var view_fov := 0.0
+var view_aspect := 0.0
 
 var _yaw := 0.0
 var _pitch := 0.0
@@ -186,13 +194,32 @@ func _validate_lock() -> void:
 	if not is_instance_valid(lock_target) or not lock_target.is_inside_tree() \
 			or not lock_target.is_in_group("lockable") or not lock_target.is_visible_in_tree():
 		var gone := lock_target if is_instance_valid(lock_target) else null
-		_set_lock(_find_nearest_target(gone) if retarget_on_kill else null)
+		# Same rules as pressing lock-on, so it never swings to something
+		# behind you or far off screen.
+		_set_lock(_find_best_target(gone) if retarget_on_kill else null)
 		return
 	if _player_center().distance_to(get_lock_point(lock_target)) > lock_break_range:
 		_set_lock(null)
 
 
-func _find_best_target() -> Node3D:
+## Whether a point is within lock_screen_fraction of the screen centre (and in
+## front of the camera).
+func is_near_screen_centre(point: Vector3) -> bool:
+	var local := camera.global_transform.affine_inverse() * point
+	if local.z >= -0.1:
+		return false  # behind the camera
+	var fov := deg_to_rad(view_fov if view_fov > 0.0 else camera.fov)
+	var aspect := view_aspect
+	if aspect <= 0.0:
+		var rect := get_viewport().get_visible_rect().size
+		aspect = rect.x / maxf(rect.y, 1.0)
+	var half_h := tan(fov / 2.0)
+	var x := (local.x / -local.z) / (half_h * aspect)
+	var y := (local.y / -local.z) / half_h
+	return absf(x) <= lock_screen_fraction and absf(y) <= lock_screen_fraction
+
+
+func _find_best_target(exclude: Node3D = null) -> Node3D:
 	var origin := _player_center()
 	var forward := -camera.global_basis.z
 	forward.y = 0.0
@@ -201,14 +228,14 @@ func _find_best_target() -> Node3D:
 
 	var best: Node3D = null
 	var best_score := INF
-	for node in get_tree().get_nodes_in_group("lockable"):
+	for node in Scope.group(self, "lockable"):
 		var candidate := node as Node3D
-		if candidate == null or not candidate.is_visible_in_tree():
+		if candidate == null or candidate == exclude or not candidate.is_visible_in_tree():
 			continue
 		var point := get_lock_point(candidate)
 		var to := point - origin
 		var dist := to.length()
-		if dist > lock_range:
+		if dist > lock_range or not is_near_screen_centre(point):
 			continue
 		var flat := Vector3(to.x, 0.0, to.z)
 		if flat.length_squared() < 0.01:
@@ -232,7 +259,7 @@ func _find_nearest_target(exclude: Node3D = null) -> Node3D:
 	var origin := _player_center()
 	var best: Node3D = null
 	var best_dist := INF
-	for node in get_tree().get_nodes_in_group("lockable"):
+	for node in Scope.group(self, "lockable"):
 		var candidate := node as Node3D
 		if candidate == null or candidate == exclude or not candidate.is_visible_in_tree():
 			continue
@@ -266,7 +293,7 @@ func _switch_target(side: float) -> void:
 	var origin := _player_center()
 	var best: Node3D = null
 	var best_dx := INF
-	for node in get_tree().get_nodes_in_group("lockable"):
+	for node in Scope.group(self, "lockable"):
 		var candidate := node as Node3D
 		if candidate == null or candidate == lock_target or not candidate.is_visible_in_tree():
 			continue

@@ -862,7 +862,7 @@ func _quit_to_title() -> void:
 		seeker.deposit_lumidium()
 	if seeker and seeker.guest_device >= 0:
 		close()
-		var level := get_tree().get_first_node_in_group("respawner")
+		var level := Scope.level(seeker)
 		if level and level.has_method("leave_party"):
 			level.call("leave_party", seeker)
 		return

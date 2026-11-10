@@ -275,9 +275,9 @@ PSO-style hazards and buttons (Grayson, 2026-11-09).
 Couch co-op for up to four, split-screen.
 
 - **Joining:** press **Start on another controller**. A new pane opens with your saved characters. Pick one that isn't already playing (create characters from the title screen first). Alone, the leader plays with any controller; the first one used is theirs, and the keyboard and mouse always belong to the leader.
-- **Split screen:** two Seekers split the screen top and bottom, three or four use quarters. Each pane has its own camera, HUD, menu, counters and teleporter list, and only hears its own controller. Menus are scaled to fit a half-height pane. Each Seeker's target rings only show in their own pane.
+- **Split screen:** two Seekers split the screen left and right, three or four use quarters. Each pane has its own camera, HUD, menu, counters and teleporter list, and only hears its own controller. Menus are scaled to fit a half-height pane. Each Seeker's target rings only show in their own pane.
 - **Your own character:** each guest plays one of the saved characters with their own pack, palettes, level and SyncAIDa, saved like the leader's.
-- **Together:** the party travels through teleporters together, everyone standing gets each kill's EXP, enemies chase the nearest Seeker, floor plates count everyone (Part 11's rule), and a Goluman's trap vision shows traps to the whole party.
+- **Together:** everyone on the same map gets each kill's full EXP, enemies chase the nearest Seeker, floor plates count everyone (Part 11's rule), and a Goluman's trap vision shows traps to the whole party.
 - **Falling:** a Seeker who falls while a partner is still standing stays down. A partner's **Revive** brings them back, or they press **A** to go back to the start (carried Lumidium is lost). When everyone is down, everyone goes back.
 - **Leaving:** a guest picks "Save and leave the party" in the Options tab. When the leader quits to the title, everyone does.
 - Counters and the teleporter's list no longer pause the game, like the menu.
@@ -294,6 +294,18 @@ Couch co-op for up to four, split-screen.
 
 ![Traps section](docs/screenshots/traps_section.png)
 ![The RT page on the HUD](docs/screenshots/dpad_rt_page.png)
+
+
+## Part 12 (continued): co-op playtest fixes
+- **Split screen is left / right** for two Seekers (widescreen first), with 10° more vertical FOV in a half-width pane. Menus scale to fit.
+- **Each Seeker travels on their own.** One can go to Nomad-2 to sell while the other explores. A map nobody else is on runs in its own world beside yours (`CoopDirector`), and each pane looks into its Seeker's map. Maps nobody is on are closed.
+- **EXP:** every party member on the same map gets the full EXP of every kill, whoever made it and even while down. Members on other maps get none.
+- **Enemies have +50% HP per extra Seeker on the map** when they appear.
+- **Discs go into the pack** when picked up, to be read from the Inventory tab. Nothing is learned or sold on the spot.
+- **Lock-on is gentler:** it, and the retarget after a kill, only pick targets in front of the camera and within 75% of the way from the screen centre to the edge, so the lock never swings to something behind you. Switching targets is unchanged.
+- **Boomerangs** skip targets that die before they arrive (this used to throw an error), and fly back to the thrower when done.
+
+![Two maps at once](docs/screenshots/coop_two_maps.png)
 
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.

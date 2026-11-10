@@ -23,7 +23,7 @@ static func place(controller: CombatController, casting_item: WeaponData, trap_s
 		trap_level: int, is_hard: bool, at: Vector3) -> Trap:
 	var player := controller.get_parent() as Player
 	var mine: Array[Trap] = []
-	for node in player.get_tree().get_nodes_in_group("traps"):
+	for node in Scope.group(player, "traps"):
 		if (node as Trap).ctrl == controller:
 			mine.append(node)
 	while mine.size() >= SpellCaster.MAX_TRAPS:

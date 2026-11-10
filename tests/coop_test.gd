@@ -2,15 +2,18 @@ extends SceneTree
 ## Automated test for Part 12, local co-op (Grayson, 2026-11-09).
 ##
 ## - Start on a second controller opens a character picker in a new
-##   split-screen pane (top / bottom); characters already playing can't join.
+##   split-screen pane (left / right); characters already playing can't join.
 ## - The guest plays their own character with their own controller: each
 ##   controller moves only its Seeker, and each Seeker's menu opens in its own
 ##   pane without pausing the other.
 ## - Target rings stay in their owner's pane; floor plates count both Seekers.
 ## - Falling in co-op: down until a partner's Revive (or A back to the start);
-##   everyone down sends everyone back. EXP goes to everyone standing.
-## - The party travels together (the next scene spawns the guest) and a guest
-##   can leave, which ends the split screen.
+##   everyone down sends everyone back. EXP goes to everyone on the map.
+## - Each Seeker travels on their own: a guest goes to Nomad-2 (a hosted map
+##   in its own world) while the leader stays; EXP stays on its map; enemy HP
+##   grows with Seekers on the map; the leader follows (the window's level
+##   becomes a placeholder); the guest leaves; the leader travels back and
+##   it's plain single player again.
 ##
 ## Uses its own folder for character slots, so real characters are never touched.
 ##   godot --headless --path . --script res://tests/coop_test.gd
@@ -48,12 +51,12 @@ func _run() -> void:
 
 	# --- Joining -----------------------------------------------------------------------------
 	await _pad(1, JOY_BUTTON_START)
-	var split: SplitScreen = _main.split
+	var split: SplitScreen = CoopDirector.find(self).split if CoopDirector.find(self) else null
 	_check("Start on a second controller splits the screen (2 panes)", split != null and split.panes.size() == 2)
 	_check("only the panes draw the world now", root.disable_3d)
 	_check("the leader's controls are their own now (keyboard and pad 0)",
 		leader.input.slot == 0 and leader.input.device == 0 and leader.input.keyboard)
-	_check("the leader's HUD and menu moved into the top pane",
+	_check("the leader's HUD and menu moved into the left pane",
 		_main.hud.get_parent() == split.panes[0].sub and _main.loadout_menu.get_parent() == split.panes[0].sub)
 	var picker := _find(split.panes[1].sub, "JoinPicker") as JoinPicker
 	_check("the new pane asks which character joins", picker != null)
@@ -61,9 +64,9 @@ func _run() -> void:
 		var entries := picker.entries()
 		_check("the leader's character is marked playing (%s)" % entries[0], entries[0].ends_with("(playing)"))
 		_check("empty slots can't be picked (%s)" % entries[3], entries[3].contains("empty"))
-	_check("panes split top and bottom",
-		split.panes[0].position == Vector2.ZERO and split.panes[1].position.y > 0.0
-		and is_equal_approx(split.panes[1].size.x, split.panes[0].size.x))
+	_check("panes split left and right",
+		split.panes[0].position == Vector2.ZERO and split.panes[1].position.x > 0.0
+		and split.panes[1].position.y == 0.0 and is_equal_approx(split.panes[1].size.y, split.panes[0].size.y))
 	await _pad(1, JOY_BUTTON_DPAD_DOWN)
 	await _pad(1, JOY_BUTTON_A)
 	_check("the leader's controller didn't move the guest's picker", _main.kits.size() == 2)
@@ -74,7 +77,7 @@ func _run() -> void:
 		_finish()
 		return
 	_check("on their own controller", guest.input.slot == 1 and guest.input.device == 1 and not guest.input.keyboard)
-	_check("their HUD is in the bottom pane", _main.kits[1].hud.get_parent() == split.panes[1].sub)
+	_check("their HUD is in the right pane", _main.kits[1].hud.get_parent() == split.panes[1].sub)
 
 	# --- Each controller moves its own Seeker -------------------------------------------------
 	await _settle()
@@ -140,40 +143,78 @@ func _run() -> void:
 		not guest.downed and not leader.downed and leader.health.hp == leader.health.max_hp
 		and leader.global_position.distance_to(_main.kits[0].spawn.origin) < 0.5)
 
-	# --- EXP for everyone standing ---------------------------------------------------------------
+	# --- EXP for everyone on the map --------------------------------------------------------------
 	var hound := _enemy("grub_hound", leader.global_position + Vector3(0, 0, -6))
+	_check("enemies get more HP with two Seekers on the map (%.0f)" % hound.health.max_hp,
+		is_equal_approx(hound.health.max_hp, hound.data.max_hp * 1.5))
+	_kill(guest)
+	await _frames(2)
 	var exp_leader := leader.save.character.experience
 	var exp_guest := guest.save.character.experience
 	_main.on_enemy_defeated(hound)
-	_check("a kill gives both Seekers its EXP",
+	_check("a kill gives both Seekers its full EXP, even one who's down",
 		leader.save.character.experience > exp_leader and guest.save.character.experience - exp_guest == leader.save.character.experience - exp_leader)
 	hound.queue_free()
+	guest.revive(1.0)
 
-	# --- Travelling together -----------------------------------------------------------------------
-	_main.kits[1].player.autosave = false
-	await _scene("res://scenes/hub.tscn")
-	_check("the guest comes along to the next place (%d Seekers)" % _main.kits.size(),
-		_main.kits.size() == 2 and _main.split != null and _main.split.panes.size() == 2)
-	guest = _main.kits[1].player
-	_check("still as their character, on their controller",
-		guest.save.character.seeker_name == "Guest" and guest.input.device == 1)
+	# --- Travelling on your own -------------------------------------------------------------------
+	var director := CoopDirector.find(self)
+	guest.autosave = false
+	CoopDirector.travel(guest, Session.HUB_SCENE)
+	await _frames(20)
+	var hub: Node = director.hosts.get(Session.HUB_SCENE)
+	_check("the guest goes to Nomad-2 alone; the leader stays in the arena",
+		hub != null and _main.kits.size() == 1 and _main.kits[0].player == leader and hub.kits.size() == 1)
+	guest = hub.kits[0].player
+	guest.autosave = false
+	_check("still as their character, on their controller, in their own pane",
+		guest.save.character.seeker_name == "Guest" and guest.input.device == 1
+		and director.split.pane_for_who(1).player == guest and split.panes.size() == 2)
+	_check("each pane looks into its Seeker's map",
+		director.split.pane_for_who(1).sub.world_3d == guest.get_world_3d()
+		and director.split.pane_for_who(Party.LEADER).sub.world_3d == leader.get_world_3d()
+		and guest.get_world_3d() != leader.get_world_3d())
+	_check("each map only sees its own Seekers",
+		Scope.group(leader, "player") == [leader] and Scope.group(guest, "player") == [guest])
+	var solo := _enemy("grub_hound", leader.global_position + Vector3(0, 0, -6))
+	_check("alone on the map, enemies have their normal HP", is_equal_approx(solo.health.max_hp, solo.data.max_hp))
+	exp_leader = leader.save.character.experience
+	exp_guest = guest.save.character.experience
+	_main.on_enemy_defeated(solo)
+	_check("a kill on another map gives the guest nothing",
+		leader.save.character.experience > exp_leader and guest.save.character.experience == exp_guest)
+	solo.queue_free()
+
+	leader.autosave = false
+	CoopDirector.travel(leader, Session.HUB_SCENE)
+	await _frames(20)
+	_check("the leader follows: both in Nomad-2, the window's level is a placeholder",
+		current_scene.scene_file_path == CoopDirector.PLACEHOLDER and hub.kits.size() == 2)
+	leader = hub.kits[1].player
+	leader.autosave = false
 
 	# --- Leaving ----------------------------------------------------------------------------------
-	guest.autosave = false
-	_main.leave_party(guest)
+	hub.leave_party(guest)
 	await _frames(3)
+	_check("a guest can leave the party", hub.kits.size() == 1 and not Party.is_active() and split.panes.size() == 1)
+	_check("the leader keeps playing in Nomad-2 full screen", CoopDirector.find(self) != null and split.panes[0].player == leader)
+	CoopDirector.travel(leader, "res://scenes/arena.tscn")
+	await _frames(30)
+	_main = current_scene
+	for kit in _main.kits:
+		kit.player.autosave = false
 	leader = _main.kits[0].player
-	_check("a guest can leave the party", _main.kits.size() == 1 and not Party.is_active())
-	_check("which ends the split screen", _main.split == null and not root.disable_3d)
-	_check("and the leader is back on the shared controls with their HUD in the window",
-		leader.input.is_shared() and _main.hud.get_parent() == _main)
+	_check("travelling back to the arena: plain single player again",
+		CoopDirector.find(self) == null and not root.disable_3d and leader.input.is_shared()
+		and _main.hud.get_parent() == _main and _main.scene_file_path == "res://scenes/arena.tscn")
 	await _pad(2, JOY_BUTTON_START)
-	var p2 := _find(_main.split.panes[1].sub, "JoinPicker") as JoinPicker if _main.split else null
+	director = CoopDirector.find(self)
+	var p2 := _find(director.split.panes[1].sub, "JoinPicker") as JoinPicker if director else null
 	_check("a third controller can join next (picker open)", p2 != null)
 	if p2:
 		p2.cancelled.emit()
 		await _frames(3)
-	_check("cancelling the picker closes the pane and the split screen", _main.split == null)
+	_check("cancelling the picker closes the pane and the split screen", CoopDirector.find(self) == null)
 
 	_finish()
 

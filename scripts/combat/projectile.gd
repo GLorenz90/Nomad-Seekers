@@ -31,6 +31,10 @@ var returns := false
 ## Only bodies in `chain` can be hit (PSO-shotgun targeting: one projectile per
 ## enemy). It flies through everything else.
 var exclusive := false
+## Homing throws (Boomerang): when the chain is done, or the throw runs out of
+## range, fly back to the thrower instead of vanishing (Grayson, 2026-11-09).
+## Nothing more is hit on the way back.
+var return_when_done := false
 
 var _travelled := 0.0
 var _reflected := false
@@ -101,7 +105,7 @@ func _physics_process(delta: float) -> void:
 	params.exclude = _exclude
 	for result in space.intersect_shape(params, 8):
 		var body: Node = result.collider
-		if body in _already_hit:
+		if not is_instance_valid(body) or body in _already_hit:
 			continue
 		if exclusive and not body in chain:
 			continue
@@ -122,8 +126,10 @@ func _physics_process(delta: float) -> void:
 			chain.erase(body)
 			_prune_chain()
 			if chain.is_empty():
-				queue_free()
-				return
+				_chain_done()
+				if not is_instance_valid(self) or is_queued_for_deletion():
+					return
+				break
 			continue
 		if not pierce:
 			queue_free()
@@ -138,7 +144,10 @@ func _physics_process(delta: float) -> void:
 	if _returning and is_instance_valid(shooter) and global_position.distance_to(_shooter_point()) < 1.0:
 		queue_free()
 		return
-	if not wall.is_empty() or _travelled >= max_range * (2.0 if returns else 1.0):
+	if return_when_done and not _returning and (not wall.is_empty() or _travelled >= max_range):
+		_chain_done()
+		return
+	if not wall.is_empty() or _travelled >= max_range * (2.0 if returns or return_when_done else 1.0):
 		if explosion_radius > 0.0:
 			_explode(to)
 			return
@@ -159,18 +168,35 @@ func _steer(delta: float) -> void:
 	if not chain.is_empty():
 		_prune_chain()
 		if chain.is_empty():
-			queue_free()
+			_chain_done()
 			return
 		var aim := CameraRig.get_lock_point(chain[0]) - global_position
 		velocity = aim.normalized() * _speed
 
 
+## Drops chain targets that died or were freed. (Untyped on purpose: a freed
+## enemy can't be passed as a Node3D, which used to throw an error when a big
+## hit killed the next target first.)
 func _prune_chain() -> void:
-	chain = chain.filter(func(n: Node3D) -> bool:
-		if not is_instance_valid(n) or not n.is_inside_tree():
-			return false
+	var alive: Array[Node3D] = []
+	for n in chain:
+		if not is_instance_valid(n) or not (n as Node3D).is_inside_tree():
+			continue
 		var h := Health.find(n)
-		return h != null and not h.is_dead())
+		if h != null and not h.is_dead():
+			alive.append(n)
+	chain = alive
+
+
+## The chain is finished (or the throw ran out of range): a Boomerang heads
+## back to its thrower, anything else is spent.
+func _chain_done() -> void:
+	chain.clear()
+	if return_when_done and is_instance_valid(shooter):
+		_returning = true
+		exclusive = true  # empty chain + exclusive: hits nothing on the way back
+		return
+	queue_free()
 
 
 ## Area damage: every target inside explosion_radius takes the hit once.
@@ -186,7 +212,7 @@ func _explode(at: Vector3) -> void:
 	var hit: Array[Node] = []
 	for result in space.intersect_shape(params, 24):
 		var body: Node = result.collider
-		if body in hit:
+		if not is_instance_valid(body) or body in hit:
 			continue
 		hit.append(body)
 		var info := damage.duplicate_info()

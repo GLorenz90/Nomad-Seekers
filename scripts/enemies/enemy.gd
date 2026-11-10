@@ -57,6 +57,16 @@ func _ready() -> void:
 	_build()
 
 
+## Co-op (Grayson, 2026-11-09: fine for co-op to raise enemy HP): +50% max HP
+## for each extra Seeker on this map when the enemy appears (Claude's number).
+const HP_PER_EXTRA_SEEKER := 0.5
+
+
+func party_hp_scale() -> float:
+	var seekers := Scope.group(self, "player").size() if is_inside_tree() else 1
+	return 1.0 + HP_PER_EXTRA_SEEKER * maxi(seekers - 1, 0)
+
+
 func get_lock_point() -> Vector3:
 	return global_position + Vector3.UP * (data.size.y * 0.6 + data.hover_height)
 
@@ -97,7 +107,7 @@ func _react(info: DamageInfo, attacker: Node3D, amount: float) -> void:
 				away = global_basis.z
 			_knockback = away.normalized() * HARD_PUSH_SPEED
 			_stagger(HARD_FLINCH_SECONDS)
-	elif amount >= data.max_hp * LIGHT_STAGGER_FRACTION:
+	elif amount >= health.max_hp * LIGHT_STAGGER_FRACTION:
 		_stagger(HARD_FLINCH_SECONDS)
 
 
@@ -299,7 +309,9 @@ func _on_died() -> void:
 	_label.visible = false
 	defeated.emit(self)
 	# EXP for the Seeker and a loot roll (Main is in the loot_spawner group).
-	get_tree().call_group("loot_spawner", "on_enemy_defeated", self)
+	var level := Scope.level(self)
+	if level:
+		level.call("on_enemy_defeated", self)
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3(1.2, 0.05, 1.2), 0.4).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
@@ -404,9 +416,9 @@ func _build() -> void:
 
 	health = Health.new()
 	health.name = "Health"
-	health.max_hp = data.max_hp
+	health.max_hp = data.max_hp * party_hp_scale()
 	add_child(health)
-	health.hp = data.max_hp
+	health.hp = health.max_hp
 	if data.weak_to != Element.Type.GENERIC:
 		health.multipliers[data.weak_to] = 2.0
 	if data.resists != Element.Type.GENERIC:

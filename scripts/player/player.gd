@@ -201,7 +201,7 @@ var interact_target: Node3D = null
 func _find_interactable() -> Node3D:
 	var best: Node3D = null
 	var best_dist := INF
-	for node in get_tree().get_nodes_in_group("interactables"):
+	for node in Scope.group(self, "interactables"):
 		if not node.is_inside_tree() or not node.can_interact(self):
 			continue
 		var to: Vector3 = node.interact_point() - global_position
@@ -299,16 +299,21 @@ func read_disc(id: StringName, level: int, from_pickup: bool) -> String:
 	return "%s %d stored: %s" % [spell.display_name, level, error]
 
 
-## True when picking this disc up would put it in the pack (it can't be
-## learned yet and isn't worth selling).
-func disc_needs_slot(id: StringName, level: int) -> bool:
+## Picking up a disc (Grayson, 2026-11-09): it always goes into the pack, to
+## be read from the Inventory tab (or sold at a shop). Nothing is learned or
+## sold on the spot.
+func pick_up_disc(id: StringName, level: int) -> String:
 	var spell := SpellBook.get_spell(id)
 	if spell == null or save == null:
-		return false
-	var c := save.character
-	if c.learn_error(spell, level, learning_stat(spell)) == "":
-		return false
-	return not (c.spell_level(id) >= level or c.level_cap_for(spell) == 0)
+		return "Unknown disc"
+	if not save.take_disc({"id": id, "level": level}):
+		return "Your pack is full."
+	return "Found disc: %s %d (read it from the Inventory tab)" % [spell.display_name, level]
+
+
+## Discs always take a pack slot now (see pick_up_disc).
+func disc_needs_slot(_id: StringName, _level: int) -> bool:
+	return true
 
 
 ## Reads a disc from the stash (menu). Removes it once learned.
@@ -385,7 +390,7 @@ func set_downed(on: bool) -> void:
 static func nearest(tree_node: Node, at: Vector3, include_down: bool = false) -> Player:
 	var best: Player = null
 	var best_dist := INF
-	for node in tree_node.get_tree().get_nodes_in_group("player"):
+	for node in Scope.group(tree_node, "player"):
 		var seeker := node as Player
 		if seeker == null or (not include_down and (seeker.downed or seeker.health.is_dead())):
 			continue
@@ -483,7 +488,9 @@ func deposit_lumidium() -> int:
 	var total := save.inventory.bank_lumidium(carried_lumidium)
 	carried_lumidium.clear()
 	if total > 0 and QuestBook.record(save, "bank_lumidium", "", total):
-		get_tree().call_group("loot_spawner", "quest_done")
+		var level := Scope.level(self)
+		if level:
+			level.call("quest_done")
 	if total > 0:
 		save_game()
 	return total

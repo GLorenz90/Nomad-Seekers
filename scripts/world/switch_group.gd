@@ -35,7 +35,7 @@ func _ready() -> void:
 
 
 func seekers() -> int:
-	return maxi(get_tree().get_nodes_in_group("player").size(), 1)
+	return maxi(Scope.group(self, "player").size(), 1)
 
 
 ## How many floor plates may stay down without someone on them.

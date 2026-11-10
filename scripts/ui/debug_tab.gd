@@ -253,7 +253,10 @@ func _on_level(scene: String) -> void:
 		seeker.save_game()
 	menu.save_on_close = false  # already saved
 	menu.close()
-	get_tree().change_scene_to_file(scene)
+	if seeker:
+		CoopDirector.travel(seeker, scene)
+	else:
+		get_tree().change_scene_to_file(scene)
 
 
 func _toggle_infinite_lp(on: bool) -> void:
@@ -394,7 +397,9 @@ func _tool_satchel() -> void:
 
 
 func _tool_respawn() -> void:
-	get_tree().call_group("respawner", "respawn_player", menu._player())
+	var level := Scope.level(menu._player())
+	if level:
+		level.call("respawn_player", menu._player())
 	_message.text = "Back at the start."
 
 
@@ -478,7 +483,8 @@ func refresh() -> void:
 	var hud := menu._hud()
 	_debug_toggle.set_pressed_no_signal(hud != null and hud.is_debug_visible())
 	_hitbox_toggle.set_pressed_no_signal(_combat() != null and _combat().show_hitboxes)
-	var current := get_tree().current_scene.scene_file_path if get_tree().current_scene else ""
+	var level := Scope.level(seeker) if seeker else null
+	var current := level.scene_file_path if level else ""
 	for b in _level_buttons:
 		var here: bool = b.get_meta("scene") == current
 		b.text = ("> " if here else "   ") + String(b.get_meta("title")) + ("  (here)" if here else "")

@@ -76,7 +76,7 @@ func _process(_delta: float) -> void:
 	# Co-op: shown when any Seeker can see it (a Goluman's trap vision shows
 	# it to the party).
 	var seen := false
-	for node in get_tree().get_nodes_in_group("player"):
+	for node in Scope.group(self, "player"):
 		seen = seen or is_visible_to(node as Player)
 	_mesh.visible = sprung or seen
 	if device:
@@ -103,14 +103,13 @@ const SCAN_RADIUS := 15.0
 
 
 static func scan(seeker: Player) -> int:
-	var tree := seeker.get_tree()
 	var room: WaveRoom = null
-	for r in tree.get_nodes_in_group("wave_rooms"):
+	for r in Scope.group(seeker, "wave_rooms"):
 		if (r as WaveRoom).contains(seeker.global_position):
 			room = r
 			break
 	var found := 0
-	for node in tree.get_nodes_in_group("hazards"):
+	for node in Scope.group(seeker, "hazards"):
 		var trap := node as HazardTrap
 		if trap.sprung or trap.destroyed:
 			continue

@@ -242,6 +242,26 @@ func _run() -> void:
 	await _tap("hand_x")
 	await _frames(150)
 	_check("Boomerang hits all three in turn", _hit(ring[0]) and _hit(ring[1]) and _hit(ring[2]))
+	await _frames(60)
+	var still_out := false
+	for node in _player.get_parent().get_children():
+		if node is Projectile:
+			still_out = true
+	_check("and comes back to the thrower, then it's gone", not still_out)
+	# Grayson, 2026-11-09: a target dying before the Boomerang reaches it threw
+	# an error; the chain now skips it.
+	var doomed := _spawn("grub_hound", ARENA + Vector3(0, 0, -8))
+	var next := _spawn("grub_hound", ARENA + Vector3(4, 0, -8))
+	var throw := Projectile.spawn(_player.get_parent(), _player.global_position + Vector3.UP, Vector3.FORWARD,
+		_w("boomerang").normal_attacks[0], DamageInfo.new(), Color.WHITE, _player, _combat)
+	throw.return_when_done = true
+	throw.chain.append(doomed)
+	throw.chain.append(next)
+	doomed.free()
+	await _frames(5)
+	_check("a freed target in the chain is skipped (now heading for %s)" % (throw.chain[0].name if is_instance_valid(throw) and not throw.chain.is_empty() else "none"),
+		is_instance_valid(throw) and throw.chain.size() == 1 and throw.chain[0] == next)
+	next.queue_free()
 	_player.camera_rig.lock_target = null
 	await _idle()
 	for e in ring:

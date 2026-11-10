@@ -11,10 +11,12 @@ extends Node3D
 ## on_enemy_defeated(); the Seekers get the EXP and a drop is rolled from an
 ## emblem's pool, spawned as an ItemPickup where the enemy fell.
 ##
-## Local co-op (Part 12): the scene's Player is the party leader. Pressing Start
-## on another controller opens a character picker in a new split-screen pane;
-## the guest then plays beside the leader with their own camera, HUD and menu
-## (see Party, SplitScreen, PlayerInput). Guests come along through teleporters.
+## Local co-op (Part 12): pressing Start on another controller opens a
+## character picker in a new split-screen pane; the guest then plays beside the
+## leader with their own camera, HUD and menu (see CoopDirector, Party,
+## SplitScreen, PlayerInput). Party members travel on their own: this level
+## holds only the Seekers on this map (the scene's own Player takes the first
+## of them), and a level can run hosted in its own world beside the window's.
 ## A Seeker who falls in co-op stays down until a partner's Revive, or presses
 ## A to go back to the start; when everyone is down, everyone goes back.
 
@@ -35,7 +37,6 @@ class Kit:
 	var hud: DebugHud
 	var menu: LoadoutMenu
 	var markers: TargetMarkers
-	var pane: SeekerPane
 	var spawn := Transform3D.IDENTITY
 
 
@@ -46,9 +47,6 @@ var loadout_menu: LoadoutMenu
 var target_markers: TargetMarkers
 ## Every Seeker here, the leader first.
 var kits: Array[Kit] = []
-var split: SplitScreen
-## Controllers picking a character: device -> SeekerPane.
-var _joining := {}
 
 @onready var player: Player = $Player
 @onready var camera_rig: CameraRig = $CameraRig
@@ -61,25 +59,50 @@ func _ready() -> void:
 	add_to_group("respawner")
 	rng.randomize()
 	_spawn = player.global_transform
-	var leader := _wire(player, camera_rig, hud)
-	leader.spawn = _spawn
-	loadout_menu = leader.menu
-	target_markers = leader.markers
-	for room in get_tree().get_nodes_in_group("wave_rooms"):
+	for room in Scope.group(self, "wave_rooms"):
 		room.wave_started.connect(func(r: WaveRoom, index: int, total: int):
 			banner("%s — Wave %d / %d" % [r.room_name, index + 1, total]))
 		room.room_cleared.connect(func(r: WaveRoom):
 			banner("%s clear" % r.room_name)
 			_check_all_rooms_cleared())
-	for pad in get_tree().get_nodes_in_group("teleporters"):
+	for pad in Scope.group(self, "teleporters"):
 		pad.deposited.connect(func(seeker: Player, amount: int):
 			var kit := kit_for(seeker)
 			if kit:
 				kit.hud.show_banner("Deposited %d Lumidium" % amount))
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	for guest in Party.guests.duplicate():
-		_add_guest(guest)
+	if get_viewport() == get_tree().root:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	var director := CoopDirector.find(get_tree())
+	if director == null:
+		var leader := _wire(player, camera_rig, hud)
+		leader.spawn = _spawn
+		loadout_menu = leader.menu
+		target_markers = leader.markers
+	else:
+		_join_director(director)
 	_bake_navmesh()
+
+
+## A level opened while the party is up (the window's or a hosted map):
+## spawns whoever is on this map, the scene's own Seeker taking the first.
+func _join_director(director: CoopDirector) -> void:
+	var members := Party.members_on(scene_file_path)
+	if members.is_empty():
+		members.append(Party.LEADER)
+	var first := members[0]
+	if first != Party.LEADER:
+		player.guest_device = first
+		player.use_save(Party.guest_for(first).save as SaveData)
+	player.input = CoopDirector.input_for(first)
+	var kit := _wire(player, camera_rig, hud)
+	kit.spawn = _spawn_point(first)
+	player.global_transform = kit.spawn
+	loadout_menu = kit.menu
+	target_markers = kit.markers
+	director.attach(player, camera_rig, hud, kit.menu, kit.markers)
+	for i in range(1, members.size()):
+		spawn_member(members[i])
+	director.maybe_end.call_deferred()
 
 
 func _wire(seeker: Player, rig: CameraRig, seeker_hud: DebugHud) -> Kit:
@@ -112,7 +135,7 @@ func kit_for(seeker: Player) -> Kit:
 	return null
 
 
-## A banner on every Seeker's HUD.
+## A banner on every Seeker's HUD on this map.
 func banner(text: String) -> void:
 	for kit in kits:
 		kit.hud.show_banner(text)
@@ -135,170 +158,102 @@ func _physics_process(_delta: float) -> void:
 			_respawn_player(kit)  # A while down: back to the start
 
 
-# --- Joining (Part 12) -------------------------------------------------------------------
+# --- The party (Part 12) ------------------------------------------------------------------
 
-## Start on a controller nobody plays with opens the character picker for it.
-## Alone, the leader plays with any controller; the first one they use is
-## theirs.
+## Start on another controller joins (see CoopDirector). Once the director
+## exists it listens itself.
 func _input(event: InputEvent) -> void:
-	var pad_event := event is InputEventJoypadButton \
-		or (event is InputEventJoypadMotion and absf((event as InputEventJoypadMotion).axis_value) > 0.5)
-	if not pad_event:
-		return
-	var start := event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed \
-		and (event as InputEventJoypadButton).button_index == JOY_BUTTON_START
-	if Party.leader_pad < 0:
-		Party.leader_pad = event.device
-		return
-	if start and not Party.has_device(event.device) and not _joining.has(event.device):
-		get_viewport().set_input_as_handled()
-		start_join(event.device)
+	if get_viewport() == get_tree().root and CoopDirector.find(get_tree()) == null:
+		CoopDirector.watch_for_join(self, event)
 
 
-## Opens the character picker for a controller in a new pane.
-func start_join(device: int) -> SeekerPane:
-	if device < 0 or Party.size() + _joining.size() >= PlayerInput.MAX_PLAYERS:
-		return null
-	_ensure_split()
-	var listen := PlayerInput.new()
-	listen.slot = PlayerInput.MAX_PLAYERS  # never polled; owns() filters by device
-	listen.device = device
-	listen.keyboard = false
-	var pane := split.add_pane(listen)
-	var picker := JoinPicker.new()
-	pane.sub.add_child(picker)
-	picker.open(Party.slots_in_use())
-	picker.picked.connect(func(slot: int): _finish_join(device, slot, pane, picker))
-	picker.cancelled.connect(func(): _cancel_join(device, pane))
-	_joining[device] = pane
-	return pane
-
-
-func _finish_join(device: int, slot: int, pane: SeekerPane, picker: JoinPicker) -> void:
-	var guest := Party.join(device, slot)
-	if guest.is_empty():
-		picker.show_message("That character can't join.")
-		return
-	_joining.erase(device)
-	picker.queue_free()
-	var kit := _add_guest(guest, pane)
-	banner("%s joined the party" % kit.player.save.character.seeker_name)
-
-
-func _cancel_join(device: int, pane: SeekerPane) -> void:
-	_joining.erase(device)
-	split.remove_pane(pane)
-	if kits.size() == 1 and _joining.is_empty():
-		_end_split()
-
-
-## Spawns a guest's Seeker beside the leader's spawn point.
-func _add_guest(guest: Dictionary, pane: SeekerPane = null) -> Kit:
-	_ensure_split()
-	var seeker := PLAYER_SCENE.instantiate() as Player
-	seeker.guest_device = int(guest.device)
-	seeker.name = "Seeker%d" % (int(guest.input) + 1)
-	seeker.input = PlayerInput.bind(int(guest.input), int(guest.device), false)
-	add_child(seeker)
-	var at := _spawn
-	at.origin += _spawn.basis.x * GUEST_SPACING * int(guest.input)
-	seeker.global_transform = at
-	seeker.reset_physics_interpolation()
-	var rig := RIG_SCENE.instantiate() as CameraRig
-	rig.name = "CameraRig%d" % (int(guest.input) + 1)
-	add_child(rig)
-	var seeker_hud := HUD_SCENE.instantiate() as DebugHud
-	seeker_hud.name = "HUD%d" % (int(guest.input) + 1)
-	add_child(seeker_hud)
-	var kit := _wire(seeker, rig, seeker_hud)
-	kit.spawn = at
-	if pane == null:
-		pane = split.add_pane(seeker.input)
-	else:
-		pane.input = seeker.input
-	_move_into(kit, pane)
-	return kit
-
-
-## A guest leaves (Options tab): saved, then their Seeker and pane go.
-func leave_party(seeker: Player) -> void:
-	var kit := kit_for(seeker)
-	if kit == null or seeker.guest_device < 0:
-		return
-	seeker.deposit_lumidium()
-	seeker.save_game()
-	Party.leave(seeker.guest_device)
-	kits.erase(kit)
-	if kit.pane:
-		split.remove_pane(kit.pane)
-	for node: Node in [kit.menu, kit.markers, kit.hud, kit.rig, seeker]:
-		if is_instance_valid(node):
-			node.queue_free()
-	banner("%s left the party" % seeker.save.character.seeker_name)
-	if kits.size() == 1 and _joining.is_empty():
-		_end_split()
-
-
-# --- Split screen ----------------------------------------------------------------------
-
-func _ensure_split() -> void:
-	if split:
-		return
-	split = SplitScreen.new()
-	split.name = "SplitScreen"
-	add_child(split)
+## The first guest joined: the leader moves into the split screen.
+func adopt_director(director: CoopDirector) -> void:
 	var leader := kits[0]
-	if Party.leader_pad < 0:
-		Party.leader_pad = 0
-	leader.player.input = PlayerInput.bind(0, Party.leader_pad, true)
-	_move_into(leader, split.add_pane(leader.player.input))
-	# Only the panes draw the world now.
-	get_viewport().disable_3d = true
+	leader.player.input = CoopDirector.input_for(Party.LEADER)
+	director.attach(leader.player, leader.rig, leader.hud, leader.menu, leader.markers)
 
 
-func _end_split() -> void:
-	if split == null:
+## The party is over and the leader is alone here: back to a plain level.
+func release_director() -> void:
+	if kits.is_empty():
 		return
 	var leader := kits[0]
 	leader.player.input = PlayerInput.shared()
 	leader.player.ui_parent = null
-	leader.pane = null
 	for node: Node in [leader.hud, leader.menu]:
 		node.reparent(self)
-	_reparent_modals(leader.player, self)
+	for menu in get_tree().get_nodes_in_group("modal_menus"):
+		if menu.get("player") == leader.player:
+			(menu as Node).reparent(self)
 	leader.markers.render_layers = 1
-	split.queue_free()
-	split = null
-	get_viewport().disable_3d = false
+	Party.leader_map = ""
 
 
-func _move_into(kit: Kit, pane: SeekerPane) -> void:
-	kit.pane = pane
-	pane.attach(kit.player, kit.rig)
-	kit.player.ui_parent = pane.sub
-	for node: Node in [kit.hud, kit.menu]:
-		node.reparent(pane.sub)
-	_reparent_modals(kit.player, pane.sub)
-	kit.markers.render_layers = SeekerPane.marker_layer(kit.player.input.slot)
+## Where a party member appears: guests beside the leader's spot.
+func _spawn_point(who: int) -> Transform3D:
+	var at := _spawn
+	var slot := 0 if who == Party.LEADER else Party.slot_of(who)
+	at.origin += _spawn.basis.x * GUEST_SPACING * slot
+	return at
 
 
-## Counters and teleporter lists already open follow their Seeker's view.
-func _reparent_modals(seeker: Player, to: Node) -> void:
+## Brings a party member onto this map (joining, or arriving by teleporter).
+func spawn_member(who: int) -> Kit:
+	var seeker := PLAYER_SCENE.instantiate() as Player
+	if who != Party.LEADER:
+		seeker.guest_device = who
+	seeker.input = CoopDirector.input_for(who)
+	seeker.name = "Seeker%d" % (seeker.input.slot + 1)
+	add_child(seeker)
+	var at := _spawn_point(who)
+	seeker.global_transform = at
+	seeker.reset_physics_interpolation()
+	var rig := RIG_SCENE.instantiate() as CameraRig
+	rig.name = "CameraRig%d" % (seeker.input.slot + 1)
+	add_child(rig)
+	var seeker_hud := HUD_SCENE.instantiate() as DebugHud
+	seeker_hud.name = "HUD%d" % (seeker.input.slot + 1)
+	add_child(seeker_hud)
+	var kit := _wire(seeker, rig, seeker_hud)
+	kit.spawn = at
+	var director := CoopDirector.find(get_tree())
+	if director:
+		director.attach(seeker, rig, seeker_hud, kit.menu, kit.markers)
+	return kit
+
+
+## A Seeker leaves this map (teleporter, or leaving the party): their Seeker,
+## camera, HUD, menu and any counter they had open go. Their pane stays.
+func remove_seeker(seeker: Player) -> void:
+	var kit := kit_for(seeker)
+	if kit == null:
+		return
+	kits.erase(kit)
 	for menu in get_tree().get_nodes_in_group("modal_menus"):
 		if menu.get("player") == seeker:
-			(menu as Node).reparent(to)
+			(menu as Node).queue_free()
+	for node: Node in [kit.menu, kit.markers, kit.hud, kit.rig, seeker]:
+		if is_instance_valid(node):
+			node.queue_free()
+
+
+## A guest leaves the party (Options tab).
+func leave_party(seeker: Player) -> void:
+	var director := CoopDirector.find(get_tree())
+	if director:
+		director.leave(seeker)
 
 
 # --- Loot and EXP -------------------------------------------------------------------------
 
-## Called by every Enemy as it dies (group "loot_spawner"). Every Seeker still
-## standing gets the EXP (Claude's pick for co-op); the drop rolls from the
-## emblem of the Seeker nearest the enemy.
+## Called by every Enemy as it dies. Every party member on this map gets the
+## full EXP, whoever landed the kill and whether or not they hit it, even if
+## they're down (Grayson, 2026-11-09: unhindered, unlike PSO). Members on other
+## maps get none. The drop rolls from the emblem of the Seeker nearest the enemy.
 func on_enemy_defeated(enemy: Enemy) -> void:
 	var enemy_id := enemy.data.resource_path.get_file().get_basename()
 	for kit in kits:
-		if kit.player.downed or kit.player.health.is_dead():
-			continue
 		kit.player.gain_exp(enemy.data.exp_value())
 		if QuestBook.record(kit.player.save, "defeat", enemy_id):
 			kit.hud.show_banner("Quest complete: report to the Guild")
@@ -313,7 +268,7 @@ func on_enemy_defeated(enemy: Enemy) -> void:
 
 ## Guild quests (Part 10): every wave room cleared in one trip.
 func _check_all_rooms_cleared() -> void:
-	for room in get_tree().get_nodes_in_group("wave_rooms"):
+	for room in Scope.group(self, "wave_rooms"):
 		if (room as WaveRoom).state != WaveRoom.RoomState.CLEARED:
 			return
 	for kit in kits:
