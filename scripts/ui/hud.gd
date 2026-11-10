@@ -294,10 +294,12 @@ func _build_status() -> void:
 	_wallet.offset_right = -24.0
 	_wallet.offset_top = 20.0
 	_wallet.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_wallet.grow_horizontal = Control.GROW_DIRECTION_BEGIN  # long lines grow left, never off screen
 
 	_feed = VBoxContainer.new()
 	_feed.anchor_left = 1.0
 	_feed.anchor_right = 1.0
+	_feed.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_feed.anchor_top = 1.0
 	_feed.anchor_bottom = 1.0
 	_feed.offset_left = -460.0

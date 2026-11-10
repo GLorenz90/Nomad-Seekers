@@ -84,7 +84,7 @@ func is_inside(seeker: Player) -> bool:
 
 ## True when an active darkness hazard covers this Seeker (the HUD asks).
 static func dark_for(seeker: Player) -> bool:
-	for node in seeker.get_tree().get_nodes_in_group("room_hazards"):
+	for node in Scope.group(seeker, "room_hazards"):
 		var h := node as RoomHazard
 		if h.active and h.kind == Kind.DARKNESS and h.is_inside(seeker):
 			return true

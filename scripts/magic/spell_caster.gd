@@ -229,7 +229,8 @@ static func _self_spell(ctrl: CombatController, item: WeaponData, spell: SpellDe
 				seeker.status.cure(level)
 				DamageNumber.spawn_text(world, seeker.global_position + Vector3.UP * 2.2, "Cured")
 		SpellDef.Kind.TELEPORTAL:
-			var here := player.get_tree().current_scene.scene_file_path if player.get_tree().current_scene else ""
+			var map_level := Scope.level(player)
+			var here := map_level.scene_file_path if map_level else ""
 			if here == SHIP_SCENE:
 				ctrl.combo_feedback.emit("Already on Nomad-2")
 				return
@@ -243,7 +244,7 @@ static func _self_spell(ctrl: CombatController, item: WeaponData, spell: SpellDe
 			ctrl.combo_feedback.emit("Teleportal open (30 s)")
 		SpellDef.Kind.REVIVE:
 			var revived := 0
-			for node in player.get_tree().get_nodes_in_group("player"):
+			for node in Scope.group(player, "player"):
 				var seeker := node as Player
 				if seeker and seeker != player and seeker.health.is_dead() \
 						and seeker.global_position.distance_to(player.global_position) <= spell.radius:
@@ -322,7 +323,7 @@ static func _alive(node: Node) -> bool:
 
 static func _targets(tree_node: Node) -> Array[Node3D]:
 	var out: Array[Node3D] = []
-	for node in tree_node.get_tree().get_nodes_in_group("lockable"):
+	for node in Scope.group(tree_node, "lockable"):
 		var n := node as Node3D
 		if n and n.is_visible_in_tree() and _alive(n):
 			out.append(n)
@@ -374,7 +375,7 @@ static func _area_center(player: Node3D, target: Node3D, direction: Vector3, rea
 
 static func _party(player: Player, radius: float) -> Array[Player]:
 	var list: Array[Player] = []
-	for node in player.get_tree().get_nodes_in_group("player"):
+	for node in Scope.group(player, "player"):
 		var seeker := node as Player
 		if seeker and not seeker.health.is_dead() \
 				and seeker.global_position.distance_to(player.global_position) <= radius:

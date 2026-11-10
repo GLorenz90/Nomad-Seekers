@@ -12,6 +12,13 @@ extends RefCounted
 static var guests: Array[Dictionary] = []
 ## The leader's controller (-1 until they press something on one).
 static var leader_pad := -1
+## Which map (scene path) the leader is on, once the party can split up
+## (Grayson, 2026-11-09: one Seeker can go to town while another explores).
+## Guests keep theirs in their entry ("map"). "" = the window's own level.
+static var leader_map := ""
+
+## Party members are named by `who`: LEADER, or a guest's controller.
+const LEADER := -1
 
 
 static func is_active() -> bool:
@@ -77,6 +84,37 @@ static func leave(device: int) -> void:
 
 static func clear() -> void:
 	guests.clear()
+	leader_map = ""
+
+
+static func who_of(seeker: Player) -> int:
+	return seeker.guest_device if seeker.guest_device >= 0 else LEADER
+
+
+static func map_of(who: int) -> String:
+	if who == LEADER:
+		return leader_map
+	return String(guest_for(who).get("map", ""))
+
+
+static func set_map(who: int, path: String) -> void:
+	if who == LEADER:
+		leader_map = path
+		return
+	var g := guest_for(who)
+	if not g.is_empty():
+		g["map"] = path
+
+
+## Everyone on a map: LEADER and / or guests' controllers, leader first.
+static func members_on(path: String) -> Array[int]:
+	var out: Array[int] = []
+	if leader_map == path:
+		out.append(LEADER)
+	for g in guests:
+		if String(g.get("map", "")) == path:
+			out.append(int(g.device))
+	return out
 
 
 ## The input slot (action prefix): the leader 0, guests 1-3 (kept while they

@@ -339,17 +339,22 @@ func _run() -> void:
 	# --- Discs ------------------------------------------------------------------------------
 	save.character.spells.erase(&"granfajro")
 	_combat.stats.soul = 130.0
-	_check("reading a disc you qualify for learns it (%s)" % _player.read_disc(&"granfajro", 1, true),
-		save.character.spell_level(&"granfajro") == 1)
-	var stored := _player.read_disc(&"lumo", 20, true)
-	_check("a disc you can't read yet is stored (%s)" % stored, save.inventory.discs.size() == 1)
+	var found := _player.pick_up_disc(&"granfajro", 1)
+	_check("picking up a disc you could read only stores it (%s)" % found,
+		save.character.spell_level(&"granfajro") == 0 and save.inventory.discs.size() == 1)
+	_check("using it from the pack learns it (%s)" % _player.read_stored_disc(0),
+		save.character.spell_level(&"granfajro") == 1 and save.inventory.discs.is_empty())
+	_player.pick_up_disc(&"lumo", 20)
+	_check("a disc you can't read yet stays in the pack (%s)" % _player.read_stored_disc(0), save.inventory.discs.size() == 1)
 	_combat.stats.soul = 2000.0
-	_check("and can be read later from the stash (%s)" % _player.read_stored_disc(0),
+	_check("and can be read later (%s)" % _player.read_stored_disc(0),
 		save.character.spell_level(&"lumo") == 20 and save.inventory.discs.is_empty())
 	_combat.stats.soul = 40.0
 	var oro := save.inventory.oro
-	_player.read_disc(&"fajro", 1, true)
-	_check("a disc you already know is sold for Oro (+%d)" % (save.inventory.oro - oro), save.inventory.oro > oro)
+	_player.pick_up_disc(&"fajro", 1)
+	_check("a disc you already know is kept too, not sold on the spot",
+		save.inventory.oro == oro and save.inventory.discs.size() == 1)
+	save.inventory.discs.clear()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	var discs := 0

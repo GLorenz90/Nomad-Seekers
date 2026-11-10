@@ -105,6 +105,26 @@ func _run() -> void:
 		node.remove_from_group("lockable")
 	await _frames(3)
 	_check("with nothing left in range the lock drops", rig.lock_target == null and not _markers.is_lock_marker_visible())
+	# Grayson, 2026-11-09: the retarget follows the lock-on rules: nothing
+	# behind you, nothing far off screen.
+	var behind := rig.camera.global_position - rig.get_flat_forward() * 4.0 + Vector3.UP * 0.5
+	var ahead := rig.camera.global_position + rig.get_flat_forward() * 8.0
+	var off_side := ahead + rig.camera.global_basis.x * 7.0
+	_check("a point behind the camera isn't near the screen centre", not rig.is_near_screen_centre(behind))
+	_check("a point straight ahead is", rig.is_near_screen_centre(ahead))
+	_check("one far to the side (past 75% of the way to the edge) isn't", not rig.is_near_screen_centre(off_side))
+	_a.add_to_group("lockable")
+	_b.add_to_group("lockable")
+	rig._set_lock(_a)
+	var b_at := _b.global_position
+	_b.global_position = _player.global_position - rig.get_flat_forward() * 3.0  # behind the Seeker
+	_a.remove_from_group("lockable")
+	await _frames(3)
+	_check("killing the target doesn't swing the lock to one behind you (%s)" % (rig.lock_target.name if rig.lock_target else "none"),
+		rig.lock_target == null)
+	_b.global_position = b_at
+	_a.remove_from_group("lockable")
+	_b.remove_from_group("lockable")
 	for node in everyone:
 		node.add_to_group("lockable")
 	_a.add_to_group("lockable")

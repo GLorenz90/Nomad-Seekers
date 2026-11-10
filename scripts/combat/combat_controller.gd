@@ -1021,7 +1021,7 @@ func _predict_projectile(attack: AttackData, target: Node3D, dir: Vector3) -> Ar
     var first_distance := INF
     var space := get_world_3d().direct_space_state
     var flat_aim := Vector3(aim.x, 0.0, aim.z).normalized()
-    for node in get_tree().get_nodes_in_group("lockable"):
+    for node in Scope.group(self, "lockable"):
       var n := node as Node3D
       if n == null or not n.is_visible_in_tree():
         continue
@@ -1045,7 +1045,7 @@ func _predict_projectile(attack: AttackData, target: Node3D, dir: Vector3) -> Ar
       found.append(first)
   if attack.explosion_radius > 0.0 and not found.is_empty():
     var center := found[0].global_position
-    for node in get_tree().get_nodes_in_group("lockable"):
+    for node in Scope.group(self, "lockable"):
       var n := node as Node3D
       if n and not n in found and n.global_position.distance_to(center) <= attack.explosion_radius:
         found.append(n)
@@ -1060,7 +1060,7 @@ func _multi_targets(attack: AttackData, first: Node3D, dir: Vector3) -> Array[No
   var space := get_world_3d().direct_space_state
   var pool: Array[Node3D] = []
   var half_cone := attack.multi_target_cone * 0.5 if attack.multi_target_cone > 0.0 else MULTI_TARGET_CONE
-  for node in get_tree().get_nodes_in_group("lockable"):
+  for node in Scope.group(self, "lockable"):
     var n := node as Node3D
     if n == null or not n.is_visible_in_tree() or n == first:
       continue
@@ -1093,7 +1093,7 @@ func _lock_chain(attack: AttackData, first: Node3D, dir: Vector3) -> Array[Node3
   var chain: Array[Node3D] = []
   var pool: Array[Node3D] = []
   var half_cone := attack.multi_target_cone * 0.5 if attack.multi_target_cone > 0.0 else MULTI_TARGET_CONE
-  for node in get_tree().get_nodes_in_group("lockable"):
+  for node in Scope.group(self, "lockable"):
     var n := node as Node3D
     if n and n.is_visible_in_tree() \
         and n.global_position.distance_to(_player.global_position) <= attack.projectile_range:
@@ -1136,7 +1136,7 @@ func _find_soft_target(max_range: float, max_angle_deg: float) -> Node3D:
   forward = forward.normalized()
   var best: Node3D = null
   var best_score := INF
-  for node in get_tree().get_nodes_in_group("lockable"):
+  for node in Scope.group(self, "lockable"):
     var n := node as Node3D
     if n == null or not n.is_visible_in_tree():
       continue
@@ -1281,6 +1281,8 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
         p.velocity = _lob_velocity(muzzle, dir, target, attack)  # a fan lands as far out as the target
       if not chain.is_empty():
         p.chain = chain.duplicate()
+      if attack.lock_targets > 0:
+        p.return_when_done = true  # Boomerang: comes back to you
 
 
 ## Keeps a shot within MAX_AIM_YAW degrees of the facing direction (left /
@@ -1323,7 +1325,7 @@ func _cast_support(cur: ActiveAttack) -> void:
     var attack: AttackData = strike[1]
     if attack.support == AttackData.Support.NONE:
       continue
-    for node in get_tree().get_nodes_in_group("player"):
+    for node in Scope.group(self, "player"):
       var seeker := node as Player
       if seeker == null or seeker.global_position.distance_to(_player.global_position) > SUPPORT_RANGE:
         continue

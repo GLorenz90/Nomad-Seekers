@@ -97,7 +97,7 @@ func _react(info: DamageInfo, attacker: Node3D, amount: float) -> void:
 				away = global_basis.z
 			_knockback = away.normalized() * HARD_PUSH_SPEED
 			_stagger(HARD_FLINCH_SECONDS)
-	elif amount >= data.max_hp * LIGHT_STAGGER_FRACTION:
+	elif amount >= health.max_hp * LIGHT_STAGGER_FRACTION:
 		_stagger(HARD_FLINCH_SECONDS)
 
 
@@ -299,7 +299,9 @@ func _on_died() -> void:
 	_label.visible = false
 	defeated.emit(self)
 	# EXP for the Seeker and a loot roll (Main is in the loot_spawner group).
-	get_tree().call_group("loot_spawner", "on_enemy_defeated", self)
+	var level := Scope.level(self)
+	if level:
+		level.call("on_enemy_defeated", self)
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3(1.2, 0.05, 1.2), 0.4).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
@@ -404,9 +406,9 @@ func _build() -> void:
 
 	health = Health.new()
 	health.name = "Health"
-	health.max_hp = data.max_hp
+	health.max_hp = data.max_hp  # same in co-op, like PSO (Grayson, 2026-11-09)
 	add_child(health)
-	health.hp = data.max_hp
+	health.hp = health.max_hp
 	if data.weak_to != Element.Type.GENERIC:
 		health.multipliers[data.weak_to] = 2.0
 	if data.resists != Element.Type.GENERIC:

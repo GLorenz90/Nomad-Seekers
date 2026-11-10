@@ -162,7 +162,7 @@ func fire() -> bool:
 
 func _lumen_nova(lv_scale: float) -> void:
 	var stat := player.combat.stats.soul
-	for node in get_tree().get_nodes_in_group("enemies"):
+	for node in Scope.group(self, "enemies"):
 		var enemy := node as Node3D
 		if enemy == null or enemy.global_position.distance_to(player.global_position) > NOVA_RADIUS:
 			continue
@@ -179,7 +179,7 @@ func _lumen_nova(lv_scale: float) -> void:
 
 func _party() -> Array[Player]:
 	var list: Array[Player] = []
-	for node in get_tree().get_nodes_in_group("player"):
+	for node in Scope.group(self, "player"):
 		var seeker := node as Player
 		if seeker and seeker.global_position.distance_to(player.global_position) <= PARTY_RADIUS:
 			list.append(seeker)

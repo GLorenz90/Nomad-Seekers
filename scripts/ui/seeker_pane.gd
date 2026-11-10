@@ -5,8 +5,13 @@ extends SubViewportContainer
 ## Visual layers 11-14 hold each Seeker's own target markers, so a partner's
 ## rings don't show in your pane.
 const MARKER_LAYER_BASE := 10
+## Extra vertical FOV for a tall, narrow pane (half of a widescreen), so the
+## view doesn't feel cramped (Claude's pick; Grayson: "increased a little").
+const NARROW_FOV_BONUS := 10.0
 
 var input: PlayerInput
+## Whose pane: Party.LEADER or a guest's controller.
+var who := -1
 var player: Player
 var rig: CameraRig
 var sub: SubViewport
@@ -31,6 +36,8 @@ func _init() -> void:
 func attach(seeker: Player, camera_rig: CameraRig) -> void:
 	player = seeker
 	rig = camera_rig
+	# Look into the Seeker's own map (party members can be on different ones).
+	sub.world_3d = seeker.get_world_3d()
 	var slot := maxi(seeker.input.slot, 0)
 	# See every marker layer except the other Seekers'.
 	var mask := 0xFFFFF
@@ -54,6 +61,9 @@ func _propagate_input_event(event: InputEvent) -> bool:
 func _process(_delta: float) -> void:
 	if rig and is_instance_valid(rig) and rig.camera:
 		camera.global_transform = rig.camera.global_transform
-		camera.fov = rig.camera.fov
+		var aspect := size.x / maxf(size.y, 1.0)
+		camera.fov = rig.camera.fov + (NARROW_FOV_BONUS if aspect < 1.3 else 0.0)
+		rig.view_fov = camera.fov
+		rig.view_aspect = aspect
 		camera.near = rig.camera.near
 		camera.far = rig.camera.far

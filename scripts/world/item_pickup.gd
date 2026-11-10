@@ -272,7 +272,7 @@ func collect(seeker: Player) -> void:
 		save.take_unit(StringName(contents.unit))
 		text = "+1 " + text
 	elif contents.has("disc"):
-		text = seeker.read_disc(StringName(contents.disc.id), int(contents.disc.level), true)
+		text = seeker.pick_up_disc(StringName(contents.disc.id), int(contents.disc.level))
 	if taken < amount():
 		contents.count = amount() - taken
 		_label.text = describe()

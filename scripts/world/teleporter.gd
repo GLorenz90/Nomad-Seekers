@@ -88,7 +88,7 @@ func is_active() -> bool:
 
 
 func _rooms_cleared() -> bool:
-	for room in get_tree().get_nodes_in_group("wave_rooms"):
+	for room in Scope.group(self, "wave_rooms"):
 		if (room as WaveRoom).state != WaveRoom.RoomState.CLEARED:
 			return false
 	return true
@@ -183,11 +183,10 @@ func _open_picker(seeker: Player) -> void:
 			travel(seeker), seeker)
 
 
-## Saves and loads the destination scene (fresh every time).
+## Takes the Seeker to the destination (fresh every time). In a party only
+## they go (Grayson, 2026-11-09); see CoopDirector.travel.
 func travel(seeker: Player) -> void:
-	_leaving = true
-	# The whole party goes (Part 12); everyone is saved first.
-	for node in get_tree().get_nodes_in_group("player"):
-		(node as Player).save_game()
+	# Alone, the whole level is about to go; in a party the pad stays for the rest.
+	_leaving = CoopDirector.find(get_tree()) == null
 	travelling.emit(destination)
-	get_tree().change_scene_to_file.call_deferred(destination)
+	CoopDirector.travel(seeker, destination)

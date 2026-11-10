@@ -72,7 +72,7 @@ func _process(delta: float) -> void:
 
 
 func _enabled() -> bool:
-	for node in get_tree().get_nodes_in_group("player"):
+	for node in Scope.group(self, "player"):
 		if (node as Player).combat.show_hitboxes:
 			return true
 	return false
