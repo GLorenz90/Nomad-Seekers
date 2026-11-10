@@ -857,9 +857,7 @@ func _hud() -> DebugHud:
 ## The leader quits to the title (taking the party); a guest leaves the party
 ## (Part 12).
 func _quit_to_title() -> void:
-	var seeker := _player()
-	if seeker:
-		seeker.deposit_lumidium()
+	var seeker := _player()  # the satchel's Lumidium is saved with the character
 	if seeker and seeker.guest_device >= 0:
 		close()
 		var level := Scope.level(seeker)

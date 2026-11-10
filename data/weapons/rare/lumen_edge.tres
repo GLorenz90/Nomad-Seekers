@@ -42,9 +42,9 @@ active_start = 0.357
 active_end = 0.457
 window_open = 1.02
 window_close = 1.02
-lunge_distance = 0.4
-reach = 1.0
-hitbox_size = Vector3(2.8, 1.6, 2)
+lunge_distance = 0.0
+reach = 0.0
+hitbox_size = Vector3(4.4, 1.6, 4.4)
 
 [sub_resource type="Resource" id="Resource_y2vbi"]
 script = ExtResource("1_kgxw3")
@@ -82,9 +82,9 @@ active_start = 0.3255
 active_end = 0.4255
 window_open = 0.93
 window_close = 0.93
-lunge_distance = 0.4
-reach = 1.0
-hitbox_size = Vector3(2.8, 1.6, 2)
+lunge_distance = 0.0
+reach = 0.0
+hitbox_size = Vector3(4.4, 1.6, 4.4)
 
 [sub_resource type="Resource" id="Resource_pbrsi"]
 script = ExtResource("4_wtw2b")

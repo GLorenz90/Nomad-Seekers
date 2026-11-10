@@ -157,7 +157,7 @@ func _process(delta: float) -> void:
 		var inv := player.save.inventory
 		_wallet.text = "%s  %s  (%s emblem)\nLv %d  EXP %d   Pack %d / %d\nOro %d\nLumidium carried %d / %d   banked %d\n%s" % [
 			c.seeker_name, c.job_name(), c.emblem_name(), c.level(), c.experience, player.save.pack_used(), Inventory.PACK_SLOTS,
-			inv.oro, player.carried_lumidium_total(), Inventory.SATCHEL_LUMIDIUM, inv.lumidium_total(),
+			inv.oro, player.carried_lumidium_total(), player.satchel_size(), inv.lumidium_total(),
 			quick_text(player)]
 		_wallet.modulate = c.emblem_text_color()
 	_lt.modulate = Color(0.6, 0.85, 1.0) if combat.is_blocking() else Color.WHITE

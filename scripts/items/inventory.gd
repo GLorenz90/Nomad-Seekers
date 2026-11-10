@@ -8,15 +8,19 @@ extends Resource
 ##   the same item is one slot and holds up to STACK_MAX.
 ## - The **satchel** holds Oro and carried Lumidium, so a full satchel never
 ##   stops you picking up a rare. Carried Lumidium is capped at
-##   SATCHEL_LUMIDIUM, all colors together, and lives on the Player (lost on
-##   death until a teleporter banks it).
+##   SATCHEL_LUMIDIUM (SaveData.satchel_size), all colors together. It's kept
+##   in the save across maps (SaveData.satchel_lumidium) and lost on death
+##   until the Seeker banks it at a Lumidium depot (Grayson, 2026-11-10).
 ##
 ## Banked Lumidium (`lumidium`) is the bank, not the pack. Slot counts and
 ## pickups that need the worn armor go through SaveData (pack_used, take_*).
 
 const PACK_SLOTS := 30
 const STACK_MAX := 10
+## The satchel's starting size; quests will grow it (SaveData.satchel_size).
 const SATCHEL_LUMIDIUM := 15
+## The most Lumidium the bank holds, all colors together (Grayson, 2026-11-10).
+const BANK_LUMIDIUM_MAX := 99999
 const ORO_MAX := 999999
 ## Debug tab: lift the pack's slot limit (stacks still stop at STACK_MAX).
 static var unlimited := false
@@ -120,11 +124,19 @@ func count(id: StringName) -> int:
 	return int(consumables.get(id, 0))
 
 
+## Moves carried Lumidium into the bank, up to BANK_LUMIDIUM_MAX in all.
+## What fits leaves `carried`; returns how much was banked.
 func bank_lumidium(carried: Dictionary) -> int:
 	var total := 0
-	for color in carried:
-		lumidium[color] = int(lumidium.get(color, 0)) + int(carried[color])
-		total += int(carried[color])
+	for color in carried.keys():
+		var n := mini(int(carried[color]), BANK_LUMIDIUM_MAX - lumidium_total())
+		if n <= 0:
+			break
+		lumidium[color] = int(lumidium.get(color, 0)) + n
+		carried[color] = int(carried[color]) - n
+		if int(carried[color]) <= 0:
+			carried.erase(color)
+		total += n
 	return total
 
 

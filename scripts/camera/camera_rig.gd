@@ -247,6 +247,8 @@ func _find_best_target(exclude: Node3D = null) -> Node3D:
 			continue
 		# Facing matters most, distance breaks ties.
 		var score := (angle / max_angle) * 2.0 + dist / lock_range
+		if candidate is TrapTrigger:
+			score += 3.0  # enemies first; a trap only when nothing else fits
 		if score < best_score:
 			best_score = score
 			best = candidate

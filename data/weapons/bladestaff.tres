@@ -41,9 +41,9 @@ active_start = 0.357
 active_end = 0.45699999999999996
 window_open = 1.02
 window_close = 1.02
-lunge_distance = 0.4
-reach = 1.0
-hitbox_size = Vector3(2.8, 1.6, 2)
+lunge_distance = 0.0
+reach = 0.0
+hitbox_size = Vector3(4.4, 1.6, 4.4)
 
 [sub_resource type="Resource" id="Resource_jnbmv"]
 script = ExtResource("1_efq7e")
@@ -81,9 +81,9 @@ active_start = 0.3255
 active_end = 0.42550000000000004
 window_open = 0.93
 window_close = 0.93
-lunge_distance = 0.4
-reach = 1.0
-hitbox_size = Vector3(2.8, 1.6, 2)
+lunge_distance = 0.0
+reach = 0.0
+hitbox_size = Vector3(4.4, 1.6, 4.4)
 
 [resource]
 script = ExtResource("2_lpg58")

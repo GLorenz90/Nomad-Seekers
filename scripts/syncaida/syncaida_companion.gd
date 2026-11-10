@@ -116,7 +116,7 @@ func feed(item: StringName, free: bool = false) -> Array[String]:
 func _physics_process(delta: float) -> void:
 	if player == null:
 		return
-	if player.input.just_pressed("sync_burst"):
+	if player.input.just_pressed("sync_burst") and not player.peaceful:
 		fire()
 	_age += delta
 	# Hover just over and slightly behind the right shoulder, low enough to keep

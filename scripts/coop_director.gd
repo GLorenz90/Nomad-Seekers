@@ -260,7 +260,6 @@ func leave(seeker: Player) -> void:
 		return
 	var level := Scope.level(seeker)
 	var path := level.scene_file_path if level else ""
-	seeker.deposit_lumidium()
 	seeker.save_game()
 	var name_was := seeker.save.character.seeker_name
 	if level:

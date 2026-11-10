@@ -123,6 +123,9 @@ func _ready() -> void:
 ## Switches to a save: its loadouts, job and inventory.
 func use_save(data: SaveData) -> void:
 	save = data
+	# The satchel's Lumidium lives in the save so it crosses maps (Grayson,
+	# 2026-11-10); carried_lumidium is the same Dictionary.
+	carried_lumidium = save.satchel_lumidium
 	combat.inventory = save.inventory
 	combat.job_code = save.character.job_code()
 	combat.set_left_handed(save.character.left_handed)
@@ -185,6 +188,9 @@ var _input_hold := 0.0
 ## Part 11: the menu no longer pauses (PSO). While it's open the Seeker
 ## stands still and takes no game input, but the world keeps going.
 var input_locked := false
+## On a peaceful map (Nomad-2): no attacks, spells, traps or Sync Bursts
+## (Grayson, 2026-11-10). Read from the level each physics frame.
+var peaceful := false
 
 
 ## Ignore jump / dash / interact for a moment (called when a menu closes).
@@ -362,6 +368,9 @@ func set_trap(id: StringName) -> bool:
 	if not c.can_use_traps():
 		combat.combo_feedback.emit("Only Goluman can set traps")
 		return false
+	if peaceful:
+		combat.combo_feedback.emit("No traps here")
+		return false
 	var level := c.spell_level(id)
 	if level <= 0:
 		combat.combo_feedback.emit("%s isn't learned" % spell.display_name)
@@ -451,7 +460,7 @@ func _level_up(from_level: int, to_level: int) -> void:
 	leveled_up.emit(to_level, gains)
 
 
-## Puts Lumidium in the satchel, up to Inventory.SATCHEL_LUMIDIUM carried
+## Puts Lumidium in the satchel, up to satchel_size() carried
 ## (all colors together). Returns how many fit.
 func add_lumidium(color: StringName, amount: int = 1) -> int:
 	var n := mini(amount, satchel_room())
@@ -473,7 +482,12 @@ func remove_lumidium(color: StringName, amount: int) -> int:
 
 ## Room left in the satchel for Lumidium.
 func satchel_room() -> int:
-	return maxi(Inventory.SATCHEL_LUMIDIUM - carried_lumidium_total(), 0)
+	return maxi(satchel_size() - carried_lumidium_total(), 0)
+
+
+## How much Lumidium the satchel holds (15 to start; quests will add more).
+func satchel_size() -> int:
+	return save.satchel_size if save else Inventory.SATCHEL_LUMIDIUM
 
 
 func carried_lumidium_total() -> int:
@@ -483,10 +497,10 @@ func carried_lumidium_total() -> int:
 	return total
 
 
-## Teleporter: bank everything carried. Returns how much was deposited.
+## Lumidium depot: banks everything carried (up to the bank's limit). Returns
+## how much was deposited; anything that didn't fit stays in the satchel.
 func deposit_lumidium() -> int:
 	var total := save.inventory.bank_lumidium(carried_lumidium)
-	carried_lumidium.clear()
 	if total > 0 and QuestBook.record(save, "bank_lumidium", "", total):
 		var level := Scope.level(self)
 		if level:
@@ -526,6 +540,8 @@ func use_consumable(id: StringName) -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	var level := Scope.level(self)
+	peaceful = level != null and level.get("peaceful") == true
 	_recalculate_jump()
 	_tick_timers(delta)
 	_regen_hp(delta)

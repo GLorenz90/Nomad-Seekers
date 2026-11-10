@@ -19,6 +19,7 @@ const TEST_SAVE := "user://services_test_save.tres"
 
 var _main: Node
 var _player: Player
+var _feedback_seen: Array[String] = []
 var _save: SaveData
 var _failures := 0
 
@@ -35,6 +36,7 @@ func _run() -> void:
 	_save = SaveData.create("Tester", CharacterData.Race.HUMAN, CharacterData.Gender.MALE,
 		CharacterData.Job.RANGER, 0)
 	_player.use_save(_save)
+	_player.combat.combo_feedback.connect(func(t: String): _feedback_seen.append(t))
 	_player.autosave = false
 	await _frames(20)
 	var inv := _save.inventory
@@ -267,9 +269,11 @@ func _run() -> void:
 	await _frames(2)
 	_check("deposit all but one HP Gel (%d in the bank, %d carried)" % [_save.bank.count(&"hp_gel"), inv.count(&"hp_gel")],
 		_save.bank.count(&"hp_gel") == gels - 1 and inv.count(&"hp_gel") == 1)
-	# Oro.
+	# Resources (Grayson, 2026-11-10: was Oro): Oro and Lumidium.
 	inv.oro = 3000
-	menu.show_command("oro")
+	_check("the bank's third counter is Resources",
+		(menu._commands.get_child(2) as Button).text.trim_prefix("> ") == "Resources")
+	menu.show_command("resources")
 	await _frames(2)
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)
@@ -282,6 +286,32 @@ func _run() -> void:
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)
 	_check("withdraw 1,000 Oro (carrying %d, banked %d)" % [inv.oro, _save.bank.oro], inv.oro == 1000 and _save.bank.oro == 2000)
+	_player.add_lumidium(&"ice", 3)
+	menu.show_command("resources")
+	await _frames(2)
+	var texts := menu.list_buttons().map(func(b: Button) -> String: return b.text)
+	_check("Resources lists carried and banked Lumidium (%s)" % [texts],
+		texts.size() == 4 and texts[2].begins_with("Deposit Ice Lumidium") and texts[3].begins_with("Withdraw Ice Lumidium"))
+	menu.list_buttons()[2].grab_focus()
+	await _frames(2)
+	await _pad(JOY_BUTTON_A)
+	await _pad(JOY_BUTTON_A)
+	await _frames(2)
+	_check("deposit the 3 Ice Lumidium into the bank",
+		int(inv.lumidium.get(&"ice", 0)) == 3 and _player.carried_lumidium_total() == 0)
+	menu.list_buttons()[3].grab_focus()
+	await _frames(2)
+	await _pad(JOY_BUTTON_A)
+	await _pad(JOY_BUTTON_A)
+	await _frames(2)
+	_check("and take it back out to trade (carried %d)" % _player.carried_lumidium_total(),
+		_player.carried_lumidium_total() == 3 and int(inv.lumidium.get(&"ice", 0)) == 0)
+	inv.lumidium[&"raw"] = 40
+	_player.save.satchel_size = 15
+	_check("withdrawing stops at the satchel's size (%d)" % _save.withdraw_lumidium(&"raw", 40),
+		_player.carried_lumidium_total() == 15 and int(inv.lumidium[&"raw"]) == 28)
+	_player.carried_lumidium.clear()
+	inv.lumidium.clear()
 	# Withdraw the weapon.
 	menu.show_command("withdraw")
 	await _frames(2)
@@ -296,6 +326,32 @@ func _run() -> void:
 	_check("the bank is kept in the save (%d Oro, %d HP Gels)" % [loaded.bank.oro, loaded.bank.count(&"hp_gel")],
 		loaded.bank.oro == 2000 and loaded.bank.count(&"hp_gel") == gels - 1)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
+
+	# --- Nomad-2 is peaceful (Grayson, 2026-11-10) ------------------------------------------------------
+	_check("the hub is a peaceful map", _player.peaceful)
+	_player.hold_input(0.0)
+	await _pad(JOY_BUTTON_X)
+	await _frames(10)
+	_check("no attacking in the hub", _player.combat._current == null)
+	var syn := _player.syncaida
+	if syn:
+		syn.data.gauge = 1.0
+		await _pad(JOY_BUTTON_LEFT_STICK)
+		await _frames(3)
+		_check("no Sync Bursts either", syn.data.gauge >= 1.0)
+	_save.character.race = CharacterData.Race.GOLUMAN
+	_save.character.spells[&"damage_trap"] = 1
+	_feedback_seen.clear()
+	_player.set_trap(&"damage_trap")
+	_check("and no traps (%s)" % [_feedback_seen], "No traps here" in _feedback_seen and get_nodes_in_group("traps").is_empty())
+	_save.character.race = CharacterData.Race.HUMAN
+
+	# --- The palette in use is remembered across maps (Grayson, 2026-11-10) -----------------------------
+	_save.loadouts.loadouts[3] = Loadout.make(load("res://data/weapons/sword.tres"), null)
+	_player.combat.select_loadout(3)
+	_player.combat.loadout_index = 0  # what a fresh Seeker on the next map starts with
+	_player.combat.apply_loadout_set(_save.loadouts)
+	_check("the next map starts on the same palette (%d)" % _player.combat.loadout_index, _player.combat.loadout_index == 3)
 
 	# --- Guild ---------------------------------------------------------------------------------------------
 	menu = guild.open_menu(_player)

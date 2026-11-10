@@ -501,6 +501,12 @@ func _full_list() -> Array[WeaponData]:
 		Vector3(0.08, 0.08, 1.8), Color(0.6, 0.9, 1.0)), SABER_N, SABER_H, 0.9,
 		[AttackData.Swing.SLASH_RIGHT, AttackData.Swing.SLASH_LEFT, AttackData.Swing.SPIN],
 		1.0, Vector3(2.8, 1.6, 2.0), 0.4)
+	# The third step is a spin (Grayson, 2026-11-10: "the animation implies
+	# this"): it hits all around the Seeker, both blades' reach, no lunge.
+	for finisher in [bladestaff.normal_attacks[2], bladestaff.hard_attacks[2]]:
+		finisher.reach = 0.0
+		finisher.lunge_distance = 0.0
+		finisher.hitbox_size = Vector3(4.4, 1.6, 4.4)
 	list.append(bladestaff)
 	# Dagger: fast single-target; saber frames x0.75 (PSO's dagger table isn't in the data).
 	list.append(_melee(_weapon("Dagger", &"dagger", WeaponData.WeaponClass.MELEE, false, false, 12.0,

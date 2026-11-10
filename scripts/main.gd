@@ -40,6 +40,10 @@ class Kit:
 	var spawn := Transform3D.IDENTITY
 
 
+## No fighting here (Nomad-2; Grayson 2026-11-10): Seekers can't attack, cast,
+## set traps or fire Sync Bursts.
+@export var peaceful := false
+
 var _spawn := Transform3D.IDENTITY
 var rng := RandomNumberGenerator.new()
 ## The leader's menu and markers (kept for tests and older code).
@@ -65,7 +69,7 @@ func _ready() -> void:
 		room.room_cleared.connect(func(r: WaveRoom):
 			banner("%s clear" % r.room_name)
 			_check_all_rooms_cleared())
-	for pad in Scope.group(self, "teleporters"):
+	for pad in Scope.group(self, "lumidium_depots"):
 		pad.deposited.connect(func(seeker: Player, amount: int):
 			var kit := kit_for(seeker)
 			if kit:
