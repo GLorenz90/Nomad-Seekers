@@ -269,9 +269,9 @@ func _run() -> void:
 	Input.parse_input_event(press)
 	await process_frame
 	await process_frame
-	_check("Start/Tab opens the loadout menu and pauses the game", menu.is_open() and paused)
+	_check("Start/Tab opens the menu without pausing the game (Part 11, PSO)", menu.is_open() and not paused)
 	menu.close()
-	_check("closing the menu unpauses", not menu.is_open() and not paused)
+	_check("closing the menu", not menu.is_open() and not paused)
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)

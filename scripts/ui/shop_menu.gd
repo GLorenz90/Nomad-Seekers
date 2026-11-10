@@ -44,10 +44,10 @@ func _buy_items() -> Array[Dictionary]:
 			for w in weapons:
 				var price := Prices.weapon_price(w)
 				var item := _gear_item("%s   %s Oro" % [w.display_name, _num(price)],
-					ItemText.weapon_detail(w, job), price, func() -> String:
+					ItemText.weapon_detail(w, job, player.combat.stats), price, func() -> String:
 						return "" if save().take_weapon(w.duplicate()) else "full")
-				if not w.can_be_used_by(job):
-					item.color = Color(0.6, 0.6, 0.65)
+				if not w.can_be_used_by(job) or w.requirement_error(player.combat.stats) != "":
+					_mark_cant_equip(item)
 				list.append(item)
 		Kind.ARMOR:
 			for a in armors:
@@ -59,7 +59,7 @@ func _buy_items() -> Array[Dictionary]:
 						copy.ensure_units()
 						return "" if save().take_armor(copy) else "full")
 				if ArmorBook.equip_error(save().character, a) != "":
-					item.color = Color(0.6, 0.6, 0.65)
+					_mark_cant_equip(item)
 				list.append(item)
 			for id in units:
 				var price := Prices.unit_price(id)
@@ -72,6 +72,15 @@ func _buy_items() -> Array[Dictionary]:
 			for id in Prices.CURATIVES:
 				list.append(_curative_item(id))
 	return list
+
+
+## Gear this Seeker can't equip yet still sells (Grayson: buy for another
+## character, a friend, or later). It's marked, not greyed: grey means it
+## can't be bought.
+func _mark_cant_equip(item: Dictionary) -> void:
+	item.text += "   (can't equip yet)"
+	item.color = Color(1.0, 0.78, 0.5)
+	item.detail += "\nYou can still buy it: for another character, a friend, or for later."
 
 
 ## One piece of gear for `price`; `give` puts a copy in the pack ("" or "full").

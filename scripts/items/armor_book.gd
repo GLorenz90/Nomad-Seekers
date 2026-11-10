@@ -93,6 +93,8 @@ static func equip_error(c: CharacterData, a: ArmorData) -> String:
 		return "%s only" % CharacterData.Race.keys()[a.race_only].capitalize()
 	if a.gender_only >= 0 and c.gender != a.gender_only:
 		return "%s only" % ("Female" if a.gender_only == CharacterData.Gender.FEMALE else "Male")
+	if c.level() < a.level_req():
+		return "Needs level %d" % a.level_req()
 	return ""
 
 
@@ -269,6 +271,12 @@ static func _rares() -> void:
 	crown.bonuses = {&"strength": 10.0}
 	var treads := _rare("Pathfinder Treads", ArmorData.Slot.LEGS, ArmorData.Weight.LIGHT, 5, 10, 4, 2)
 	treads.bonuses = {&"accuracy": 5.0}
+	# Level requirements (Part 11), like PSO's rare frames.
+	shell.required_level = 70
+	veil.required_level = 40
+	greaves.required_level = 30
+	crown.required_level = 50
+	treads.required_level = 20
 	for a in [shell, veil, greaves, crown, treads]:
 		_add(a)
 

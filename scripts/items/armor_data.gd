@@ -100,13 +100,26 @@ func monster_resist(enemy_type: int) -> float:
 	return total
 
 
+## Overrides the level requirement when above 0 (rares).
+@export var required_level := 0
+## Level needed by tier (Part 11, Grayson: "armor should have level
+## requirements"; Claude's levels, first pass).
+const TIER_LEVELS := [1, 25, 60, 100]
+
+
+func level_req() -> int:
+	if required_level > 0:
+		return required_level
+	return TIER_LEVELS[clampi(tier, 1, TIER_LEVELS.size()) - 1]
+
+
 func has_double_heavy() -> bool:
 	return UnitBook.DOUBLE_HEAVY in units
 
 
 ## "Torso · Light · DEF 9 EVA 11 RES 8 · 2 slots" and the like.
 func summary() -> String:
-	var parts := PackedStringArray([slot_name(), weight_name(),
+	var parts := PackedStringArray([slot_name(), weight_name(), "Lv %d" % level_req(),
 		"DEF %d  EVA %d%s" % [roundi(total_defense()), roundi(total_evasion()),
 			"  RES %d" % roundi(resolve) if resolve > 0.0 else ""]])
 	for stat in bonuses:

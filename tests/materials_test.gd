@@ -164,7 +164,7 @@ func _run() -> void:
 	_check("and the empty stack leaves the pack", not still_listed)
 	_menu.debug_tab._reset_character()
 	_check("Reset character forgets materials used (SOL back to %.0f)" % s.soul, c.materials.is_empty() and s.soul == sol_before)
-	_menu.close()  # the menu pauses the game; regen and LP need it running
+	_menu.close()  # the menu locks input (Part 11: it no longer pauses)
 
 	# --- Race perks through the Debug tab -----------------------------------------
 	c.job = CharacterData.Job.RANGER
@@ -178,12 +178,32 @@ func _run() -> void:
 	await _frames(120)  # 2 s at 0.5% of max HP a second = 3 HP
 	_check("Goluman slowly regenerate HP (100 -> %.1f)" % _player.health.hp,
 		_player.health.hp > 102.0 and _player.health.hp < 104.0)
+	# LP regen (Grayson, 2026-11-09): Goluman and Lumera only, 1% of max LP a second.
+	_player.combat.lp = 10.0
+	await _frames(120)
+	var goluman_lp := _player.combat.lp
+	_check("Goluman slowly regenerate LP (10 -> %.1f, 1%% of %.0f a second)" % [goluman_lp, s.max_lp],
+		goluman_lp > 10.0 + s.max_lp * 0.015 and goluman_lp < 10.0 + s.max_lp * 0.025)
+	_menu.debug_tab._race.select(CharacterData.Race.LUMERA)
+	_menu.debug_tab._apply_character()
+	_player.combat.lp = 10.0
+	await _frames(120)
+	_check("so do Lumera (10 -> %.1f)" % _player.combat.lp, _player.combat.lp > 10.0 + s.max_lp * 0.015)
+	_menu.debug_tab._race.select(CharacterData.Race.CORESIAN)
+	_menu.debug_tab._apply_character()
+	_player.combat.lp = 10.0
+	await _frames(120)
+	_check("Coresian don't regenerate LP (%.1f)" % _player.combat.lp, _player.combat.lp == 10.0)
+	_menu.debug_tab._race.select(CharacterData.Race.GOLUMAN)
+	_menu.debug_tab._apply_character()
 	_menu.debug_tab._race.select(CharacterData.Race.HUMAN)
 	_menu.debug_tab._apply_character()
 	_player.health.hp = 100.0
 	await _frames(60)
-	_check("and back to Human restores the stats and stops regen (DEX %.0f, HP %.0f)" % [s.dexterity, _player.health.hp],
-		s.dexterity == dex_human and _player.health.hp == 100.0)
+	_player.combat.lp = 10.0
+	await _frames(60)
+	_check("and back to Human restores the stats and stops regen (DEX %.0f, HP %.0f, LP %.1f)" % [s.dexterity, _player.health.hp, _player.combat.lp],
+		s.dexterity == dex_human and _player.health.hp == 100.0 and _player.combat.lp == 10.0)
 	c.job = CharacterData.Job.INVOKER
 	_menu.debug_tab._race.select(CharacterData.Race.GOLUMAN)
 	_menu.debug_tab._apply_character()

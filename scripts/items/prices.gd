@@ -108,9 +108,30 @@ static func sell_price(entry: Dictionary, save: SaveData) -> int:
 
 # --- Stock ------------------------------------------------------------------------------
 
+## Part 11: shop tiers go up with the character's level (Grayson).
+## Weapons: the best tag tier on offer is 0 below level 50, then +1 per 50
+## levels; monster bonuses grow too. Armor: tiers whose level requirement is
+## within 5 levels of yours. Augments: grade II from level 40, III from 100.
+## (Claude's steps.)
+static func max_tag_tier(level: int) -> int:
+	return clampi(level / 50, 0, 3)
+
+
+static func max_unit_grade(level: int) -> int:
+	return 2 if level >= 100 else (1 if level >= 40 else 0)
+
+
+static func max_armor_tier(level: int) -> int:
+	var tier := 1
+	for t in ArmorData.TIER_LEVELS.size():
+		if ArmorData.TIER_LEVELS[t] <= level + 5:
+			tier = t + 1
+	return tier
+
+
 ## The weapons shop: common weapons, some tagged or with a monster bonus
-## (low tiers only). Never rares.
-static func roll_weapon_stock(rng: RandomNumberGenerator) -> Array[WeaponData]:
+## (tiers by level). Never rares.
+static func roll_weapon_stock(rng: RandomNumberGenerator, level: int = 1) -> Array[WeaponData]:
 	var stock: Array[WeaponData] = []
 	var bases := Loot.base_weapons()
 	for i in WEAPON_STOCK:
@@ -121,22 +142,24 @@ static func roll_weapon_stock(rng: RandomNumberGenerator) -> Array[WeaponData]:
 		if not base.casting and not base.is_shield and rng.randf() < 0.35:
 			var lines := SpecialTag.all_lines()
 			var line: SpecialTag = lines[rng.randi() % lines.size()]
-			Loot.apply_tag(w, line, rng.randi_range(0, mini(1, line.tier_count() - 1)))
+			Loot.apply_tag(w, line, rng.randi_range(0, mini(max_tag_tier(level) + 1, line.tier_count() - 1)))
 		if rng.randf() < 0.2:
 			var types := EnemyData.EnemyType.values()
-			w.type_bonus[types[rng.randi() % types.size()]] = snappedf(rng.randf_range(0.05, 0.15), 0.05)
+			var top := 0.15 + 0.05 * max_tag_tier(level)
+			w.type_bonus[types[rng.randi() % types.size()]] = snappedf(rng.randf_range(0.05, top), 0.05)
 		stock.append(w)
 	stock.sort_custom(func(a: WeaponData, b: WeaponData) -> bool: return a.display_name < b.display_name)
 	return stock
 
 
-## The armor shop: tier 1-2 pieces (no character levels yet), rolled like
-## drops, never rares.
-static func roll_armor_stock(rng: RandomNumberGenerator) -> Array[ArmorData]:
+## The armor shop: pieces up to the tier for your level, rolled like drops,
+## never rares.
+static func roll_armor_stock(rng: RandomNumberGenerator, level: int = 1) -> Array[ArmorData]:
 	var ids: Array = []
+	var top := max_armor_tier(level)
 	for id in ArmorBook.all():
 		var t := ArmorBook.template(id)
-		if not t.rare and t.tier <= 2:
+		if not t.rare and t.tier <= top and t.tier >= top - 1:
 			ids.append(id)
 	var stock: Array[ArmorData] = []
 	for i in ARMOR_STOCK:
@@ -146,12 +169,13 @@ static func roll_armor_stock(rng: RandomNumberGenerator) -> Array[ArmorData]:
 	return stock
 
 
-## Grade I stat augments and grade I element wards.
-static func roll_unit_stock(rng: RandomNumberGenerator) -> Array[StringName]:
+## Stat augments and element wards up to the grade for your level.
+static func roll_unit_stock(rng: RandomNumberGenerator, level: int = 1) -> Array[StringName]:
 	var pool: Array[StringName] = []
+	var top := max_unit_grade(level)
 	for id in UnitBook.ids():
 		var u := UnitBook.get_unit(id)
-		if int(u.grade) == 0 and (u.kind == "stat" or u.kind == "element"):
+		if int(u.grade) <= top and (u.kind == "stat" or u.kind == "element"):
 			pool.append(id)
 	var stock: Array[StringName] = []
 	while stock.size() < UNIT_STOCK and stock.size() < pool.size():

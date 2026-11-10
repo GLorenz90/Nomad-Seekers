@@ -188,6 +188,9 @@ var _time := 0.0
 var _lp_regen_delay := 0.0
 ## Testing (Levels tab): LP never runs out.
 var infinite_lp := false
+## Racial LP regen: this fraction of max LP per second (Player.apply_bonuses
+## sets it from CharacterData.lp_regen_fraction()).
+var lp_regen_fraction := 0.0
 var _held: Array[float] = [-1.0, -1.0]
 var _hard_fired: Array[bool] = [false, false]
 ## Whether each hand's current press landed in the chain window (judged at press).
@@ -557,13 +560,16 @@ func _action_for(hand: int) -> StringName:
 
 
 func _read_hand(hand: int, delta: float) -> void:
+  if _player and _player.input_locked:  # menu open (Part 11: it doesn't pause)
+    _held[hand] = -1.0
+    return
   var action := _action_for(hand)
-  if Input.is_action_just_pressed(action):
+  if _in().just_pressed(action):
     _held[hand] = 0.0
     _hard_fired[hand] = false
     _press_chains[hand] = _judge_press()
   elif _held[hand] >= 0.0:
-    if Input.is_action_pressed(action):
+    if _in().pressed(action):
       _held[hand] += delta
       if not _hard_fired[hand] and _held[hand] >= hold_threshold:
         _hard_fired[hand] = true
@@ -575,11 +581,11 @@ func _read_hand(hand: int, delta: float) -> void:
 
 
 func _handle_loadout_input() -> void:
-  if _current:
+  if _current or (_player and _player.input_locked):
     return
-  if Input.is_action_just_pressed("loadout_next"):
+  if _in().just_pressed("loadout_next"):
     cycle_loadout(1)
-  elif Input.is_action_just_pressed("loadout_prev"):
+  elif _in().just_pressed("loadout_prev"):
     cycle_loadout(-1)
 
 
@@ -589,7 +595,7 @@ func _update_block(delta: float) -> void:
   var mode := get_lt_mode()
   var can_block := mode == Loadout.LTMode.SHIELD or mode == Loadout.LTMode.TWO_HAND \
     or mode == Loadout.LTMode.ARMS_UP
-  var lt_down := Input.is_action_pressed("block")
+  var lt_down := _in().pressed("block") and not (_player and _player.input_locked)
   var fresh_press := lt_down and not _lt_was_down
   _lt_was_down = lt_down
   # Shields stay up while you attack; other blocks drop for the attack.
@@ -635,7 +641,7 @@ func _request_attack(hand: int, hard: bool) -> void:
     return  # frozen or shocked
   var twin := is_powerstance()
   var standalone := weapon.no_combo or weapon.casting or (hard and weapon.sustained)
-  var special := Input.is_action_pressed("shift")
+  var special := _in().pressed("shift")
   var slot := spell_slot(weapon, hand, special)
   var on_time := _press_chains[hand] and not _chain_locked and not standalone
 
@@ -791,7 +797,7 @@ func _update_attack(delta: float) -> void:
 ## attack's duration after release.
 func _update_sustained(cur: ActiveAttack, delta: float) -> void:
   var a := cur.attack
-  if not cur.releasing and Input.is_action_pressed(_action_for(cur.hand)):
+  if not cur.releasing and _in().pressed(_action_for(cur.hand)):
     cur.tick -= delta
     if cur.tick <= 0.0:
       var tick_cost := a.lp_cost + (cur.other_attack.lp_cost if cur.twin and cur.other_attack else 0.0)
@@ -880,7 +886,7 @@ func predict_targets(hand: int) -> Array[Node3D]:
   var weapon := current_weapon(hand)
   if weapon == null or weapon.is_shield:
     return []
-  var special := Input.is_action_pressed("shift")
+  var special := _in().pressed("shift")
   var attack: AttackData
   if _current and _current.sustained:
     attack = _current.attack
@@ -1378,7 +1384,9 @@ func _regen_lp(delta: float) -> void:
   if _lp_regen_delay > 0.0:
     _lp_regen_delay -= delta
     return
-  lp = minf(lp + stats.lp_regen_per_second * delta, stats.max_lp)
+  var rate := stats.lp_regen_per_second + stats.max_lp * lp_regen_fraction
+  if rate > 0.0:
+    lp = minf(lp + rate * delta, stats.max_lp)
 
 
 # --- Placeholder visuals ----------------------------------------------------
@@ -1554,3 +1562,23 @@ func _update_hitbox_debug() -> void:
   if live:
     (_hitbox_debug.mesh as BoxMesh).size = _current.attack.hitbox_size
     _hitbox_debug.global_transform = _hitbox_transform(_current)
+
+
+## The Seeker's controls (Part 12): its own controller in co-op.
+func _in() -> PlayerInput:
+  return _player.input if _player else _SHARED_INPUT
+
+
+static var _SHARED_INPUT := PlayerInput.shared()
+
+
+## Pays LP for something outside an attack (d-pad traps). False when short.
+func spend_lp(cost: float) -> bool:
+  if infinite_lp:
+    return true
+  if lp < cost:
+    return false
+  lp -= cost
+  if cost > 0.0:
+    _lp_regen_delay = 0.75
+  return true

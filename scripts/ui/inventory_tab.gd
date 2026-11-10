@@ -321,6 +321,10 @@ func _equip_weapon(w: WeaponData, hand: int) -> void:
 	if not w.can_be_used_by(menu.combat.job_code):
 		_message.text = "%s needs %s." % [w.display_name, w.jobs_text()]
 		return
+	var short := w.requirement_error(menu.combat.stats)
+	if short != "":
+		_message.text = "%s: %s." % [w.display_name, short]
+		return
 	var index := menu.combat.loadout_index
 	var error := menu.equip(index, hand, w)
 	if error == "":

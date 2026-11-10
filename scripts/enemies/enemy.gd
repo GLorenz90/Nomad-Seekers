@@ -137,7 +137,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
-	var seeker := get_tree().get_first_node_in_group("player") as Player
+	var seeker := Player.nearest(self, global_position)
 	var move := Vector3.ZERO
 	var acting := status.can_act()
 	if not acting and state == State.WINDUP:

@@ -1,6 +1,6 @@
 class_name LoadoutMenu
 extends CanvasLayer
-## The pause menu (Start / Tab). Pauses the game while open. (Named for its
+## The menu (Start / Tab). Doesn't pause the game (Part 11, like PSO). (Named for its
 ## first job, editing loadouts; it holds every tab now.)
 ##
 ## Tabs (Part 9, Grayson 2026-11-09: PSO's menus with PSU's palettes), LB / RB
@@ -42,8 +42,10 @@ var _inventory_tab: InventoryTab
 var _equip_tab: EquipTab
 var _spells_tab: SpellsTab
 var _armor_tab: ArmorTab
+var _quick_tab: QuickTab
 var debug_tab: DebugTab
 var _status_text: RichTextLabel
+var _to_title: Button
 var _sync_starter_title: Label
 var _sync_starters: VBoxContainer
 var _sync_info: Label
@@ -72,8 +74,8 @@ func is_open() -> bool:
 
 
 func open() -> void:
-	if combat == null or not get_tree().get_nodes_in_group("modal_menus").is_empty():
-		return  # a counter or the teleporter's list is open
+	if combat == null or _player() == null or _modal_open(_player()) or _player().downed:
+		return  # a counter or the teleporter's list is open (or down in co-op)
 	_set = combat.loadout_set
 	_rebuild_picker()
 	if debug_tab:
@@ -82,9 +84,16 @@ func open() -> void:
 	var seeker := _player()
 	if seeker and seeker.save and seeker.save.syncaida.is_empty():
 		_tabs.set_current_tab(_tab_index("SyncAIDa"))
+	if _to_title:
+		_to_title.text = "Save and leave the party" if seeker and seeker.guest_device >= 0 \
+			else "Save and quit to the title screen"
 	visible = true
-	get_tree().paused = true
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	# Part 11 (Grayson): like PSO, the menu doesn't pause the game. The Seeker
+	# just stops taking game input while it's open.
+	var seeker_open := _player()
+	if seeker_open:
+		seeker_open.input_locked = true
+		seeker_open.set_mouse_captured(false)
 	_close_picker()
 	_refresh()
 	_focus_tab()
@@ -96,8 +105,10 @@ func close() -> void:
 	_close_picker()
 	get_viewport().gui_release_focus()
 	visible = false
-	get_tree().paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	var seeker_closed := _player()
+	if seeker_closed:
+		seeker_closed.input_locked = seeker_closed.downed
+		seeker_closed.set_mouse_captured(true)
 	combat.apply_loadout_set(_set)
 	var seeker := _player()
 	if seeker:
@@ -105,6 +116,15 @@ func close() -> void:
 	if save_on_close and seeker:
 		seeker.save_game()
 	closed.emit()
+
+
+## A counter or teleporter list this Seeker has open (they share the Seeker's
+## pane, and each Seeker uses one menu at a time).
+static func _modal_open(seeker: Player) -> bool:
+	for menu in seeker.get_tree().get_nodes_in_group("modal_menus"):
+		if menu.get("player") == seeker:
+			return true
+	return false
 
 
 func _player() -> Player:
@@ -140,6 +160,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _spells_tab.clear_focused_slot():
 			get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Spells" and event.is_action_pressed("ui_cancel") and _spells_tab.back():
+		get_viewport().set_input_as_handled()
+	elif visible and _tab_name() in ["Traps", "D-pad"] and _clear_input(event) == 1:
+		if _quick_tab.clear_focused():
+			get_viewport().set_input_as_handled()
+	elif visible and _tab_name() in ["Traps", "D-pad"] and event.is_action_pressed("ui_cancel") and _quick_tab.back():
 		get_viewport().set_input_as_handled()
 	elif visible and _tab_name() == "Armor" and _clear_input(event) == 1:
 		if _armor_tab.clear_focused():
@@ -189,6 +214,9 @@ func _on_slot_pressed(index: int, hand: int) -> void:
 func _on_weapon_picked(weapon: WeaponData) -> void:
 	if weapon and combat and not weapon.can_be_used_by(combat.job_code):
 		_message.text = "%s needs %s." % [weapon.display_name, weapon.jobs_text()]
+		return
+	if weapon and combat and weapon.requirement_error(combat.stats) != "":
+		_message.text = "%s: %s." % [weapon.display_name, weapon.requirement_error(combat.stats)]
 		return
 	var error := equip(_editing.x, _editing.y, weapon)
 	if error == "":
@@ -245,6 +273,11 @@ func _refresh() -> void:
 		_spells_tab.refresh()
 	if _armor_tab:
 		_armor_tab.refresh()
+	var seeker_now := _player()
+	if _equip_tab and seeker_now and seeker_now.save:
+		_equip_tab.set_goluman(seeker_now.save.character.can_use_traps())
+	if _quick_tab:
+		_quick_tab.refresh()
 
 
 func _lt_short(l: Loadout) -> String:
@@ -317,7 +350,8 @@ func _build() -> void:
 	_armor_tab = ArmorTab.new(self)
 	_inventory_tab = InventoryTab.new(self)
 	_tabs.add_child(_inventory_tab)
-	_equip_tab = EquipTab.new(self, columns, _spells_tab, _armor_tab)
+	_quick_tab = QuickTab.new(self)
+	_equip_tab = EquipTab.new(self, columns, _spells_tab, _armor_tab, _quick_tab)
 	_tabs.add_child(_equip_tab)
 	_build_status_tab()
 	_build_syncaida_tab()
@@ -437,7 +471,7 @@ func _weapon_button(w: WeaponData) -> Button:
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.tooltip_text = Loot.describe(w)
 	b.modulate = Color(1.0, 0.6, 1.0) if w.rare else Color(0.85, 0.92, 1.0)
-	if combat and not w.can_be_used_by(combat.job_code):
+	if combat and (not w.can_be_used_by(combat.job_code) or w.requirement_error(combat.stats) != ""):
 		# Still focusable (so the d-pad doesn't skip it); A explains the lock.
 		b.modulate = Color(0.55, 0.55, 0.6)
 		b.set_meta("locked", true)
@@ -470,10 +504,12 @@ func _refresh_status() -> void:
 		rares.append(w.display_name)
 	var lines := PackedStringArray()
 	lines.append("[font_size=26]%s[/font_size]" % c.seeker_name)
-	lines.append("%s %s %s   %s-handed   Emblem [color=#%s]%s[/color]   EXP %d" % [
+	lines.append("[b]Level %d[/b]   EXP %d   %s" % [c.level(), c.experience,
+		"next level in %d" % Leveling.to_next(c.experience) if c.level() < Leveling.MAX_LEVEL else "max level"])
+	lines.append("%s %s %s   %s-handed   Emblem [color=#%s]%s[/color]" % [
 		CharacterData.Race.keys()[c.race].capitalize(), CharacterData.Gender.keys()[c.gender].capitalize(),
 		c.job_name(), "Left" if c.left_handed else "Right", c.emblem_text_color().to_html(false),
-		c.emblem_name(), c.experience])
+		c.emblem_name()])
 	lines.append("")
 	lines.append("[b]HP[/b] %d / %d    [b]LP[/b] %d / %d" % [roundi(seeker.health.hp), roundi(s.max_hp),
 		roundi(combat.lp), roundi(s.max_lp)])
@@ -736,6 +772,8 @@ func _focus_tab() -> void:
 					(_slot_buttons[combat.loadout_index][CombatController.Hand.PRIMARY] as Button).grab_focus()
 			"Spells":
 				_spells_tab.focus_default()
+			"Traps", "D-pad":
+				_quick_tab.focus_default()
 			"Armor":
 				_armor_tab.focus_default()
 		return
@@ -796,6 +834,7 @@ func _build_options_tab() -> void:
 	columns.add_child(left)
 	left.add_child(_label("Options", 22))
 	var to_title := Button.new()
+	_to_title = to_title
 	to_title.text = "Save and quit to the title screen"
 	to_title.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	to_title.pressed.connect(_quit_to_title)
@@ -810,14 +849,23 @@ func _build_options_tab() -> void:
 
 func _hud() -> DebugHud:
 	for node in get_tree().get_nodes_in_group("hud"):
-		return node as DebugHud
+		if (node as DebugHud).player == _player():
+			return node as DebugHud
 	return null
 
 
+## The leader quits to the title (taking the party); a guest leaves the party
+## (Part 12).
 func _quit_to_title() -> void:
 	var seeker := _player()
 	if seeker:
 		seeker.deposit_lumidium()
+	if seeker and seeker.guest_device >= 0:
+		close()
+		var level := get_tree().get_first_node_in_group("respawner")
+		if level and level.has_method("leave_party"):
+			level.call("leave_party", seeker)
+		return
 	save_on_close = false
 	close()
 	Session.quit_to_title()

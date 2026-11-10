@@ -11,17 +11,17 @@ extends Area3D
 
 const PLAYER_MASK := 2
 
-enum Kind { DAMAGE, FREEZE, SLOW, SHOCK, POISON, CONFUSE, PARALYZE }
+enum Kind { DAMAGE, FREEZE, SLOW, SHOCK, POISON, CONFUSE, STUN }
 
 const KIND_ELEMENT := {
 	Kind.DAMAGE: Element.Type.FIRE, Kind.FREEZE: Element.Type.ICE, Kind.SLOW: Element.Type.ICE,
 	Kind.SHOCK: Element.Type.LIGHTNING, Kind.POISON: Element.Type.NATURE,
-	Kind.CONFUSE: Element.Type.LIGHT, Kind.PARALYZE: Element.Type.GENERIC,
+	Kind.CONFUSE: Element.Type.LIGHT, Kind.STUN: Element.Type.GENERIC,
 }
 const KIND_STATUS := {
 	Kind.FREEZE: StatusEffects.Status.FREEZE, Kind.SLOW: StatusEffects.Status.SLOW,
 	Kind.SHOCK: StatusEffects.Status.SHOCK, Kind.POISON: StatusEffects.Status.POISON,
-	Kind.CONFUSE: StatusEffects.Status.BLIND, Kind.PARALYZE: StatusEffects.Status.PARALYZE,
+	Kind.CONFUSE: StatusEffects.Status.BLIND, Kind.STUN: StatusEffects.Status.STUN,
 }
 
 @export var kind: Kind = Kind.DAMAGE
@@ -56,7 +56,7 @@ func _ready() -> void:
 	_material = StandardMaterial3D.new()
 	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var color := Element.color_of(KIND_ELEMENT[kind]) if kind != Kind.PARALYZE else Color(0.9, 0.5, 1.0)
+	var color := Element.color_of(KIND_ELEMENT[kind]) if kind != Kind.STUN else Color(0.9, 0.5, 1.0)
 	_material.albedo_color = Color(color, 0.45)
 	disc.material = _material
 	_mesh = MeshInstance3D.new()
@@ -73,7 +73,11 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	# Hidden unless scanned, sprung, or seen through Goluman trap vision.
-	var seen := is_visible_to(get_tree().get_first_node_in_group("player") as Player)
+	# Co-op: shown when any Seeker can see it (a Goluman's trap vision shows
+	# it to the party).
+	var seen := false
+	for node in get_tree().get_nodes_in_group("player"):
+		seen = seen or is_visible_to(node as Player)
 	_mesh.visible = sprung or seen
 	if device:
 		device.set_shown(seen and not sprung)
@@ -81,6 +85,12 @@ func _process(_delta: float) -> void:
 
 static func goluman(seeker: Player) -> bool:
 	return seeker != null and seeker.save != null and seeker.save.character.race == CharacterData.Race.GOLUMAN
+
+
+## Buttons (Part 11): "disable" turns the trap off for good.
+func switch_action(action: String) -> void:
+	if action == "disable" and not sprung:
+		destroy()
 
 
 func is_visible_to(seeker: Player) -> bool:

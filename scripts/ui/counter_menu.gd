@@ -1,7 +1,8 @@
 class_name CounterMenu
 extends CanvasLayer
 ## Base for Nomad-2's counters (Part 10): the shops, the bank and the Guild.
-## Pauses the game while open.
+## Like the menu, doesn't pause the game (PSO; Part 12 for co-op): the
+## Seeker just stops taking game input while it's open.
 ##
 ## Layout, PSO-style: the clerk's commands on the left (Buy / Sell / Leave and
 ## so on), the list for the chosen command in the middle, and on the right the
@@ -73,16 +74,16 @@ func save() -> SaveData:
 func open(seeker: Player) -> void:
 	player = seeker
 	_build()
-	get_tree().paused = true
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	player.input_locked = true
+	player.set_mouse_captured(false)
 	_refresh_header()
 	_focus_first(_commands)
 
 
 func close() -> void:
-	get_tree().paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if player:
+		player.input_locked = player.downed
+		player.set_mouse_captured(true)
 		player.hold_input()
 		player.apply_bonuses()
 		player.save_game()

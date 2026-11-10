@@ -49,6 +49,8 @@ func _run() -> void:
 	var curatives: ServiceCounter = clerks[ServiceCounter.Service.CURATIVES]
 	var bank: ServiceCounter = clerks[ServiceCounter.Service.BANK]
 	var guild: ServiceCounter = clerks[ServiceCounter.Service.GUILD]
+	weapons.roll_stock(1)  # shops roll on first open, for the Seeker's level (Part 11)
+	armor.roll_stock(1)
 	await _place(curatives.global_position)
 	_check("standing at a counter shows the A prompt (%s)" % _player.interact_prompt(),
 		_player.interact_prompt() == "A: Shop: Curatives")
@@ -66,8 +68,8 @@ func _run() -> void:
 			rare_count += 1
 	var tiers_ok := true
 	for a in armor.stock_armor:
-		tiers_ok = tiers_ok and a.tier <= 2 and not a.rare
-	_check("stock: %d weapons, %d armor, %d augments, no rares, armor tier 1-2" % [weapons.stock_weapons.size(),
+		tiers_ok = tiers_ok and a.tier == 1 and not a.rare
+	_check("stock: %d weapons, %d armor, %d augments, no rares, armor tier 1 at level 1" % [weapons.stock_weapons.size(),
 		armor.stock_armor.size(), armor.stock_units.size()],
 		weapons.stock_weapons.size() == Prices.WEAPON_STOCK and rare_count == 0 and tiers_ok
 		and armor.stock_armor.size() == Prices.ARMOR_STOCK and armor.stock_units.size() == Prices.UNIT_STOCK)
@@ -81,7 +83,8 @@ func _run() -> void:
 	await _tap("jump")
 	await _frames(3)
 	var menu := curatives.menu
-	_check("A opens the counter and pauses (%s)" % _focused_text(), is_instance_valid(menu) and paused and _focused_text() == "Buy")
+	_check("A opens the counter without pausing; the Seeker takes no game input (%s)" % _focused_text(),
+		is_instance_valid(menu) and not paused and _player.input_locked and _focused_text() == "Buy")
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)
 	_check("A on Buy lists the stock, first item focused (%s)" % _focused_text(), _focused_text().begins_with("HP Gel   50 Oro"))
@@ -114,7 +117,7 @@ func _run() -> void:
 	await _pad(JOY_BUTTON_START)
 	await _frames(3)
 	_check("Start leaves the counter without opening the pause menu",
-		not is_instance_valid(curatives.menu) and not paused and not _main.loadout_menu.visible)
+		not is_instance_valid(curatives.menu) and not _player.input_locked and not _main.loadout_menu.visible)
 
 	# --- Weapons: buy and sell ------------------------------------------------------------------
 	inv.oro = 5000
@@ -135,6 +138,24 @@ func _run() -> void:
 		inv.weapons.size() == weapons_before + 1 and bought != stock_w and bought.display_name == stock_w.display_name
 		and inv.oro == 5000 - price)
 	_check("the stock can be bought again (still %d listed)" % weapons.stock_weapons.size(), weapons.stock_weapons.size() == Prices.WEAPON_STOCK)
+	# Gear you can't equip yet still sells (for other characters or later).
+	var heavy := (load("res://data/weapons/heavy_shield.tres") as WeaponData).duplicate() as WeaponData  # Striker only
+	var arbalest := (load("res://data/weapons/arbalest.tres") as WeaponData).duplicate() as WeaponData  # DEX 240
+	weapons.stock_weapons[0] = heavy
+	weapons.stock_weapons[1] = arbalest
+	menu.show_command("buy")
+	await _frames(2)
+	var marked := menu.list_buttons()[0].text.contains("can't equip yet") and menu.list_buttons()[1].text.contains("can't equip yet")
+	var count_before := inv.weapons.size()
+	for i in 2:
+		menu.list_buttons()[i].grab_focus()
+		await _frames(2)
+		await _pad(JOY_BUTTON_A)
+		await _pad(JOY_BUTTON_A)
+		await _frames(2)
+	_check("job-locked and too-demanding gear is marked but still buyable (%s)" % menu._message.text,
+		marked and inv.weapons.size() == count_before + 2 and inv.weapons[-2].display_name == "Heavy Shield"
+		and inv.weapons[-1].display_name == "Arbalest")
 	# Sell: the Wand (not on a palette) and the Pistol (on palette 1).
 	menu.show_command("sell")
 	await _frames(2)

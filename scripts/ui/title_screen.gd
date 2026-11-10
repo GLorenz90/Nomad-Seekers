@@ -199,9 +199,9 @@ func _build_select(column: VBoxContainer) -> VBoxContainer:
 func _slot_text(data: SaveData) -> String:
 	var c := data.character
 	var sync := data.paired_syncaida()
-	return "%s   %s %s %s%s   %s emblem   EXP %d%s" % [c.seeker_name, c.race_name(),
+	return "%s   Lv %d %s %s %s%s   %s emblem%s" % [c.seeker_name, c.level(), c.race_name(),
 		"F" if c.gender == CharacterData.Gender.FEMALE else "M", c.job_name(), " (left-handed)" if c.left_handed else "",
-		c.emblem_name(), c.experience,
+		c.emblem_name(),
 		"   SyncAIDa: %s Lv %d" % [sync.display_name, sync.level()] if sync else ""]
 
 

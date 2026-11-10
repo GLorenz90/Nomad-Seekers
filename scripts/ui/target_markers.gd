@@ -21,6 +21,15 @@ const LOCK_COLOR := Color(1.0, 0.35, 0.2, 0.95)
 var combat: CombatController
 var camera_rig: CameraRig
 
+## Part 12: visual layers for the rings. In split-screen each Seeker's rings
+## go on their own layer, which only their pane's camera draws.
+var render_layers := 1:
+	set(value):
+		render_layers = value
+		for child in get_children():
+			if child is Sprite3D:
+				(child as Sprite3D).layers = value
+
 var _small_texture: Texture2D
 var _large_texture: Texture2D
 var _pool: Array[Sprite3D] = []
@@ -95,6 +104,7 @@ func _make_sprite(texture: Texture2D, world_size: float, color: Color) -> Sprite
 	sprite.modulate = color
 	sprite.visible = false
 	sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	sprite.layers = render_layers
 	add_child(sprite)
 	return sprite
 

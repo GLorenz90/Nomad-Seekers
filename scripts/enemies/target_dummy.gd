@@ -112,7 +112,7 @@ func _current_goal() -> Variant:
 			_agent.target_desired_distance = 0.5
 			return goal
 		Behavior.CHASE:
-			var seeker := get_tree().get_first_node_in_group("player") as Node3D
+			var seeker := Player.nearest(self, global_position) as Node3D
 			if seeker == null or seeker.global_position.distance_to(global_position) > aggro_range:
 				return null
 			_agent.target_desired_distance = stop_distance
@@ -138,7 +138,7 @@ func apply_knockback(push: Vector3) -> void:
 func _update_attack(delta: float) -> void:
 	if attack_mode == AttackMode.NONE:
 		return
-	var seeker := get_tree().get_first_node_in_group("player") as Player
+	var seeker := Player.nearest(self, global_position)
 	if seeker == null:
 		return
 	if _windup_left >= 0.0:

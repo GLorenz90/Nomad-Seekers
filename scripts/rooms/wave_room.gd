@@ -118,6 +118,12 @@ func _update_doors() -> void:
 
 
 ## True when a point is inside this room (its trigger box).
+## Buttons (Part 11): "start" starts the waves.
+func switch_action(action: String) -> void:
+	if action == "start" and state == RoomState.WAITING:
+		start()
+
+
 func contains(point: Vector3) -> bool:
 	var local := to_local(point)
 	return absf(local.x) <= trigger_size.x * 0.5 and absf(local.z) <= trigger_size.z * 0.5 \

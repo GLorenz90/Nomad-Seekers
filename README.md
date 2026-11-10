@@ -20,7 +20,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Starter weapons** (`data/weapons/*.tres`): Sword (melee), Pistol (projectiles, costs a little LP), Wand (casting item: Fire Bolt, or Frost Lance with RT held), and Dervish Blades (two-handed, sustained). Spells are standalone and end a chain. Sustained weapons (Dervish Blades, Machine Pistol, Assault Rifle) don't combo either: hold to sustain, and each tap is a single standalone attack. Edit the `.tres` files in the Inspector.
 - **Moving while attacking** (PSU-style): each attack's `move_speed_scale` is 0 (rooted) or the fraction of run speed you keep. Melee roots you, except Dervish Blades. Normal shots and Normal spells let you walk at half speed; Charged shots and Hard spells plant your feet. With nothing targeted, a mobile shot fires where the stick points.
 - **Dervish Blades**: the machinegun of melee. Tap for quick spinning slashes you can walk through (both buttons count as the same weapon for combo steps). Hold to spin continuously, hitting everything around you every 0.2 s while moving at 60% speed; release to stop.
-- **LP**: spells and shots cost LP. It regenerates slowly for now so testing never stalls.
+- **LP**: spells and shots cost LP. Like PSO's TP, it doesn't regenerate on its own (it did until 2026-11-09, as a testing convenience), except for **Goluman and Lumera**, who regenerate **1% of max LP a second** (it pauses for 0.75 s after you spend LP). Debug tab: Infinite LP.
 - **Damage types and stats**: damage = base x step multiplier x (1 + STR/DEX/SOL / 100), with crits from LCK. Every attack carries one element.
 - **Dash cancel**: dashing cancels an attack once its hit is out.
 - **Dummies with HP** (`scripts/enemies/target_dummy.gd`): floating damage numbers colored by element, hit flash, and respawn after death. DummyC is weak to Fire and resists Ice; DummyD is weak to Ice.
@@ -61,7 +61,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 | Caustic Ooze | ALCHEMIC | Slow, tanky, slams all around it | Fire (Burn) |
 | Lumen Sprite | LIGHT | Evasive, darting caster | Light (Blind) |
 
-- **Status effects** (`scripts/combat/status_effects.gd`) on enemies, dummies and the Seeker: elemental hits build up; past the threshold the status starts. Burn and Poison deal damage over time, Ice Slows (more Ice while Slowed Freezes), Lightning Shocks (stunned), Light Blinds (half your attacks miss), Dark Drains (damage over time that heals whoever applied it). Frozen or shocked means no moving, attacking or dodging. Your statuses show above the HUD bars; enemies list theirs under their HP.
+- **Status effects** (`scripts/combat/status_effects.gd`) on enemies, dummies and the Seeker: elemental hits build up; past the threshold the status starts. Burn and Poison deal damage over time, Ice Slows (more Ice while Slowed Freezes), Lightning Shocks (stunned), Light Blinds (half your attacks miss), Dark Drains (damage over time that heals whoever applied it). Frozen or stunned means no moving, attacking or dodging. Shocked Seekers can still move but can't attack; enemies and Goluman are stopped in place by Shock. Your statuses show above the HUD bars; enemies list theirs under their HP.
 - **Defense stats**: DEF reduces melee damage, RES reduces magic, EVA reduces ranged and gives a chance for melee and ranged attacks to miss (spells always land). Reduction is 100 / (100 + stat). Enemies have their own DEF / RES / EVA, weaknesses and resistances.
 - **Ward and Barrier** (magic shields): block 50% / 75%. Their hand button (Reflect) and a fresh LT press open a reflect window: an enemy shot or spell that hits you then flies back at the shooter, faster. They can't parry melee, only block it. Add them to a loadout in the menu.
 - **All hits go through `HitResolver`**, so blocks, parries, reflects, misses, defense and status work the same for every weapon and enemy.
@@ -111,7 +111,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
   - Effective ATA = ATA × attack type × combo step. Combo steps 1 / 2 / 3 give ×1.0 / ×1.3 / ×1.69, so finishers almost always land.
   - Attack type: Normal ×1.0, Hard ×0.9, but **opening** a combo with a Hard is ×0.7. Specials ×0.8.
   - **Streak (Chrono Cross):** every hit that lands adds +4% to the next one in the combo, up to +12%.
-  - Frozen targets have 30% less EVA, Shocked or Paralyzed 15% less.
+  - Frozen targets have 30% less EVA, Shocked or Stunned 15% less.
   - **Spells, traps and hazards never miss.** Misses show "Miss".
   - Enemy EVA / ATA: Ooze 30 / 40, Drone 50 / 60, Hound 60 / 50, Umbral 70 / 55, Crawler 90 / 55, Sprite 140 / 60. EVA no longer lowers ranged damage; DEF covers both.
 - **Hit reactions.** Light and sustained hits only interrupt an enemy if one hit takes half its max HP. Hard hits **push back and flinch** 90% of the time (bosses 25%), like PSO.
@@ -120,7 +120,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
   - Damage uses PSO's formula: (SOL + technique power) / 5 × the item's spell power. Fire, Ice and Lightning use the real Foie / Barta / Zonde tables; Nature, Light and Dark are my best guesses in the same shape.
   - **Shapes:** single target (Fajro, Glacio's piercing line, Fulmo, Arbo's ground thorns, Lumo, Malbo), small bursts (ring, spear fan, chain, 30° and 60° cones, rolling gravity ball), large areas (Granfajro and friends; Granmalbo pulls enemies to the center), sustained channels (hold to keep casting), buffs (+STR / DEF / DEX / SOL / ATA / EVA), debuffs on enemies around you, and auras that pulse damage near you.
   - Single-target spells and Fire / Ice / Lightning / Nature / Light auras don't inflict status; everything else can. Pasmalbo can.
-  - **Cure** clears one more status per level in order of annoyance (Slow, Burn, Poison, Blind, Drain, Shock, Paralyze, Freeze); level 9 also clears debuffs. **Teleportal** opens a pad to the ship (the gym for now). **Revive** waits for co-op.
+  - **Cure** clears one more status per level in order of annoyance (Slow, Burn, Poison, Blind, Drain, Shock, Stun, Freeze); level 9 also clears debuffs. **Teleportal** opens a pad to the ship (the gym for now). **Revive** waits for co-op.
 - **Learning.** Each spell needs SOL to learn: its base, +20 a level for the first half, +40 after (Cure +25, Revive +30 / +60). Max spell level: **15**, Lumera 20, Coresian 10. **Invokers reach 30 in everything**, whatever their race. Strikers reach 5 levels less in buff spells, Rangers 5 less in debuff spells (a Human Ranger tops out at 10 in debuffs). Cure, Revive and Teleportal always reach their own max. New Seekers know Fajro, Glacio and Fulmo.
 
   | Max level | Striker (buffs) | Ranger (debuffs) | Invoker |
@@ -131,9 +131,9 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
   | Goluman (traps) | 15 | 15 | can't be Invokers |
 - **Spell discs** drop from enemies (about 6% of kills). A disc you can read is learned; one you can't yet is stored (read it from the Spells tab later); one you already know is sold for Oro.
 - **Race stat bonuses:** Humans +5 STR / DEX / SOL, Coresian +10 STR, Lumera +10 SOL, Goluman +10 DEX.
-- **Goluman** can't cast and can't be Invokers. In return they **slowly regenerate HP** (0.5% of max HP a second). They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Paralyze) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
+- **Goluman** can't cast and can't be Invokers. In return they **slowly regenerate HP** (0.5% of max HP a second) **and LP** (1% of max LP a second, which Lumera share). Like PSO's androids they're **immune to Poison and Stun**, but **weak to Shock**, which stops them in place where other Seekers can still move. They set **traps** instead (Damage, Slow, Shock, Poison, Confuse, Freeze, Stun) from the same slots, learned with DEX. Up to 4 at once; they arm after 0.6 s and spring on the first enemy. Trap discs only drop for Goluman.
 - **Level hazards.** Six hidden traps sit in the arena; each springs once. Each has a small device that can be locked on to and destroyed with any attack, but **only while the trap is visible**: after a **Trap Scanner** (D-pad down) reveals the room you're in, or always for Goluman. Hidden traps can't be hit by anything, area spells included.
-- **Paralyze** is a new status: 2.5 s, no moving or acting.
+- **Stun** (named Paralyze until 2026-11-09) is a new status: 2.5 s, no moving or acting. On a Seeker it ends early when they're cured or a hit lands (damage over time and hazard drains don't count), so it's gentler than Freeze. Enemies stay stunned while you hit them.
 - **Materials (PSO).** Each use permanently raises one stat by 2: Power (STR), Dex (DEX, new), Mind (SOL), Def (DEF), Res (RES, new), Evade (EVA), Accuracy (ATA, new), Luck (LCK), HP and LP (PSO's TP Material). Use them from the **Inventory** tab (Part 9; the Character tab is now Status).
   - PSO's limits: the eight stat materials share one limit: **Humans 275, Lumera and Coresian 175** (PSO's 250 / 150, +25 for the new materials), **Goluman 150**. HP and LP have their own 125 each.
   - Goluman can't use Mind Materials (no magic), and can use only 75 LP Materials.
@@ -227,6 +227,74 @@ Nomad-2's counters work (Grayson, 2026-11-09). Walk up to a counter and press **
 ![The bank](docs/screenshots/bank.png)
 ![The Guild](docs/screenshots/guild.png)
 
+## Part 11: levels
+![A level-up](docs/screenshots/level_up.png)
+
+Characters level up (Grayson, 2026-11-09).
+
+- **PSO's EXP curve, levels 1-200** (83,227,800 EXP to 200). The totals are PSO's own (Ephinea PSO wiki) at every level up to 50, at every 10th level after that, and at levels 141, 161-164 and 199. Levels between those are filled in so each level costs a little more than the last and every anchor is hit exactly.
+- **Seven growth tables: one per race, one per job.** A job table holds what the job gains from level 1 to 200. A race table scales each stat. A new race or job later is one more table, with no combinations to write. `Leveling` (scripts/items/leveling.gd).
+  - **Job tables** are PSO's human classes (level 200 minus level 1): **Striker = HUmar**, **Ranger = RAmar and RAmarl averaged**, **Invoker = FOmar and FOmarl averaged**.
+  - **Race tables** are PSO's other races against the humans, averaged over jobs: **Lumera = Newman** (more SOL, LP, DEF and RES; less HP and STR), **Coresian = CAST** (HUcast / RAcast: more HP, STR and DEF), **Goluman = CASEAL** (HUcaseal / RAcaseal: more HP and DEX, good EVA).
+  - So a **Coresian Striker grows like a HUcast** and a **Lumera Invoker like a Newman Force**.
+  - Things PSO doesn't have, so I picked them: PSO has one ATP stat, so the job's main stat gets it all and the other gets 65% (Invokers get 600 in both). RES is 75% of the average of DFP and MST. CASTs have no MST or TP, so Coresians get half SOL and half LP, and Goluman a quarter SOL and half LP.
+  - **LCK never grows**, like PSO.
+  - Stats grow in PSO's shapes: attack stats, SOL, LP, EVA and ATA early; HP later; DEF and RES latest.
+- **Level-up:** the screen flashes, a **LEVEL UP! Lv N** banner shows, and a PSO-style list of what each stat gained appears beside the bars. **HP and LP refill.**
+- **EXP bar** under the LP bar, with the level beside it. The Status tab shows the level, EXP and EXP to the next level. The character select shows the level.
+- **Armor has level requirements:** tier 1 level 1, tier 2 level 25, tier 3 level 60, tier 4 level 100. The rares have their own: Pathfinder Treads 20, Huntress Treads 30, Veil of the Nomad 40, Warden's Crown 50, Ironclad Shell 70.
+- **Weapons have stat requirements**, like PSO: STR for melee, DEX for ranged, SOL for magic. The amount is 6 per point of base damage above 20, in steps of 5. Pistol, Sword and the casting items need nothing; Great Sword needs STR 85 and Arbalest DEX 240. Rares need 80 more. The palette picker and the Inventory won't equip a weapon your stats can't use, and they say what's missing. **Shops still sell gear you can't equip** (job-locked, stats or level too low), for another character, a friend or later: it's marked "(can't equip yet)" in orange. Grey only means you can't afford it or your pack is full.
+- **Spells and traps** were already limited by stats (SOL, or DEX for traps) and still are.
+- **Shop tiers rise with your level:**
+  - **Armor shop:** tiers within 5 levels of your level, the top two only.
+  - **Augments:** grade II from level 40, grade III from level 100.
+  - **Weapons shop:** higher special-tag tiers every 50 levels, and bigger monster bonuses.
+  - Stock is rolled the first time you open a shop on each visit.
+- **Debug tab:** Level +1 / +10 / +50 / Max, done with EXP so the level-up shows. Reset character now goes back to level 1 and takes off armor above it.
+
+## Part 11 (continued): room hazards, buttons and a menu that doesn't pause
+![Poison mist](docs/screenshots/hazard_poison.png)
+![Darkness](docs/screenshots/hazard_darkness.png)
+
+PSO-style hazards and buttons (Grayson, 2026-11-09).
+
+- **Room hazards** (`RoomHazard`) belong to rooms but can **span several boxes**. The poison mist covers the poison room and its corridor. A button turns them off or on.
+  - **Poison mist:** drains 2% of max HP a second from anyone inside, Goluman included. It isn't the Poisoned status, and like PSO's poison it never takes you below 1 HP.
+  - **Darkness:** the view closes down to a small circle around you while you're inside, and the room reads black from outside.
+- **Buttons** (`RoomButton`) come in groups (`SwitchGroup`). When every button in a group is down, the group acts on its targets: open, close or toggle a door (`SwitchDoor`); turn a hazard off, on or toggle it; start a room's waves; turn traps off.
+  - **Press buttons:** a pedestal you press with A, once.
+  - **Floor plates:** you stand on them. Alone, every plate but the last stays down once stepped on (PSO), and the last needs you on it. **In co-op, plates minus Seekers stay down**: four plates with two Seekers means two latch and the last two need a Seeker on each.
+- **Arena east wing**, through Room B's new east doorway:
+  - **Poison room:** the mist fills the room and its corridor. The button in the corner opens the east door and clears the mist.
+  - **Switch hall:** a branch north of the poison room. **Four floor plates** open the door to a Lumidium alcove.
+  - **Dark room:** two waves in the dark. The **button in the far corner** turns the darkness off, but the north door only opens once every enemy is dead. Past it, the end room's teleporter goes back to Nomad-2. Every wave room must be cleared, as with the old exit.
+- **The menu no longer pauses the game**, like PSO. While it's open your Seeker stands still and takes no game input (no moving, attacking, items, lock-on or camera), but enemies, statuses and hazards carry on. The shop, bank and Guild counters and the teleporter's list still pause for now.
+
+
+## Part 12: local co-op
+Couch co-op for up to four, split-screen.
+
+- **Joining:** press **Start on another controller**. A new pane opens with your saved characters. Pick one that isn't already playing (create characters from the title screen first). Alone, the leader plays with any controller; the first one used is theirs, and the keyboard and mouse always belong to the leader.
+- **Split screen:** two Seekers split the screen top and bottom, three or four use quarters. Each pane has its own camera, HUD, menu, counters and teleporter list, and only hears its own controller. Menus are scaled to fit a half-height pane. Each Seeker's target rings only show in their own pane.
+- **Your own character:** each guest plays one of the saved characters with their own pack, palettes, level and SyncAIDa, saved like the leader's.
+- **Together:** the party travels through teleporters together, everyone standing gets each kill's EXP, enemies chase the nearest Seeker, floor plates count everyone (Part 11's rule), and a Goluman's trap vision shows traps to the whole party.
+- **Falling:** a Seeker who falls while a partner is still standing stays down. A partner's **Revive** brings them back, or they press **A** to go back to the start (carried Lumidium is lost). When everyone is down, everyone goes back.
+- **Leaving:** a guest picks "Save and leave the party" in the Options tab. When the leader quits to the title, everyone does.
+- Counters and the teleporter's list no longer pause the game, like the menu.
+
+![Join picker](docs/screenshots/coop_join.png)
+![Split screen](docs/screenshots/coop_split.png)
+![A guest's menu in their pane](docs/screenshots/coop_menu.png)
+
+
+## Part 12 (continued): the d-pad palette and Goluman traps
+- **D-pad palette:** the d-pad is four slots (left, up, right, down), and **holding RT shifts to four more**, ready for more items. Fill them in **Equip > D-pad**: A on a slot, A on an item (X clears; an item moves if it was already on another slot). It starts with HP Gel, LP Cell, Cure Salt and Trap Scanner where they used to be. The HUD shows the current page (the RT page while RT is held).
+- **Goluman: Traps replaces Spells.** The same palette, plus their learned traps. A trap on the d-pad is set at their feet for its LP (up to 4 at once).
+- **Spells section on a controller:** with no casting item equipped, focus goes to your learned spells (or the section buttons) instead of nowhere. Up from the top of any column reaches the section buttons, and down from them goes back in.
+
+![Traps section](docs/screenshots/traps_section.png)
+![The RT page on the HUD](docs/screenshots/dpad_rt_page.png)
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 
@@ -260,13 +328,14 @@ Show hitboxes (Debug tab, on by default) also draws enemy melee hit areas on the
 | Hand attacks (tap / hold) | X / Y | Left / right click |
 | Cast (tap) / Hard cast (hold) | X / Y with a casting item | Left / right click |
 | Spell slots 2 / 4 (hold while casting) / special | RT | E |
-| Use HP Gel / LP Cell / Cure Salt / Trap Scanner | D-pad left / up / right / down | 1 / 2 / 3 / 4 |
+| D-pad palette (items; traps for Goluman) | D-pad left / up / right / down, hold RT for 4 more | 1 / 2 / 3 / 4, hold E |
 | Activate a teleporter / pick up an item (when the prompt shows; otherwise jump) | A | Space |
 | Sync Burst | L3 | R |
 | Cycle palettes | LB / RB | Z / C |
 | Block / powerstance | LT | F |
 | Menu | Start | Tab |
 | Toggle debug panel | Select | F3 |
+| Join the party (co-op) | Start on another controller | |
 
 Click to capture the mouse, Esc to release it.
 
@@ -286,12 +355,12 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - Normal attacks fire when the button is released, so tap and hold can share one button.
 - Only the arena has Lumidium nodes, and every Guild quest happens there until real levels exist. Shop stock has no character-level tiers yet (armor stops at tier 2).
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
-- EXP is counted but there are no levels yet.
-- Revive has nothing to revive until co-op. Teleportal goes to the gym until the ship exists.
-- Party bursts (several Seekers firing together) wait for co-op. SyncAIDa have no feeding cooldown and no personalities yet.
-- The game pauses while the menu is open. Co-op will need a non-pausing version.
+- Enemies don't scale with level or area yet: past the first few levels, the arena gets easy.
+- Teleportal goes to the gym until the ship exists.
+- Party bursts (several Seekers firing together) aren't in yet. SyncAIDa have no feeding cooldown and no personalities yet.
+- Co-op: partners' HP isn't shown in your pane yet, and menus get small text in a half-height pane.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
-- No step-up for small ledges yet. Input is bound to all devices until couch co-op.
+- No step-up for small ledges yet.
 
 ## Automated tests
 Run from the project folder. Each prints `ok` or `FAIL` per check and exits with code 1 if anything fails.
@@ -311,6 +380,9 @@ godot --headless --path . --script res://tests/armor_test.gd
 godot --headless --path . --script res://tests/flow_test.gd
 godot --headless --path . --script res://tests/inventory_test.gd
 godot --headless --path . --script res://tests/services_test.gd
+godot --headless --path . --script res://tests/leveling_test.gd
+godot --headless --path . --script res://tests/hazards_test.gd
+godot --headless --path . --script res://tests/coop_test.gd
 ```
 
 - `movement_test.gd`: walking, stopping, jump height, short hops, dash distance, the 5 s dash cooldown, lock-on, orbiting, recentering, camera height return.
@@ -334,7 +406,7 @@ The tests always use a fresh save and never write yours.
 
 - `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, trap devices (untouchable while hidden, even by area spells; the Trap Scanner on D-pad down revealing only the current room; destroyed by a spell once revealed), discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
 
-- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Inventory tab with a gamepad, and Reset character forgetting them.
+- `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, LP regen for Goluman and Lumera only, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Inventory tab with a gamepad, and Reset character forgetting them.
 
 - `armor_test.gd` (in the arena): the armor book (24 tiered pieces, 5 rares, slot rules, job-locked sets), drop rolls (0-4 / 0-1 slots, DEF / EVA bonus), the starter Field Frame, who can wear what (Invokers Light only, job, race and gender locks), swapping pieces with their augments, stat augments, Fire Wards and a Beast Guard in real hits, Double-Heavy from an augment, unwearable armor coming off after a race change, drop rates (Blue emblem 2x), pickups, the save, old saves, and the Armor tab with a gamepad.
 
@@ -343,3 +415,7 @@ The tests always use a fresh save and never write yours.
 - `inventory_test.gd` (in the arena): a new Seeker's pack (Sword, Pistol, Wand; palette 1 holding the pack's own Pistol and Sword), worn armor and palette weapons taking slots, stacks of 10 in one slot, a stack pickup taking only what fits and leaving the rest, the 30-slot limit (items refused, Oro still taken, existing stacks still filling), the 15-Lumidium satchel, and the Inventory tab with a gamepad: equip to a palette, equipped and worn gear refusing to drop, use, wear, a material, dropping part of a stack, Oro and Lumidium as one pickup each, dropped Oro and Lumidium waiting for A, and the palette picker listing only the pack.
 
 - `services_test.gd` (in Nomad-2, then the arena): the five clerks and their prompts, PSO's curative prices, weapon prices, stock (sizes, no rares, armor tiers, rerolled per visit), buying stacks with an amount, gear, armor and augments with a gamepad, not enough Oro, a full pack, selling back at 1/8 (palette weapons refused, stacks by amount), Start leaving without the pause menu, B backing out, the bank (200 slots, items, stacks, Oro both ways, kept in the save), and the Guild (accept, one at a time, reporting early, the teleporter listing the quest first, defeats, room clears and banked Lumidium completing quests, the reward, abandoning).
+
+- `leveling_test.gd` (in the arena): PSO's EXP curve at its anchor levels and rising every level, level lookups, the seven tables (and nothing gained at level 1), Human Striker = HUmar's growth, Coresian Striker above it like HUcast, Lumera Invoker above a Human Invoker like a Newman Force, Rangers' ATA, LCK never growing, a level-up (stats, HP / LP refill, banner, gains list, flash, the EXP bar under LP), a multi-level jump, armor level requirements (tiers and rares), weapon stat requirements (Pistol, Great Sword, Arbalest, rares; the palette refusing), shop tiers by level, the Debug tab's level tools, Reset character, and the save.
+
+- `hazards_test.gd` (in the arena): poison mist (draining HP, never below 1, not the Poisoned status, spanning the corridor, draining Goluman too), Goluman statuses (immune to Poison and Stun, stopped by Shock; others still move while shocked), Stun ending on Cure or a hit but not on damage over time, its button opening the door and clearing it, the four floor plates (three latch alone, the fourth needs you; with two Seekers two latch and the last two need one each), darkness (the HUD darkens, the corner button clears it, the exit still waits for every enemy), buttons starting waves and turning traps off, and the menu not pausing (no movement while it's open, poison still ticking).

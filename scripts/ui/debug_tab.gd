@@ -193,7 +193,10 @@ func _reset_character() -> void:
 	seeker.health.restore_full()
 	_combat().lp = _combat().stats.max_lp
 	menu._refresh()
-	_character_message.text = "Back to level 1 (EXP 0). Materials used are forgotten too. Character levels aren't in yet."
+	ArmorBook.strip_unwearable(seeker.save)
+	seeker.apply_bonuses()
+	seeker.health.restore_full()
+	_character_message.text = "Back to level 1 (EXP 0). Materials used are forgotten too; armor above level 1 came off."
 
 
 func _reset_syncaida() -> void:
@@ -262,6 +265,12 @@ func _toggle_infinite_lp(on: bool) -> void:
 
 func _build_tools(box: VBoxContainer) -> void:
 	box.add_child(_label("Testing tools", 20))
+	var level_row := HBoxContainer.new()
+	level_row.add_child(_label("Level: ", 16))
+	for step in [1, 10, 50]:
+		_button(level_row, "+%d" % step, _tool_levels.bind(step))
+	_button(level_row, "Max (200)", _tool_levels.bind(Leveling.MAX_LEVEL))
+	box.add_child(level_row)
 	for spec in [["Refill HP, LP and Sync gauge", _tool_refill], ["Clear statuses", _tool_cure],
 			["+1000 Oro", _tool_oro], ["Fill your consumable stacks", _tool_items],
 			["+10 of each material", _tool_materials],
@@ -296,6 +305,16 @@ func _build_tools(box: VBoxContainer) -> void:
 	weapon_row.add_child(_weapon_pick)
 	_button(weapon_row, "Add to pack", _tool_add_weapon)
 	box.add_child(weapon_row)
+
+
+## Levels up through EXP, so the level-up shows like a real one.
+func _tool_levels(count: int) -> void:
+	var seeker := _player()
+	var c := seeker.save.character
+	var target := mini(c.level() + count, Leveling.MAX_LEVEL)
+	seeker.gain_exp(Leveling.exp_for(target) - c.experience)
+	_message.text = "Level %d." % c.level()
+	menu._refresh()
 
 
 func _tool_refill() -> void:
@@ -375,7 +394,7 @@ func _tool_satchel() -> void:
 
 
 func _tool_respawn() -> void:
-	get_tree().call_group("respawner", "respawn_player")
+	get_tree().call_group("respawner", "respawn_player", menu._player())
 	_message.text = "Back at the start."
 
 

@@ -55,15 +55,19 @@ static func color(e: Dictionary) -> Color:
 	return Color.WHITE
 
 
-static func weapon_detail(w: WeaponData, job_code: String) -> String:
+static func weapon_detail(w: WeaponData, job_code: String, stats: Stats = null) -> String:
 	var lines := PackedStringArray([w.display_name + ("  (RARE)" if w.rare else "")])
 	var tags := Loot.describe(w)
 	if tags != "":
 		lines.append(tags)
 	lines.append("Jobs: %s   %s%s   Base damage %d" % [w.jobs_text(), "Heavy" if w.is_heavy() else "Light",
 		", two-handed" if w.two_handed else "", roundi(w.base_damage)])
+	lines.append("Requirement: %s" % w.requirement_text())
 	if not w.can_be_used_by(job_code):
 		lines.append("Your job can't use it.")
+	var short := w.requirement_error(stats)
+	if short != "":
+		lines.append(short + ".")
 	return "\n".join(lines)
 
 
@@ -84,7 +88,7 @@ static func detail(e: Dictionary, player: Player, inv: Inventory) -> String:
 		"weapon":
 			var w: WeaponData = e.weapon
 			var on := save.palettes_with(w)
-			return weapon_detail(w, player.combat.job_code) + "\n" + (
+			return weapon_detail(w, player.combat.job_code, player.combat.stats) + "\n" + (
 				"On palette %s." % ", ".join(Array(on).map(func(n: int) -> String: return str(n))) if not on.is_empty() else "Not on a palette.")
 		"armor":
 			return armor_detail(e.armor, save.character, e.get("worn", false))
