@@ -19,10 +19,10 @@ const FAVORED := [
 	[&"spear", &"halberd"],  # Teal
 	[&"cane", &"talisman"],  # Cyan
 	[&"pistol", &"rifle"],  # Blue
-	[&"wand", &"staff"],  # Purple
+	[&"shotgun", &"hand_shotgun"],  # Purple
 	[&"boomerang", &"cards"],  # Magenta
 	[&"dagger", &"thrown_daggers"],  # Pink
-	[&"shotgun", &"hand_shotgun"],  # White
+	[&"wand", &"staff"],  # White
 	[&"bladestaff", &"glove"],  # Black
 ]
 

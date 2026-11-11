@@ -836,12 +836,12 @@ func _support_attack(name: String, kind: AttackData.Support, amount: float, lp: 
 func _rares() -> Array[WeaponData]:
 	var specs := [
 		["Emberfang", "sword", "Heat", 3, EnemyData.EnemyType.BEAST, 0.2, [0, 1]],
-		["Glacier Maw", "great_sword", "Ice", 3, EnemyData.EnemyType.ALCHEMIC, 0.2, [5, 10]],
+		["Glacier Maw", "great_sword", "Ice", 3, EnemyData.EnemyType.ALCHEMIC, 0.2, [5, 7]],
 		["Stormcaller", "rifle", "Shock", 3, EnemyData.EnemyType.SYNTHETIC, 0.25, [6, 2]],
-		["Gravesong", "dagger", "Dim", 3, EnemyData.EnemyType.LIGHT, 0.2, [11, 7]],
+		["Gravesong", "dagger", "Dim", 3, EnemyData.EnemyType.LIGHT, 0.2, [11, 10]],
 		["Lifeleech Coil", "flail", "Draw", 3, EnemyData.EnemyType.MUTATED, 0.2, [3, 8]],
 		["Lumen Edge", "bladestaff", "Panic", 3, EnemyData.EnemyType.DARK, 0.25, [9, 4]],
-		["Kingmaker", "halberd", "Master's", 2, EnemyData.EnemyType.BEAST, 0.15, [2, 7, 11]],
+		["Kingmaker", "halberd", "Master's", 2, EnemyData.EnemyType.BEAST, 0.15, [2, 10, 11]],
 	]
 	var lines := {}
 	for line in SpecialTag.all_lines():
