@@ -21,9 +21,9 @@ const FAVORED := [
 	[&"pistol", &"rifle"],  # Blue
 	[&"shotgun", &"hand_shotgun"],  # Purple
 	[&"boomerang", &"cards"],  # Magenta
-	[&"dagger", &"thrown_daggers"],  # Pink
+	[&"bladestaff", &"glove"],  # Pink
 	[&"wand", &"staff"],  # White
-	[&"bladestaff", &"glove"],  # Black
+	[&"dagger", &"thrown_daggers"],  # Black
 ]
 
 const DROP_CHANCE := 0.6
