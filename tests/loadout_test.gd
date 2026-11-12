@@ -244,13 +244,19 @@ func _run() -> void:
 		_started == ["Test Special"] and _hits.size() == 2
 		and is_equal_approx(_hits.max(), sword_hit * 2.0 * 0.75) and is_equal_approx(_hits.min(), sword_hit * 0.75)
 		and spent >= 5.0)
+	# The Frost Sword is an Ice-tagged Sword, so it has its own special: take it
+	# away to check that a hand without one swings a normal twin.
+	var frost: WeaponData = _combat.current_weapon(CombatController.Hand.PRIMARY)
+	var frost_tag := frost.tag
+	frost.tag = null
 	await _reset(Vector3(0, 0.1, -5.5))
 	Input.action_press("shift")
 	await _tap("hand_y")
 	Input.action_release("shift")
 	await _idle()
-	_check("RT + Y uses the Y-hand weapon's special; Frost Sword has none, so a normal twin (%s)" % [_started],
+	_check("RT + Y with no special on the Y-hand weapon is a normal twin (%s)" % [_started],
 		_started == ["Slash"] and _hits.size() == 2)
+	frost.tag = frost_tag
 	sword.special_attack = null
 
 	_combat.select_loadout(TWIN_PISTOLS)

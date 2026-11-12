@@ -235,12 +235,17 @@ func _dervish_blades() -> WeaponData:
 	return w
 
 
-## Same type as the Sword (so the two powerstance), but deals Ice damage.
+## A Sword with the Ice line's second tier ("Frost"), like any found one
+## (2026-11-12: it used to be its own base weapon, so drops could tag it again,
+## e.g. "Bind Frost Sword"). Kept as a file for the test palettes; Loot skips
+## tagged files when rolling drops and stock.
 func _frost_sword() -> WeaponData:
 	var w := _sword()
-	w.display_name = "Frost Sword"
-	w.damage_type = Element.Type.ICE
+	w.base_name = w.display_name
 	w.mesh_color = Color(0.6, 0.85, 1.0)
+	for line in SpecialTag.all_lines():
+		if line.line_name == "Ice":
+			Loot.apply_tag(w, line, 1)
 	return w
 
 

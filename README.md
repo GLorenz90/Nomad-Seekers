@@ -42,7 +42,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Sword hitbox narrowed** to match PSO's single-target saber; the Great Sword is the wide sweep.
 - **Shield hand button**: Shield **Deflect** opens a parry window; Heavy Shield **Shove** knocks enemies back.
 - **Dodge**: hits during the dash's i-frames are dodged.
-- **New weapons**: Shield, Heavy Shield, Great Sword (PSO sword frames), Axe (PSO partisan frames), Frost Sword (an Ice sword that powerstances with the Sword).
+- **New weapons**: Shield, Heavy Shield, Great Sword (PSO sword frames), Axe (PSO partisan frames), Frost Sword (now just a Sword with the Ice line's "Frost" tag, so it powerstances with the Sword and is never a drop base).
 - **Block practice** in the test room: the Swinger glows orange, then swings; the Shooter fires slow pink bolts. Parry the Swinger to stagger it (it glows blue).
 - **Taking damage**: the Seeker now has HP that enemies can reduce, and respawns at the start on death.
 
