@@ -9,7 +9,7 @@ extends SceneTree
 ## - Four floor plates: alone, three stay down and the fourth needs you on
 ##   it; then the alcove door opens. With two Seekers, two latch and the last
 ##   two need someone on each.
-## - Darkness: dark around you while inside; the corner button turns it off;
+## - Darkness: sight limited to 8 m inside (DarkVision), enemies past it dodge +25; the corner button turns it off;
 ##   the room's exit still waits for every enemy.
 ## - Buttons that start waves and turn traps off.
 ## - The menu: the game keeps running, the Seeker takes no game input.
@@ -169,16 +169,39 @@ func _run() -> void:
 	var room_d: WaveRoom = _main.get_node("Rooms/RoomD")
 	await _place(Vector3(52, 0.1, -22))
 	await _frames(40)
-	var hud: DebugHud = _main.hud
-	_check("inside the dark room it's dark around you (%.2f)" % hud._dark.modulate.a, RoomHazard.dark_for(_player) and hud._dark.modulate.a > 0.5)
+	var sight: DarkVision = _main.target_markers.dark_vision
+	_check("inside the dark room your sight closes in (%.2f, %.0f m)" % [sight.strength, RoomHazard.sight_range_for(_player)],
+		RoomHazard.dark_for(_player) and sight.visible and sight.strength > 0.5
+		and RoomHazard.sight_range_for(_player) == RoomHazard.DEFAULT_SIGHT)
+	_check("the darkness sits on your own marker layer", sight.layers == _main.target_markers.render_layers)
+	_check("no dark box is drawn over the room", dark.get_children().all(func(c): return not c is MeshInstance3D))
+	# Enemies beyond sight dodge 25 points more; close ones don't. Lock-on still reaches.
+	var probe := DamageInfo.new()
+	probe.accuracy = 40.0
+	var far_spot := Node3D.new()
+	_main.add_child(far_spot)
+	far_spot.global_position = _player.global_position + Vector3(0, 1, -(RoomHazard.DEFAULT_SIGHT + 4.0))
+	var near_spot := Node3D.new()
+	_main.add_child(near_spot)
+	near_spot.global_position = _player.global_position + Vector3(0, 1, -3.0)
+	var far_dodge := RoomHazard.dark_dodge(_player, far_spot)
+	var near_dodge := RoomHazard.dark_dodge(_player, near_spot)
+	_check("enemies past your sight get +25 dodge, close ones none (%.0f / %.0f)" % [far_dodge, near_dodge],
+		far_dodge == RoomHazard.DARK_DODGE and near_dodge == 0.0)
+	_check("which takes 25 points off the hit chance (%.0f -> %.0f)" % [Accuracy.hit_percent(probe, 60.0),
+		Accuracy.hit_percent(probe, 60.0, null, far_dodge)],
+		is_equal_approx(Accuracy.hit_percent(probe, 60.0) - Accuracy.hit_percent(probe, 60.0, null, far_dodge), 25.0))
+	_check("a non-Seeker attacker gets no darkness penalty", RoomHazard.dark_dodge(far_spot, near_spot) == 0.0)
+	far_spot.free()
+	near_spot.free()
 	_check("its waves started", room_d.state == WaveRoom.RoomState.ACTIVE)
 	_check("its exit is locked while enemies live", room_d.is_door_locked(&"ExitDoor0"))
 	await _place(Vector3(69.2, 0.1, -37.4))
 	_player.hold_input(0.0)
 	await _tap("jump")
 	await _frames(40)
-	_check("the corner button turns the darkness off (%.2f)" % hud._dark.modulate.a, not dark.active and not RoomHazard.dark_for(_player)
-		and hud._dark.modulate.a < 0.5)
+	_check("the corner button turns the darkness off (%.2f)" % sight.strength, not dark.active and not RoomHazard.dark_for(_player)
+		and sight.strength < 0.5)
 	_check("but the exit still waits for the enemies", room_d.is_door_locked(&"ExitDoor0"))
 	for e in get_nodes_in_group("enemies"):
 		if is_instance_valid(e) and not e.is_queued_for_deletion():

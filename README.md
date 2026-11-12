@@ -260,7 +260,7 @@ PSO-style hazards and buttons (Grayson, 2026-11-09).
 
 - **Room hazards** (`RoomHazard`) belong to rooms but can **span several boxes**. The poison mist covers the poison room and its corridor. A button turns them off or on.
   - **Poison mist:** drains 2% of max HP a second from anyone inside, Goluman included. It isn't the Poisoned status, and like PSO's poison it never takes you below 1 HP.
-  - **Darkness:** the view closes down to a small circle around you while you're inside, and the room reads black from outside.
+  - **Darkness:** while you're inside you can't see more than **4 m** from your Seeker: everything farther is drawn black (a depth shader, one per Seeker, so a partner outside the room still sees normally). Lock-on still reaches into the dark and the target rings show through it, but **enemies past your sight are 25 points harder to hit** (spells still never miss). From outside, the room looks normal.
 - **Buttons** (`RoomButton`) come in groups (`SwitchGroup`). When every button in a group is down, the group acts on its targets: open, close or toggle a door (`SwitchDoor`); turn a hazard off, on or toggle it; start a room's waves; turn traps off.
   - **Press buttons:** a pedestal you press with A, once.
   - **Floor plates:** you stand on them. Alone, every plate but the last stays down once stepped on (PSO), and the last needs you on it. **In co-op, plates minus Seekers stay down**: four plates with two Seekers means two latch and the last two need a Seeker on each.

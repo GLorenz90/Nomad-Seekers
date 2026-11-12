@@ -22,13 +22,17 @@ var combat: CombatController
 var camera_rig: CameraRig
 
 ## Part 12: visual layers for the rings. In split-screen each Seeker's rings
-## go on their own layer, which only their pane's camera draws.
+## go on their own layer, which only their pane's camera draws. The Seeker's
+## DarkVision lives here too, so it follows the same layer.
 var render_layers := 1:
 	set(value):
 		render_layers = value
 		for child in get_children():
-			if child is Sprite3D:
-				(child as Sprite3D).layers = value
+			if child is VisualInstance3D:
+				(child as VisualInstance3D).layers = value
+
+## Darkness rooms: this Seeker's short sight (drawn under the rings).
+var dark_vision: DarkVision
 
 var _small_texture: Texture2D
 var _large_texture: Texture2D
@@ -46,6 +50,10 @@ func setup(controller: CombatController, rig: CameraRig) -> void:
 	_small_texture = _ring_texture(64, 6.0, true)
 	_large_texture = _ring_texture(128, 7.0, false)
 	_lock_marker = _make_sprite(_large_texture, LARGE_SIZE, LOCK_COLOR)
+	dark_vision = DarkVision.new()
+	dark_vision.layers = render_layers
+	add_child(dark_vision)
+	dark_vision.setup(controller.get_parent() as Player)
 
 
 ## Enemies currently marked, with which hands would hit them (for tests).
