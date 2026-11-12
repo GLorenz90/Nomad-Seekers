@@ -43,6 +43,8 @@ class Kit:
 ## No fighting here (Nomad-2; Grayson 2026-11-10): Seekers can't attack, cast,
 ## set traps or fire Sync Bursts.
 @export var peaceful := false
+## Which map this is (Maps.id_of): the scene path, or a data level's folder.
+var map_id := ""
 
 var _spawn := Transform3D.IDENTITY
 var rng := RandomNumberGenerator.new()
@@ -90,7 +92,7 @@ func _ready() -> void:
 ## A level opened while the party is up (the window's or a hosted map):
 ## spawns whoever is on this map, the scene's own Seeker taking the first.
 func _join_director(director: CoopDirector) -> void:
-	var members := Party.members_on(scene_file_path)
+	var members := Party.members_on(Maps.id_of(self))
 	if members.is_empty():
 		members.append(Party.LEADER)
 	var first := members[0]
@@ -276,7 +278,7 @@ func _check_all_rooms_cleared() -> void:
 		if (room as WaveRoom).state != WaveRoom.RoomState.CLEARED:
 			return
 	for kit in kits:
-		if QuestBook.record(kit.player.save, "clear", scene_file_path):
+		if QuestBook.record(kit.player.save, "clear", Maps.id_of(self)):
 			kit.hud.show_banner("Quest complete: report to the Guild")
 
 

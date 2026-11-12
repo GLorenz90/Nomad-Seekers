@@ -16,11 +16,14 @@ const COLOR_ACTIVE := Color(0.3, 0.9, 1.0)
 const COLOR_TRAVEL := Color(0.55, 1.0, 0.55)
 const COLOR_LOCKED := Color(0.25, 0.3, 0.35)
 
-## Scene to travel to ("" = deposit only).
-@export_file("*.tscn") var destination := ""
+## Where it goes ("" = nowhere): a scene, a data level folder, "area:<area>"
+## (this session's pick for that area) or "hub" (see Maps).
+@export var destination := ""
 ## Label shown above the pad for travel pads, e.g. "To the arena".
 @export var destination_name := ""
 @export var requires_rooms_cleared := false
+## Asleep until something wakes it (a level's wiring, Part 13a).
+@export var dormant := false
 ## Seconds until it closes on its own (Teleportal spell); 0 = permanent.
 @export var lifetime := 0.0
 ## Part 8: a pad with several destinations (Nomad-2's) asks where to go.
@@ -77,14 +80,26 @@ func _process(delta: float) -> void:
 		if lifetime <= 0.0:
 			queue_free()
 			return
-	if requires_rooms_cleared:
-		var cleared := _rooms_cleared()
-		if cleared != _active:
+	if requires_rooms_cleared or dormant:
+		if is_active() != _active:
 			_refresh()
 
 
 func is_active() -> bool:
-	return not requires_rooms_cleared or _rooms_cleared()
+	return not dormant and (not requires_rooms_cleared or _rooms_cleared())
+
+
+## Level wiring (Part 13a): "wake" / "enable" turn it on, "disable" puts it
+## back to sleep.
+func switch_action(action: String) -> void:
+	match action:
+		"wake", "enable", "open":
+			dormant = false
+		"disable", "close":
+			dormant = true
+		"toggle":
+			dormant = not dormant
+	_refresh()
 
 
 func _rooms_cleared() -> bool:
@@ -107,7 +122,9 @@ func _refresh() -> void:
 	elif destination == "":
 		_label.text = "Teleporter"
 	elif _active:
-		_label.text = "Teleporter\n%s" % (destination_name if destination_name != "" else destination.get_file().get_basename())
+		_label.text = "Teleporter\n%s" % (destination_name if destination_name != "" else Maps.display_name(destination))
+	elif dormant:
+		_label.text = "Teleporter\n(inactive)"
 	else:
 		_label.text = "Teleporter\n(clear every room first)"
 
@@ -140,6 +157,8 @@ func interact_prompt() -> String:
 		return "Teleport..."
 	if destination == "":
 		return "Teleporter (goes nowhere)"
+	if dormant:
+		return "Teleporter (inactive)"
 	if not is_active():
 		return "Teleporter locked (clear every room first)"
 	return destination_name if destination_name != "" else "Teleport"

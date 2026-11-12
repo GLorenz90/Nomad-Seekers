@@ -357,7 +357,10 @@ func _run() -> void:
 	menu = guild.open_menu(_player)
 	menu.show_command("quests")
 	await _frames(2)
-	_check("the Guild lists three quests (%s)" % _focused_text(), menu.list_buttons().size() == 3 and _focused_text().begins_with("Arena Trial"))
+	# Three built-in quests, then any from res://quests (Part 13a: the demo level's).
+	_check("the Guild lists every quest (%s)" % _focused_text(),
+		menu.list_buttons().size() == QuestBook.all().size() and QuestBook.all().size() >= 3
+		and _focused_text().begins_with("Arena Trial"))
 	await _pad(JOY_BUTTON_DPAD_DOWN)
 	await _pad(JOY_BUTTON_A)
 	await _frames(2)

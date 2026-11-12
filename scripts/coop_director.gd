@@ -63,14 +63,14 @@ func level_for(path: String) -> Node:
 	if hosts.has(path) and is_instance_valid(hosts[path]):
 		return hosts[path]
 	var scene := get_tree().current_scene
-	if scene and scene.scene_file_path == path and scene.has_method("spawn_member"):
+	if scene and Maps.id_of(scene) == path and scene.has_method("spawn_member"):
 		return scene
 	return null
 
 
 func _root_path() -> String:
 	var scene := get_tree().current_scene
-	return scene.scene_file_path if scene else ""
+	return Maps.id_of(scene) if scene else ""
 
 
 ## Opens a map in its own world. Its level script spawns whoever is on it.
@@ -82,7 +82,7 @@ func host(path: String) -> Node:
 	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	viewport.audio_listener_enable_3d = false
 	add_child(viewport)
-	var level := (load(path) as PackedScene).instantiate()
+	var level := Maps.instantiate(path)
 	hosts[path] = level
 	viewport.add_child(level)
 	return level
@@ -162,7 +162,7 @@ static func watch_for_join(from: Node, event: InputEvent) -> void:
 ## Turns a solo level into a party: the director takes over its leader.
 static func begin(level: Node) -> CoopDirector:
 	var director := ensure(level.get_tree())
-	Party.leader_map = level.scene_file_path
+	Party.leader_map = Maps.id_of(level)
 	level.call("adopt_director", director)
 	return director
 
@@ -221,15 +221,15 @@ static func travel(seeker: Player, destination: String) -> void:
 	if director == null:
 		for node in Scope.group(seeker, "player"):
 			(node as Player).save_game()
-		tree.change_scene_to_file.call_deferred(destination)
+		Maps.change_to(tree, destination)
 		return
-	director.move(seeker, destination)
+	director.move(seeker, Maps.resolve(destination))
 
 
 func move(seeker: Player, destination: String) -> void:
 	var who := Party.who_of(seeker)
 	var from_level := Scope.level(seeker)
-	var from_path := from_level.scene_file_path if from_level else ""
+	var from_path := Maps.id_of(from_level) if from_level else ""
 	if from_path == destination:
 		return
 	seeker.save_game()
@@ -246,7 +246,7 @@ func move(seeker: Player, destination: String) -> void:
 		if root_free and root_path != PLACEHOLDER:
 			get_tree().change_scene_to_file.call_deferred(PLACEHOLDER)
 	elif root_free:
-		get_tree().change_scene_to_file.call_deferred(destination)
+		Maps.change_to(get_tree(), destination)
 	else:
 		host(destination)
 
@@ -259,7 +259,7 @@ func leave(seeker: Player) -> void:
 	if who == Party.LEADER:
 		return
 	var level := Scope.level(seeker)
-	var path := level.scene_file_path if level else ""
+	var path := Maps.id_of(level) if level else ""
 	seeker.save_game()
 	var name_was := seeker.save.character.seeker_name
 	if level:

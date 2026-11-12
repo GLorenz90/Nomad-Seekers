@@ -1,0 +1,116 @@
+{
+	"free": [
+		{
+			"aggro": "short",
+			"chase_radius": 10.0,
+			"enemy": "grub_hound",
+			"id": "hall_hound",
+			"limited_chase": true,
+			"pos": [
+				0,
+				0,
+				-12
+			],
+			"wander": true,
+			"wander_radius": 2.0,
+			"yaw": 180
+		}
+	],
+	"rooms": [
+		{
+			"room": "room_2",
+			"start": "enter",
+			"waves": [
+				{
+					"enemies": [
+						{
+							"enemy": "grub_hound",
+							"id": "arena_hound_a",
+							"pos": [
+								-4,
+								0,
+								-26
+							]
+						},
+						{
+							"enemy": "grub_hound",
+							"id": "arena_hound_b",
+							"pos": [
+								4,
+								0,
+								-26
+							]
+						}
+					]
+				},
+				{
+					"enemies": [
+						{
+							"enemy": "sentry_drone",
+							"id": "arena_drone",
+							"pos": [
+								0,
+								0,
+								-29
+							],
+							"spawn_delay": 0.5
+						},
+						{
+							"enemy": "caustic_ooze",
+							"id": "arena_ooze",
+							"pos": [
+								-3,
+								0,
+								-22
+							],
+							"spawn_delay": 1.25
+						}
+					]
+				}
+			]
+		},
+		{
+			"room": "room_5",
+			"start": "event",
+			"waves": [
+				{
+					"enemies": [
+						{
+							"enemy": "umbral_eye",
+							"id": "boss",
+							"pos": [
+								0,
+								0,
+								-98
+							]
+						}
+					]
+				},
+				{
+					"enemies": [
+						{
+							"enemy": "lumen_sprite",
+							"id": "sprite_a",
+							"pos": [
+								-5,
+								0,
+								-98
+							],
+							"spawn_delay": 0.5
+						},
+						{
+							"enemy": "lumen_sprite",
+							"id": "sprite_b",
+							"pos": [
+								5,
+								0,
+								-98
+							],
+							"spawn_delay": 0.5
+						}
+					]
+				}
+			]
+		}
+	]
+}

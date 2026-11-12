@@ -72,8 +72,9 @@ func _initialize() -> void:
 	var pad := Area3D.new()
 	pad.name = "Teleporter"
 	pad.set_script(load("res://scripts/world/teleporter.gd"))
-	pad.set("destinations", PackedStringArray(["res://scenes/main.tscn", "res://scenes/arena.tscn"]))
-	pad.set("destination_names", PackedStringArray(["The gym (test room)", "The test arena (wave rooms)"]))
+	pad.set("destinations", PackedStringArray(["res://scenes/main.tscn", "res://scenes/arena.tscn", "area:test_1"]))
+	pad.set("destination_names", PackedStringArray(["The gym (test room)", "The test arena (wave rooms)",
+		"Demo level (made from data)"]))
 	pad.position = Vector3(0, 0, -10)
 	_add(_root, pad)
 

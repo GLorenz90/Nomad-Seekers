@@ -103,9 +103,9 @@ const SCAN_RADIUS := 15.0
 
 
 static func scan(seeker: Player) -> int:
-	var room: WaveRoom = null
-	for r in Scope.group(seeker, "wave_rooms"):
-		if (r as WaveRoom).contains(seeker.global_position):
+	var room: Node3D = null  # a WaveRoom, or a data level's LevelRoom (Part 13a)
+	for r in Scope.group(seeker, "wave_rooms") + Scope.group(seeker, "level_rooms"):
+		if r.call("contains", seeker.global_position):
 			room = r
 			break
 	var found := 0
@@ -113,7 +113,7 @@ static func scan(seeker: Player) -> int:
 		var trap := node as HazardTrap
 		if trap.sprung or trap.destroyed:
 			continue
-		var inside := room.contains(trap.global_position) if room \
+		var inside: bool = room.call("contains", trap.global_position) if room \
 			else trap.global_position.distance_to(seeker.global_position) <= SCAN_RADIUS
 		if inside:
 			trap.revealed = true

@@ -1,0 +1,1172 @@
+{
+	"assets": [],
+	"decorations": [
+		{
+			"asset": "builtin:fireflies",
+			"id": "fireflies",
+			"pos": [
+				0,
+				0,
+				-2
+			],
+			"size": [
+				12,
+				3,
+				12
+			]
+		},
+		{
+			"asset": "builtin:light",
+			"color": [
+				1,
+				0.8,
+				0.55
+			],
+			"energy": 1.5,
+			"id": "lamp",
+			"pos": [
+				6,
+				3,
+				6
+			],
+			"range": 10
+		},
+		{
+			"animation": {
+				"amount": 1.0,
+				"preset": "sway"
+			},
+			"asset": "builtin:cylinder",
+			"color": [
+				0.3,
+				0.55,
+				0.3
+			],
+			"id": "sapling",
+			"pos": [
+				-6,
+				0,
+				6
+			],
+			"size": [
+				0.6,
+				3,
+				0.6
+			]
+		},
+		{
+			"asset": "builtin:searchlight",
+			"id": "beacon",
+			"pos": [
+				6,
+				3.5,
+				-102
+			]
+		}
+	],
+	"grid": 4.0,
+	"lighting": {
+		"ambient_energy": 1.1,
+		"preset": "dusk",
+		"sun_energy": 1.1
+	},
+	"pieces": [
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_1",
+			"pos": [
+				0.0,
+				-1.0,
+				0.0
+			],
+			"size": [
+				16.0,
+				1.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_2",
+			"pos": [
+				-8.5,
+				0.0,
+				0.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_3",
+			"pos": [
+				8.5,
+				0.0,
+				0.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_4",
+			"pos": [
+				-5.0,
+				0.0,
+				-8.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_5",
+			"pos": [
+				5.0,
+				0.0,
+				-8.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_6",
+			"pos": [
+				0.0,
+				0.0,
+				8.5
+			],
+			"size": [
+				18.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_7",
+			"pos": [
+				0.0,
+				-1.0,
+				-12.0
+			],
+			"size": [
+				4.0,
+				1.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_8",
+			"pos": [
+				-2.5,
+				0.0,
+				-12.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_9",
+			"pos": [
+				2.5,
+				0.0,
+				-12.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_10",
+			"pos": [
+				0.0,
+				-1.0,
+				-24.0
+			],
+			"size": [
+				16.0,
+				1.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_11",
+			"pos": [
+				-8.5,
+				0.0,
+				-24.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_12",
+			"pos": [
+				8.5,
+				0.0,
+				-24.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_13",
+			"pos": [
+				-5.0,
+				0.0,
+				-32.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_14",
+			"pos": [
+				5.0,
+				0.0,
+				-32.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_15",
+			"pos": [
+				-5.0,
+				0.0,
+				-15.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_16",
+			"pos": [
+				5.0,
+				0.0,
+				-15.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_17",
+			"pos": [
+				0.0,
+				-1.0,
+				-36.0
+			],
+			"size": [
+				4.0,
+				1.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_18",
+			"pos": [
+				-2.5,
+				0.0,
+				-36.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_19",
+			"pos": [
+				2.5,
+				0.0,
+				-36.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_20",
+			"pos": [
+				0.0,
+				-1.0,
+				-42.0
+			],
+			"size": [
+				16.0,
+				1.0,
+				4.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_21",
+			"pos": [
+				0.0,
+				-1.0,
+				-54.0
+			],
+			"size": [
+				16.0,
+				1.0,
+				4.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_22",
+			"pos": [
+				-8.5,
+				0.0,
+				-48.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_23",
+			"pos": [
+				8.5,
+				0.0,
+				-48.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_24",
+			"pos": [
+				-5.0,
+				0.0,
+				-56.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_25",
+			"pos": [
+				5.0,
+				0.0,
+				-56.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_26",
+			"pos": [
+				-5.0,
+				0.0,
+				-39.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_27",
+			"pos": [
+				5.0,
+				0.0,
+				-39.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_28",
+			"pos": [
+				0.0,
+				-1.0,
+				-60.0
+			],
+			"size": [
+				4.0,
+				1.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_29",
+			"pos": [
+				-2.5,
+				0.0,
+				-60.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_30",
+			"pos": [
+				2.5,
+				0.0,
+				-60.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_31",
+			"pos": [
+				0.0,
+				-1.0,
+				-66.0
+			],
+			"size": [
+				16.0,
+				1.0,
+				4.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_32",
+			"pos": [
+				0.0,
+				-1.0,
+				-78.0
+			],
+			"size": [
+				16.0,
+				1.0,
+				4.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_33",
+			"pos": [
+				-8.5,
+				0.0,
+				-72.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_34",
+			"pos": [
+				8.5,
+				0.0,
+				-72.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_35",
+			"pos": [
+				-5.0,
+				0.0,
+				-80.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_36",
+			"pos": [
+				5.0,
+				0.0,
+				-80.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_37",
+			"pos": [
+				-5.0,
+				0.0,
+				-63.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_38",
+			"pos": [
+				5.0,
+				0.0,
+				-63.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_39",
+			"pos": [
+				0.0,
+				-1.0,
+				-84.0
+			],
+			"size": [
+				4.0,
+				1.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_40",
+			"pos": [
+				-2.5,
+				0.0,
+				-84.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_41",
+			"pos": [
+				2.5,
+				0.0,
+				-84.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				8.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.42,
+				0.45,
+				0.4
+			],
+			"id": "piece_42",
+			"pos": [
+				0.0,
+				-1.0,
+				-96.0
+			],
+			"size": [
+				16.0,
+				1.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_43",
+			"pos": [
+				-8.5,
+				0.0,
+				-96.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_44",
+			"pos": [
+				8.5,
+				0.0,
+				-96.0
+			],
+			"size": [
+				1.0,
+				4.0,
+				16.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_45",
+			"pos": [
+				0.0,
+				0.0,
+				-104.5
+			],
+			"size": [
+				18.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_46",
+			"pos": [
+				-5.0,
+				0.0,
+				-87.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		},
+		{
+			"asset": "builtin:box",
+			"collision": "box",
+			"color": [
+				0.5,
+				0.5,
+				0.56
+			],
+			"id": "piece_47",
+			"pos": [
+				5.0,
+				0.0,
+				-87.5
+			],
+			"size": [
+				6.0,
+				4.0,
+				1.0
+			]
+		}
+	],
+	"rooms": [
+		{
+			"id": "room_1",
+			"kind": "room",
+			"name": "Landing",
+			"pos": [
+				0,
+				0,
+				0.0
+			],
+			"size": [
+				16.0,
+				6,
+				16.0
+			]
+		},
+		{
+			"id": "hall_1",
+			"kind": "corridor",
+			"pos": [
+				0,
+				0,
+				-12.0
+			],
+			"size": [
+				4,
+				6,
+				8
+			]
+		},
+		{
+			"id": "room_2",
+			"kind": "room",
+			"name": "Arena",
+			"pos": [
+				0,
+				0,
+				-24.0
+			],
+			"size": [
+				16.0,
+				6,
+				16.0
+			]
+		},
+		{
+			"id": "hall_2",
+			"kind": "corridor",
+			"pos": [
+				0,
+				0,
+				-36.0
+			],
+			"size": [
+				4,
+				6,
+				8
+			]
+		},
+		{
+			"id": "room_3",
+			"kind": "room",
+			"name": "Bridge hall",
+			"pos": [
+				0,
+				0,
+				-48.0
+			],
+			"size": [
+				16.0,
+				6,
+				16.0
+			]
+		},
+		{
+			"id": "hall_3",
+			"kind": "corridor",
+			"pos": [
+				0,
+				0,
+				-60.0
+			],
+			"size": [
+				4,
+				6,
+				8
+			]
+		},
+		{
+			"id": "room_4",
+			"kind": "room",
+			"name": "Platform room",
+			"pos": [
+				0,
+				0,
+				-72.0
+			],
+			"size": [
+				16.0,
+				6,
+				16.0
+			]
+		},
+		{
+			"id": "hall_4",
+			"kind": "corridor",
+			"pos": [
+				0,
+				0,
+				-84.0
+			],
+			"size": [
+				4,
+				6,
+				8
+			]
+		},
+		{
+			"id": "room_5",
+			"kind": "room",
+			"name": "Boss room",
+			"pos": [
+				0,
+				0,
+				-96.0
+			],
+			"size": [
+				16.0,
+				6,
+				16.0
+			]
+		}
+	],
+	"start": {
+		"pos": [
+			0,
+			0.1,
+			4
+		],
+		"yaw": 0
+	},
+	"walls": [
+		{
+			"blocks": "seekers",
+			"id": "arena_pen",
+			"pos": [
+				-6,
+				0,
+				-30
+			],
+			"size": [
+				0.4,
+				2,
+				4
+			]
+		}
+	]
+}
