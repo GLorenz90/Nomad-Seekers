@@ -219,7 +219,7 @@ static func _self_spell(ctrl: CombatController, item: WeaponData, spell: SpellDe
 			SpellFx.ring(world, player.global_position, r, Color(0.5, 1.0, 0.6))
 			var amount := (ctrl.stats.soul * player.status.stat_scale(&"soul") + spell.power(level) * 4.0) / 5.0 * boost
 			for seeker in _party(player, r):
-				var restored := seeker.health.heal(amount)
+				var restored: float = seeker.health.heal(amount)
 				if restored > 0.0:
 					DamageNumber.spawn_text(world, seeker.global_position + Vector3.UP * 2.0, "+%d" % roundi(restored))
 		SpellDef.Kind.CURE:
@@ -327,6 +327,13 @@ static func _targets(tree_node: Node) -> Array[Node3D]:
 		var n := node as Node3D
 		if n and n.is_visible_in_tree() and _alive(n):
 			out.append(n)
+	# Confused casters (Grayson 2026-11-12) hit the other Seekers too.
+	var caster := tree_node as Player
+	if caster and caster.status and caster.status.is_confused():
+		for node in Scope.group(tree_node, "player"):
+			var seeker := node as Player
+			if seeker and seeker != caster and not seeker.downed and _alive(seeker):
+				out.append(seeker)
 	return out
 
 
@@ -375,13 +382,21 @@ static func _area_center(player: Node3D, target: Node3D, direction: Vector3, rea
 	return player.global_position + flat * reach * NO_TARGET_REACH
 
 
-static func _party(player: Player, radius: float) -> Array[Player]:
-	var list: Array[Player] = []
+## Seekers in range (each has .health and .status). A confused caster's
+## buffs, heals and cures land on nearby enemies too (Grayson 2026-11-12).
+static func _party(player: Player, radius: float) -> Array:
+	var list: Array = []
 	for node in Scope.group(player, "player"):
 		var seeker := node as Player
 		if seeker and not seeker.health.is_dead() \
 				and seeker.global_position.distance_to(player.global_position) <= radius:
 			list.append(seeker)
+	if player.status.is_confused():
+		for node in Scope.group(player, "enemies"):
+			var enemy := node as Enemy
+			if enemy and not enemy.is_dead() \
+					and enemy.global_position.distance_to(player.global_position) <= radius:
+				list.append(enemy)
 	return list
 
 

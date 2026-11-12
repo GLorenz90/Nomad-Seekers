@@ -36,6 +36,8 @@ var _exp_bar: ProgressBar
 var _level_label: Label
 ## Level-up: a quick flash and PSO-style list of what grew.
 var _flash: ColorRect
+## Confusion (Grayson 2026-11-12): a hazy vignette while it lasts.
+var _haze: TextureRect
 var _gains: Label
 var _gains_tween: Tween
 var _sync_label: Label
@@ -106,9 +108,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_panel.visible = not _panel.visible
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if player == null:
 		return
+	var haze_target := 1.0 if player.status and player.status.is_confused() else 0.0
+	_haze.modulate.a = move_toward(_haze.modulate.a, haze_target, delta * 2.0)
 	var combat := player.combat
 	_hp_bar.max_value = player.health.max_hp
 	_hp_bar.value = player.health.hp
@@ -305,6 +309,26 @@ func _build_status() -> void:
 	_feed.alignment = BoxContainer.ALIGNMENT_END
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_feed)
+
+	_haze = TextureRect.new()
+	_haze.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_haze.stretch_mode = TextureRect.STRETCH_SCALE
+	_haze.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var haze_grad := Gradient.new()
+	haze_grad.set_color(0, Color(0.75, 0.7, 0.9, 0.12))
+	haze_grad.set_color(1, Color(0.55, 0.5, 0.75, 0.85))
+	haze_grad.add_point(0.45, Color(0.7, 0.65, 0.85, 0.35))
+	var haze_tex := GradientTexture2D.new()
+	haze_tex.gradient = haze_grad
+	haze_tex.fill = GradientTexture2D.FILL_RADIAL
+	haze_tex.fill_from = Vector2(0.5, 0.5)
+	haze_tex.fill_to = Vector2(1.0, 0.5)
+	haze_tex.width = 256
+	haze_tex.height = 256
+	_haze.texture = haze_tex
+	_haze.modulate.a = 0.0
+	add_child(_haze)
+	move_child(_haze, 0)
 
 	_flash = ColorRect.new()
 	_flash.set_anchors_preset(Control.PRESET_FULL_RECT)

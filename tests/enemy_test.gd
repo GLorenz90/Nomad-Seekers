@@ -111,7 +111,7 @@ func _run() -> void:
 	_check("Lightning Shocks (stunned)", st.is_active(StatusEffects.Status.SHOCK) and not st.can_act())
 	st.clear_all()
 	st.add_buildup(_hit(st.threshold, DamageInfo.Kind.MAGIC, Element.Type.LIGHT))
-	_check("Light Blinds (half its attacks miss)", st.hit_chance() == 0.5)
+	_check("Light Confuses", st.is_confused())
 	st.clear_all()
 	_player.health.hp = 100.0
 	st.add_buildup(_hit(st.threshold, DamageInfo.Kind.MAGIC, Element.Type.DARK), _player)

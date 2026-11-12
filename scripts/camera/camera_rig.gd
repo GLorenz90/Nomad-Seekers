@@ -91,6 +91,10 @@ var _mouse_switch_accum := 0.0
 @onready var _pitch_pivot: Node3D = $Pitch
 @onready var _spring_arm: SpringArm3D = $Pitch/SpringArm3D
 @onready var camera: Camera3D = $Pitch/SpringArm3D/Camera3D
+## Visual layers this Seeker can't see right now (ConfusionView hides the
+## real enemies and partners behind ghosts). Split-screen panes copy it.
+var hidden_layers := 0
+const BASE_CULL_MASK := 0xFFFFF
 @onready var _marker: Node3D = $LockMarker
 
 
@@ -192,7 +196,7 @@ func _validate_lock() -> void:
 	# The target died or went away: move on to the next closest one (Grayson,
 	# 2026-11-09), or drop the lock when nothing is left in range.
 	if not is_instance_valid(lock_target) or not lock_target.is_inside_tree() \
-			or not lock_target.is_in_group("lockable") or not lock_target.is_visible_in_tree():
+			or not _is_lockable(lock_target) or not lock_target.is_visible_in_tree():
 		var gone := lock_target if is_instance_valid(lock_target) else null
 		# Same rules as pressing lock-on, so it never swings to something
 		# behind you or far off screen.
@@ -228,7 +232,7 @@ func _find_best_target(exclude: Node3D = null) -> Node3D:
 
 	var best: Node3D = null
 	var best_score := INF
-	for node in Scope.group(self, "lockable"):
+	for node in _lock_candidates():
 		var candidate := node as Node3D
 		if candidate == null or candidate == exclude or not candidate.is_visible_in_tree():
 			continue
@@ -261,7 +265,7 @@ func _find_nearest_target(exclude: Node3D = null) -> Node3D:
 	var origin := _player_center()
 	var best: Node3D = null
 	var best_dist := INF
-	for node in Scope.group(self, "lockable"):
+	for node in _lock_candidates():
 		var candidate := node as Node3D
 		if candidate == null or candidate == exclude or not candidate.is_visible_in_tree():
 			continue
@@ -295,7 +299,7 @@ func _switch_target(side: float) -> void:
 	var origin := _player_center()
 	var best: Node3D = null
 	var best_dx := INF
-	for node in Scope.group(self, "lockable"):
+	for node in _lock_candidates():
 		var candidate := node as Node3D
 		if candidate == null or candidate == lock_target or not candidate.is_visible_in_tree():
 			continue
@@ -310,6 +314,29 @@ func _switch_target(side: float) -> void:
 			best = candidate
 	if best:
 		_set_lock(best)
+
+
+## Everything lock-on can pick: the lockable group, plus the other Seekers
+## while this one is confused (Grayson 2026-11-12: friend and foe look alike).
+func _lock_candidates() -> Array[Node]:
+	var list := Scope.group(self, "lockable")
+	if _confused():
+		for node in Scope.group(self, "player"):
+			var seeker := node as Player
+			if seeker and seeker != player and not seeker.downed and not seeker.health.is_dead():
+				list.append(seeker)
+	return list
+
+
+func _is_lockable(node: Node3D) -> bool:
+	if node.is_in_group("lockable"):
+		return true
+	return _confused() and node is Player and node != player and not (node as Player).downed
+
+
+func _confused() -> bool:
+	var seeker := player as Player
+	return seeker != null and seeker.status != null and seeker.status.is_confused()
 
 
 func _has_line_of_sight(from: Vector3, to: Vector3) -> bool:
@@ -339,6 +366,7 @@ func _process(delta: float) -> void:
 	_pitch = clampf(_pitch, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
 	_apply_rotation()
 	_update_marker()
+	camera.cull_mask = BASE_CULL_MASK & ~hidden_layers
 
 
 func _leash_point() -> Vector3:

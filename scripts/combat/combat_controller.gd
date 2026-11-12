@@ -71,6 +71,7 @@ signal hit_landed(target: Node, info: DamageInfo, amount: float)
 enum Hand { OFF, PRIMARY }
 
 const ENEMY_MASK := 4
+const PLAYER_MASK := 2
 const MAX_CHAIN := 3
 ## Streak id for twin (powerstance) attacks, so twins chain into their own steps.
 const TWIN := 2
@@ -1180,6 +1181,7 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   info.damage_type = attack.damage_type if attack.override_damage_type else weapon.damage_type
   info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(cls)
   info.status_power = attack.status_power
+  info.inflicts_status = attack.inflicts_status
   # Sustained ticks count as light hits (no push-back), whatever the button.
   var sustained := hard and weapon.sustained
   info.is_hard = hard and not sustained
@@ -1215,13 +1217,22 @@ func _hitbox_transform_for(attack: AttackData, dir: Vector3) -> Transform3D:
   return Transform3D(Basis.looking_at(dir), origin)
 
 
+## What this Seeker's attacks hit: enemies, plus other Seekers while confused
+## (Grayson 2026-11-12: confused Seekers can hurt their friends).
+func hit_mask() -> int:
+  if _player and _player.status and _player.status.is_confused():
+    return ENEMY_MASK | PLAYER_MASK
+  return ENEMY_MASK
+
+
 func _melee_hits(cur: ActiveAttack) -> void:
   var shape := BoxShape3D.new()
   shape.size = cur.attack.hitbox_size
   var params := PhysicsShapeQueryParameters3D.new()
   params.shape = shape
   params.transform = _hitbox_transform(cur)
-  params.collision_mask = ENEMY_MASK
+  params.collision_mask = hit_mask()
+  params.exclude = [_player.get_rid()]
   for result in get_world_3d().direct_space_state.intersect_shape(params, 16):
     var body: Node = result.collider
     if body in cur.hit:
@@ -1263,7 +1274,7 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
           if tinfo.damage_type == Element.Type.GENERIC:
             tcolor = Color(1.0, 0.85, 0.5)
           var tdir := (CameraRig.get_lock_point(t) - muzzle).normalized()
-          var tp := Projectile.spawn(_player.get_parent(), muzzle, tdir, attack, tinfo, tcolor, _player, self)
+          var tp := Projectile.spawn(_player.get_parent(), muzzle, tdir, attack, tinfo, tcolor, _player, self, hit_mask())
           tp.chain.append(t)
           tp.exclusive = true
         continue
@@ -1283,7 +1294,7 @@ func _fire_projectiles(cur: ActiveAttack) -> void:
         if count > 1:
           offset = lerpf(-0.5, 0.5, float(i) / float(count - 1)) * attack.spread_deg
         dir = aim.rotated(Vector3.UP, deg_to_rad(offset))
-      var p := Projectile.spawn(_player.get_parent(), muzzle, dir, attack, info, color, _player, self)
+      var p := Projectile.spawn(_player.get_parent(), muzzle, dir, attack, info, color, _player, self, hit_mask())
       if attack.projectile_gravity > 0.0:
         p.velocity = _lob_velocity(muzzle, dir, target, attack)  # a fan lands as far out as the target
       if not chain.is_empty():
@@ -1324,6 +1335,18 @@ func _lob_velocity(from: Vector3, dir: Vector3, target: Node3D, attack: AttackDa
   return flat * speed + Vector3.UP * vy
 
 
+## Confused (Grayson 2026-11-12): heals and cures land on nearby enemies too.
+func _support_enemies(attack: AttackData) -> void:
+  for node in Scope.group(self, "enemies"):
+    var enemy := node as Enemy
+    if enemy == null or enemy.is_dead() or enemy.global_position.distance_to(_player.global_position) > SUPPORT_RANGE:
+      continue
+    if attack.support_amount > 0.0:
+      enemy.health.heal(enemy.health.max_hp * attack.support_amount * (1.0 + stats.soul / 200.0))
+    if attack.support == AttackData.Support.CURE:
+      enemy.status.clear_all()
+
+
 ## Heal / Cure (North Star §6): typeless support spells that affect the caster
 ## and any other Seeker within SUPPORT_RANGE. Heal restores a fraction of max HP
 ## that grows with SOL; Cure clears every status (Hard Cure also heals a little).
@@ -1332,6 +1355,8 @@ func _cast_support(cur: ActiveAttack) -> void:
     var attack: AttackData = strike[1]
     if attack.support == AttackData.Support.NONE:
       continue
+    if _player.status.is_confused():
+      _support_enemies(attack)
     for node in Scope.group(self, "player"):
       var seeker := node as Player
       if seeker == null or seeker.global_position.distance_to(_player.global_position) > SUPPORT_RANGE:
