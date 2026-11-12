@@ -121,11 +121,28 @@ func _run() -> void:
 		is_equal_approx(special.damage_mult, sword.normal_attacks[0].damage_mult * 0.5) and special.status_power >= 10.0)
 	var target := _spawn("grub_hound", Vector3(8, 0, -6))
 	await _frames(2)
+	# Weapons never Slow: their Ice goes straight to Freeze (spells keep Slow first).
+	var chill := (load("res://data/weapons/sword.tres") as WeaponData).duplicate() as WeaponData
+	chill.base_name = chill.display_name
+	Loot.apply_tag(chill, SpecialTag.find_line("Chill"), 1)
+	var ice_hit: DamageInfo = _player.combat._make_damage(chill, chill.normal_attacks[0], false, 1.0)
+	_check("an Ice weapon's hit builds Freeze, not Slow", ice_hit.damage_type == Element.Type.ICE
+		and ice_hit.inflicts_status == S.FREEZE)
+	ice_hit.amount = target.status.threshold
+	target.status.add_buildup(ice_hit)
+	_check("and freezes without slowing first", target.status.is_active(S.FREEZE) and not target.status.is_active(S.SLOW))
+	target.status.clear_all()
+	var spell_ice := DamageInfo.new()
+	spell_ice.amount = target.status.threshold
+	spell_ice.damage_type = Element.Type.ICE
+	target.status.add_buildup(spell_ice)
+	_check("other Ice (spells) still Slows first", target.status.is_active(S.SLOW) and not target.status.is_active(S.FREEZE))
+	target.status.clear_all()
 	var info := DamageInfo.new()
 	info.amount = target.status.threshold
 	info.inflicts_status = S.STUN
 	target.status.add_buildup(info)
-	_check("Stun buildup (traps) Stuns an enemy for 5 s",
+	_check("Stun buildup (the Jarring line, traps) Stuns an enemy for 5 s",
 		target.status.is_active(S.STUN) and is_equal_approx(float(target.status.active[S.STUN]), 5.0))
 	target.status.clear_all()
 	var light := DamageInfo.new()

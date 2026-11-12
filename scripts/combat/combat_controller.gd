@@ -1191,6 +1191,10 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(cls)
   info.status_power = attack.status_power
   info.inflicts_status = attack.inflicts_status
+  # Weapons never Slow (Grayson 2026-11-12): their Ice builds Freeze directly.
+  # Spells keep Slow then Freeze.
+  if info.damage_type == Element.Type.ICE and info.inflicts_status < 0 and attack.spell == null:
+    info.inflicts_status = StatusEffects.Status.FREEZE
   # Sustained ticks count as light hits (no push-back), whatever the button.
   var sustained := hard and weapon.sustained
   info.is_hard = hard and not sustained
@@ -1439,6 +1443,7 @@ func _burst(target: Node, info: DamageInfo, amount: float) -> void:
     blast.accuracy = -1.0  # a burst never misses, like any explosion
     blast.source = _player
     blast.weapon = info.weapon
+    blast.inflicts_status = info.inflicts_status
     blast.hit_position = body.global_position + Vector3.UP * 1.0
     var dealt := HitResolver.apply(body, blast, _player)
     hit_landed.emit(body, blast, dealt)

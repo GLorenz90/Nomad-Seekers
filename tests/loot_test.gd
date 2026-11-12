@@ -145,23 +145,17 @@ func _run() -> void:
 	Loot.apply_tag(leech_sword, _line("Leech"), 0)
 	_check("element-less lines keep the weapon's own damage type", leech_sword.damage_type == Element.Type.GENERIC
 		and leech_sword.get_attack(1, false, 0, true).damage_type == Element.Type.GENERIC)
-	_check("18 lines: 6 status, 6 burst, 6 element-less", SpecialTag.all_lines().size() == 18
+	_check("19 lines: 6 status, 6 burst, 7 element-less", SpecialTag.all_lines().size() == 19
 		and SpecialTag.all_lines().filter(func(l): return l.effect == SpecialTag.Effect.STATUS).size() == 6
 		and SpecialTag.all_lines().filter(func(l): return l.effect == SpecialTag.Effect.BURST).size() == 6)
-	# A weapon tagged before the rework (old Bind line, Nature) moves to the new line.
-	var old := _w("sword").duplicate() as WeaponData
-	old.base_name = "Sword"
-	var old_tag := SpecialTag.new()
-	old_tag.line_name = "Bind"
-	old_tag.tier_names = PackedStringArray(["Bind", "Hold", "Seize", "Arrest"])
-	old_tag.element = Element.Type.NATURE
-	old.tag = old_tag
-	old.tag_tier = 2
-	old.damage_type = Element.Type.NATURE
-	old.display_name = "Seize Sword"
-	Loot.refresh_tag(old)
-	_check("an old Bind weapon becomes Static, Lightning (%s)" % old.display_name,
-		old.tag.line_name == "Static" and old.display_name == "Shock Sword" and old.damage_type == Element.Type.LIGHTNING)
+	var jar := Loot.make_item(_w("sword"), rng)
+	Loot.apply_tag(jar, _line("Jarring"), 2)
+	var jar_special := jar.get_attack(1, false, 0, true)
+	_check("the stun line (\"%s\") keeps the weapon's type; its special hits for half and builds Stun" % jar.display_name,
+		jar.display_name == "Concussive Sword" and jar.damage_type == Element.Type.GENERIC
+		and jar_special.damage_type == Element.Type.GENERIC
+		and is_equal_approx(jar_special.damage_mult, jar.normal_attacks[0].damage_mult * 0.5)
+		and jar_special.inflicts_status == StatusEffects.Status.STUN and jar_special.status_power >= 10.0)
 
 	# Monster-type bonus: +30% vs Beast.
 	var hound := _spawn("grub_hound", ARENA + Vector3(0, 0, -6))

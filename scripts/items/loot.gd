@@ -193,22 +193,6 @@ static func apply_tag(w: WeaponData, line: SpecialTag, tier: int) -> void:
 		w.display_name = "%s %s" % [line.name_for(w.tag_tier), w.base_name if w.base_name != "" else w.display_name]
 
 
-## Weapons from before the 2026-11-12 tag rework carry the old line: swap in
-## the current one (same tier, renamed lines followed), which also renames the
-## weapon and sets its element. Safe to call on any weapon.
-static func refresh_tag(w: WeaponData) -> void:
-	if w == null or w.tag == null:
-		return
-	var line := SpecialTag.find_line(w.tag.line_name)
-	if line == null:
-		return
-	if line.line_name == w.tag.line_name and line.effect == w.tag.effect and line.tier_names == w.tag.tier_names:
-		return  # already current
-	var tier := w.tag_tier
-	apply_tag(w, line, tier)
-	w.reset_special()
-
-
 ## "Flame Sword  [Burning: Fire damage...]  +15% vs Beast"
 static func describe(w: WeaponData) -> String:
 	var parts := PackedStringArray()

@@ -116,11 +116,6 @@ func get_special() -> AttackData:
 var _tag_special: AttackData
 
 
-## Forget the cached tag special (after the tag changes).
-func reset_special() -> void:
-	_tag_special = null
-
-
 func can_be_used_by(job: String) -> bool:
 	return jobs.has(job)
 

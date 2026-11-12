@@ -9,18 +9,18 @@ extends Resource
 ## - BURST (one per element): the weapon deals that element; the special hits
 ##   x1.3 and bursts on the target, hitting a couple of enemies nearby, for
 ##   more LP.
-## - Element-less lines (instant kill, HP / LP / EXP steal, HP cut, Charge):
-##   the weapon keeps its own damage type.
+## - Element-less lines (stun, instant kill, HP / LP / EXP steal, HP cut,
+##   Charge): the weapon keeps its own damage type. The stun line's special
+##   hits for half and builds Stun, like a status line.
+## Weapons never Slow: their Ice builds Freeze directly (CombatController).
 
-enum Effect { STATUS, BURST, INSTANT_KILL, DRAIN_HP, STEAL_LP, STEAL_EXP, CUT_HP, CHARGE }
+enum Effect { STATUS, BURST, INSTANT_KILL, DRAIN_HP, STEAL_LP, STEAL_EXP, CUT_HP, CHARGE, STUN }
 
 @export var line_name := ""
 @export var tier_names := PackedStringArray()
 @export var effect: Effect = Effect.STATUS
 ## STATUS and BURST lines: their element (the weapon's damage type).
 @export var element: Element.Type = Element.Type.GENERIC
-## Left from the Bind line (2026-11-12, morning); unused now.
-@export var status := -1
 
 ## Per-tier strengths (index = tier).
 ## STATUS specials hit for half damage, so their buildup power is doubled.
@@ -47,13 +47,6 @@ const ELEMENT_STATUS := {Element.Type.FIRE: "Burn", Element.Type.ICE: "Freeze",
 	Element.Type.LIGHTNING: "Shock", Element.Type.NATURE: "Poison", Element.Type.LIGHT: "Confuse",
 	Element.Type.DARK: "Drain"}
 
-## Lines renamed on 2026-11-12, old name -> new, so weapons in older saves
-## (and the rares) pick up the new line. "Heat" kept its name.
-const RENAMED := {"Ice": "Chill", "Shock": "Spark", "Bind": "Static", "Panic": "Dazzle",
-	"Dim": "Grim", "Draw": "Leech", "Mind": "Lucid", "Master's": "Mentor's",
-	"Devil's": "Rending", "Charge": "Tithe"}
-
-
 static func all_lines() -> Array[SpecialTag]:
 	var lines: Array[SpecialTag] = []
 	# Status lines: half-damage special, strong status.
@@ -71,6 +64,7 @@ static func all_lines() -> Array[SpecialTag]:
 	lines.append(_line("Glint", ["Glint", "Gleam", "Radiant", "Sunburst"], Effect.BURST, Element.Type.LIGHT))
 	lines.append(_line("Shade", ["Shade", "Dusk", "Void", "Abyss"], Effect.BURST, Element.Type.DARK))
 	# Element-less lines.
+	lines.append(_line("Jarring", ["Jarring", "Staggering", "Concussive", "Pulverizing"], Effect.STUN))
 	lines.append(_line("Grim", ["Grim", "Doom", "Reaper", "Oblivion"], Effect.INSTANT_KILL))
 	lines.append(_line("Leech", ["Leech", "Siphon", "Vampire", "Sanguine"], Effect.DRAIN_HP))
 	lines.append(_line("Lucid", ["Lucid", "Focus", "Insight", "Epiphany"], Effect.STEAL_LP))
@@ -80,11 +74,10 @@ static func all_lines() -> Array[SpecialTag]:
 	return lines
 
 
-## The current line with this name (or its name before 2026-11-12).
+## The line with this name, or null.
 static func find_line(name: String) -> SpecialTag:
-	var wanted: String = RENAMED.get(name, name)
 	for line in all_lines():
-		if line.line_name == wanted:
+		if line.line_name == name:
 			return line
 	return null
 
@@ -118,6 +111,8 @@ func describe(tier: int) -> String:
 	match effect:
 		Effect.STATUS:
 			return "half damage, strong %s" % ELEMENT_STATUS.get(element, "status")
+		Effect.STUN:
+			return "half damage, strong Stun"
 		Effect.BURST:
 			return "%s burst: x%.1f, hits %d nearby" % [Element.name_of(element), BURST_SPECIAL_DAMAGE, BURST_EXTRA_TARGETS]
 		Effect.INSTANT_KILL:
@@ -152,6 +147,11 @@ func make_special(weapon: WeaponData) -> AttackData:
 			a.lp_cost += 4.0 + tier * 2.0
 			a.override_damage_type = true
 			a.damage_type = element
+			a.status_power = STATUS_POWER[mini(tier, 3)]
+		Effect.STUN:
+			a.damage_mult *= STATUS_SPECIAL_DAMAGE
+			a.lp_cost += 4.0 + tier * 2.0
+			a.inflicts_status = StatusEffects.Status.STUN
 			a.status_power = STATUS_POWER[mini(tier, 3)]
 		Effect.BURST:
 			a.damage_mult *= BURST_SPECIAL_DAMAGE
