@@ -43,13 +43,16 @@ const BONUS_CHANCE := 0.4
 const RARE_CHANCE := 0.04
 
 
+## The untagged base weapons that drops and shops roll from. Tagged files in
+## the folder (the Frost Sword, an Ice-tagged Sword kept for the test
+## palettes) aren't bases: a tag on top of them would stack two tags.
 static func base_weapons() -> Array[WeaponData]:
 	var list: Array[WeaponData] = []
 	for file in DirAccess.get_files_at(WEAPON_DIR):
 		file = file.trim_suffix(".remap")
 		if file.ends_with(".tres"):
 			var w := load(WEAPON_DIR + file) as WeaponData
-			if w:
+			if w and w.tag == null:
 				list.append(w)
 	return list
 
