@@ -79,10 +79,10 @@ window_close = 1.0333333333333334
 lunge_distance = 0.8
 hitbox_size = Vector3(1.2, 1.6, 1.8)
 
-[sub_resource type="Resource" id="Resource_jbcei"]
+[sub_resource type="Resource" id="Resource_k45v3"]
 script = ExtResource("4_jvmc7")
-line_name = "Ice"
-tier_names = PackedStringArray("Ice", "Frost", "Freeze", "Blizzard")
+line_name = "Chill"
+tier_names = PackedStringArray("Chill", "Frost", "Rime", "Glacial")
 element = 2
 
 [resource]
@@ -92,7 +92,7 @@ weapon_type = &"sword"
 base_damage = 20.0
 damage_type = 2
 jobs = PackedStringArray("S", "R", "I")
-tag = SubResource("Resource_jbcei")
+tag = SubResource("Resource_k45v3")
 tag_tier = 1
 base_name = "Sword"
 normal_attacks = Array[ExtResource("1_k45v3")]([SubResource("Resource_85v5n"), SubResource("Resource_iuth7"), SubResource("Resource_2d6sf")])

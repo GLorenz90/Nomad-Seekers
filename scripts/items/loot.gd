@@ -180,6 +180,11 @@ static func roll_tier(tiers: int, rng: RandomNumberGenerator) -> int:
 
 
 static func apply_tag(w: WeaponData, line: SpecialTag, tier: int) -> void:
+	if w.tag and w.tag.sets_weapon_element() and not line.sets_weapon_element():
+		# Replacing an elemental tag with an element-less one: back to the base's type.
+		var base_path := WEAPON_DIR + String(w.weapon_type) + ".tres"
+		if ResourceLoader.exists(base_path):
+			w.damage_type = (load(base_path) as WeaponData).damage_type
 	w.tag = line
 	w.tag_tier = clampi(tier, 0, line.tier_count() - 1)
 	if line.sets_weapon_element():

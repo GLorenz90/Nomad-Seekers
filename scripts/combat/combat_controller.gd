@@ -906,9 +906,18 @@ func predict_targets(hand: int) -> Array[Node3D]:
   if attack.spell:
     return _predict_spell(attack, hand)
   var aim := _choose_aim(attack)
+  var hits: Array[Node3D]
   if attack.is_projectile:
-    return _predict_projectile(attack, aim[0], aim[1])
-  return _predict_melee(attack, aim[1])
+    hits = _predict_projectile(attack, aim[0], aim[1])
+  else:
+    hits = _predict_melee(attack, aim[1])
+  # A burst special also marks who the burst would reach.
+  if special and weapon.tag and weapon.tag.effect == SpecialTag.Effect.BURST:
+    for t in hits.duplicate():
+      for extra in burst_targets(t):
+        if not extra in hits:
+          hits.append(extra)
+  return hits
 
 
 ## Spells: who the cast would hit, using the same target rules as SpellCaster.
@@ -1182,6 +1191,10 @@ func _make_damage(weapon: WeaponData, attack: AttackData, hard: bool, scale: flo
   info.kind = DamageInfo.Kind.RANGED if attack.ranged_hit else DamageInfo.kind_for(cls)
   info.status_power = attack.status_power
   info.inflicts_status = attack.inflicts_status
+  # Weapons never Slow (Grayson 2026-11-12): their Ice builds Freeze directly.
+  # Spells keep Slow then Freeze.
+  if info.damage_type == Element.Type.ICE and info.inflicts_status < 0 and attack.spell == null:
+    info.inflicts_status = StatusEffects.Status.FREEZE
   # Sustained ticks count as light hits (no push-back), whatever the button.
   var sustained := hard and weapon.sustained
   info.is_hard = hard and not sustained
@@ -1387,6 +1400,8 @@ func _apply_tag_effect(target: Node, info: DamageInfo, amount: float) -> void:
   var health := Health.find(target)
   var boss := enemy != null and enemy.data.boss
   match tag.effect:
+    SpecialTag.Effect.BURST:
+      _burst(target, info, amount)
     SpecialTag.Effect.INSTANT_KILL:
       if health and not health.is_dead() and not boss and randf() < SpecialTag.KILL_CHANCE[tier]:
         var kill := DamageInfo.new()
@@ -1409,6 +1424,50 @@ func _apply_tag_effect(target: Node, info: DamageInfo, amount: float) -> void:
         cut.source = _player
         health.take_damage(cut)
         _player.health.hp = maxf(_player.health.hp - _player.health.hp * 0.1, 1.0)
+
+
+## Burst lines (2026-11-12): the special bursts on the target, hitting up to
+## BURST_EXTRA_TARGETS more within BURST_RADIUS for the damage the target took.
+func _burst(target: Node, info: DamageInfo, amount: float) -> void:
+  var center := target as Node3D
+  if center == null or not center.is_inside_tree():
+    return
+  var at := center.global_position
+  SpellFx.burst(center.get_parent(), at + Vector3.UP * 0.8, SpecialTag.BURST_RADIUS,
+    Element.color_of(info.damage_type), 0.35)
+  for body in burst_targets(center):
+    var blast := DamageInfo.new()
+    blast.amount = amount
+    blast.damage_type = info.damage_type
+    blast.kind = info.kind
+    blast.accuracy = -1.0  # a burst never misses, like any explosion
+    blast.source = _player
+    blast.weapon = info.weapon
+    blast.inflicts_status = info.inflicts_status
+    blast.hit_position = body.global_position + Vector3.UP * 1.0
+    var dealt := HitResolver.apply(body, blast, _player)
+    hit_landed.emit(body, blast, dealt)
+
+
+## Who a burst on this target would also reach: the nearest others in range
+## (other Seekers too while confused).
+func burst_targets(center: Node3D) -> Array[Node3D]:
+  var found: Array[Node3D] = []
+  var pool: Array = Scope.group(self, "enemies")
+  if _player.status and _player.status.is_confused():
+    pool += Scope.group(self, "player").filter(func(p): return p != _player)
+  pool.sort_custom(func(x, y): return (x as Node3D).global_position.distance_squared_to(center.global_position) \
+    < (y as Node3D).global_position.distance_squared_to(center.global_position))
+  for node in pool:
+    var body := node as Node3D
+    if body == null or body == center or found.size() >= SpecialTag.BURST_EXTRA_TARGETS:
+      continue
+    var health := Health.find(body)
+    if health == null or health.is_dead():
+      continue
+    if body.global_position.distance_to(center.global_position) <= SpecialTag.BURST_RADIUS:
+      found.append(body)
+  return found
 
 
 func _regen_lp(delta: float) -> void:

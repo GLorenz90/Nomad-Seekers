@@ -235,7 +235,8 @@ func _dervish_blades() -> WeaponData:
 	return w
 
 
-## A Sword with the Ice line's second tier ("Frost"), like any found one
+## A Sword with the Chill line's second tier ("Frost"; the Ice line until the
+## 2026-11-12 rename), like any found one
 ## (2026-11-12: it used to be its own base weapon, so drops could tag it again,
 ## e.g. "Bind Frost Sword"). Kept as a file for the test palettes; Loot skips
 ## tagged files when rolling drops and stock.
@@ -244,7 +245,7 @@ func _frost_sword() -> WeaponData:
 	w.base_name = w.display_name
 	w.mesh_color = Color(0.6, 0.85, 1.0)
 	for line in SpecialTag.all_lines():
-		if line.line_name == "Ice":
+		if line.line_name == "Chill":
 			Loot.apply_tag(w, line, 1)
 	return w
 
@@ -841,12 +842,12 @@ func _support_attack(name: String, kind: AttackData.Support, amount: float, lp: 
 func _rares() -> Array[WeaponData]:
 	var specs := [
 		["Emberfang", "sword", "Heat", 3, EnemyData.EnemyType.BEAST, 0.2, [0, 1]],
-		["Glacier Maw", "great_sword", "Ice", 3, EnemyData.EnemyType.ALCHEMIC, 0.2, [5, 7]],
-		["Stormcaller", "rifle", "Shock", 3, EnemyData.EnemyType.SYNTHETIC, 0.25, [6, 2]],
-		["Gravesong", "dagger", "Dim", 3, EnemyData.EnemyType.LIGHT, 0.2, [9, 10]],
-		["Lifeleech Coil", "flail", "Draw", 3, EnemyData.EnemyType.MUTATED, 0.2, [3, 8]],
-		["Lumen Edge", "bladestaff", "Panic", 3, EnemyData.EnemyType.DARK, 0.25, [11, 4]],
-		["Kingmaker", "halberd", "Master's", 2, EnemyData.EnemyType.BEAST, 0.15, [2, 10, 9]],
+		["Glacier Maw", "great_sword", "Chill", 3, EnemyData.EnemyType.ALCHEMIC, 0.2, [5, 7]],
+		["Stormcaller", "rifle", "Spark", 3, EnemyData.EnemyType.SYNTHETIC, 0.25, [6, 2]],
+		["Gravesong", "dagger", "Grim", 3, EnemyData.EnemyType.LIGHT, 0.2, [9, 10]],
+		["Lifeleech Coil", "flail", "Leech", 3, EnemyData.EnemyType.MUTATED, 0.2, [3, 8]],
+		["Lumen Edge", "bladestaff", "Dazzle", 3, EnemyData.EnemyType.DARK, 0.25, [11, 4]],
+		["Kingmaker", "halberd", "Mentor's", 2, EnemyData.EnemyType.BEAST, 0.15, [2, 10, 9]],
 	]
 	var lines := {}
 	for line in SpecialTag.all_lines():

@@ -80,11 +80,11 @@ window_close = 1.1
 reach = 1.6
 hitbox_size = Vector3(3, 1.6, 2.4)
 
-[sub_resource type="Resource" id="Resource_vnamd"]
+[sub_resource type="Resource" id="Resource_mvmj6"]
 script = ExtResource("4_ftju6")
-line_name = "Master's"
-tier_names = PackedStringArray("Master\'s", "Lord\'s", "King\'s")
-effect = 4
+line_name = "Mentor's"
+tier_names = PackedStringArray("Mentor\'s", "Sage\'s", "Oracle\'s")
+effect = 5
 
 [resource]
 script = ExtResource("2_451cw")
@@ -93,7 +93,7 @@ weapon_type = &"halberd"
 two_handed = true
 base_damage = 33.800000000000004
 jobs = PackedStringArray("S", "I")
-tag = SubResource("Resource_vnamd")
+tag = SubResource("Resource_mvmj6")
 tag_tier = 2
 type_bonus = {
 0: 0.15

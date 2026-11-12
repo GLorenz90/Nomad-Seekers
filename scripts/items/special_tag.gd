@@ -1,22 +1,36 @@
 class_name SpecialTag
 extends Resource
-## A weapon special tag line (North Star §5.2, PSO's special list). Each line
-## has tiers; later names in the line are stronger versions of the same effect.
-## The tag unlocks the weapon's RT special. Elemental lines also give the
-## weapon that damage type. Tag names stay PSO's (they're generic words).
+## A weapon special tag line (North Star §5.2). Each line has tiers; later
+## names are stronger versions of the same effect. The tag gives the weapon
+## its RT special. Reworked 2026-11-12 (Grayson): our own names, and three
+## kinds of line:
+## - STATUS (one per element): the weapon deals that element; the special
+##   hits for half damage but builds the element's status hard.
+## - BURST (one per element): the weapon deals that element; the special hits
+##   x1.3 and bursts on the target, hitting a couple of enemies nearby, for
+##   more LP.
+## - Element-less lines (stun, instant kill, HP / LP / EXP steal, HP cut,
+##   Charge): the weapon keeps its own damage type. The stun line's special
+##   hits for half and builds Stun, like a status line.
+## Weapons never Slow: their Ice builds Freeze directly (CombatController).
 
-enum Effect { ELEMENT, INSTANT_KILL, DRAIN_HP, STEAL_LP, STEAL_EXP, CUT_HP, CHARGE, STATUS }
+enum Effect { STATUS, BURST, INSTANT_KILL, DRAIN_HP, STEAL_LP, STEAL_EXP, CUT_HP, CHARGE, STUN }
 
 @export var line_name := ""
 @export var tier_names := PackedStringArray()
-@export var effect: Effect = Effect.ELEMENT
-## ELEMENT lines: the element (and status) they bring.
+@export var effect: Effect = Effect.STATUS
+## STATUS and BURST lines: their element (the weapon's damage type).
 @export var element: Element.Type = Element.Type.GENERIC
-## STATUS lines: the status their special builds (StatusEffects.Status).
-@export var status := -1
 
 ## Per-tier strengths (index = tier).
-const STATUS_POWER := [3.0, 5.0, 7.0, 9.0]
+## STATUS specials hit for half damage, so their buildup power is doubled.
+const STATUS_SPECIAL_DAMAGE := 0.5
+const STATUS_POWER := [6.0, 10.0, 14.0, 18.0]
+const BURST_SPECIAL_DAMAGE := 1.3
+## The burst: radius (m) and how many other enemies it reaches, at the
+## damage dealt to the target.
+const BURST_RADIUS := 3.0
+const BURST_EXTRA_TARGETS := 2
 const KILL_CHANCE := [0.05, 0.1, 0.15, 0.2]
 const DRAIN_FRACTION := [0.1, 0.15, 0.2, 0.25]
 const LP_FRACTION := [0.1, 0.15, 0.2, 0.25]
@@ -28,24 +42,44 @@ const CHARGE_ORO := 100
 const CHARGE_LP := 30.0
 const CHARGE_HP_FRACTION := 0.15
 
+## Each element's status, for descriptions.
+const ELEMENT_STATUS := {Element.Type.FIRE: "Burn", Element.Type.ICE: "Freeze",
+	Element.Type.LIGHTNING: "Shock", Element.Type.NATURE: "Poison", Element.Type.LIGHT: "Confuse",
+	Element.Type.DARK: "Drain"}
 
 static func all_lines() -> Array[SpecialTag]:
 	var lines: Array[SpecialTag] = []
-	lines.append(_line("Heat", ["Heat", "Fire", "Flame", "Burning"], Effect.ELEMENT, Element.Type.FIRE))
-	lines.append(_line("Ice", ["Ice", "Frost", "Freeze", "Blizzard"], Effect.ELEMENT, Element.Type.ICE))
-	lines.append(_line("Shock", ["Shock", "Thunder", "Storm", "Tempest"], Effect.ELEMENT, Element.Type.LIGHTNING))
-	# Bind stuns (Grayson 2026-11-12, PSO's paralysis); the weapon keeps its element.
-	var bind := _line("Bind", ["Bind", "Hold", "Seize", "Arrest"], Effect.STATUS)
-	bind.status = StatusEffects.Status.STUN
-	lines.append(bind)
-	lines.append(_line("Panic", ["Panic", "Riot", "Havoc", "Chaos"], Effect.ELEMENT, Element.Type.LIGHT))
-	lines.append(_line("Dim", ["Dim", "Shadow", "Dark", "Hell"], Effect.INSTANT_KILL, Element.Type.DARK))
-	lines.append(_line("Draw", ["Draw", "Drain", "Fill", "Gush"], Effect.DRAIN_HP, Element.Type.DARK))
-	lines.append(_line("Mind", ["Mind", "Soul", "Psyche", "Geist"], Effect.STEAL_LP))
-	lines.append(_line("Master's", ["Master's", "Lord's", "King's"], Effect.STEAL_EXP))
-	lines.append(_line("Devil's", ["Devil's", "Demon's"], Effect.CUT_HP))
-	lines.append(_line("Charge", ["Charge", "Spirit", "Berserk"], Effect.CHARGE))
+	# Status lines: half-damage special, strong status.
+	lines.append(_line("Smolder", ["Smolder", "Scorch", "Sear", "Immolate"], Effect.STATUS, Element.Type.FIRE))
+	lines.append(_line("Chill", ["Chill", "Frost", "Rime", "Glacial"], Effect.STATUS, Element.Type.ICE))
+	lines.append(_line("Static", ["Static", "Jolt", "Shock", "Overload"], Effect.STATUS, Element.Type.LIGHTNING))
+	lines.append(_line("Toxic", ["Toxic", "Venom", "Blight", "Plague"], Effect.STATUS, Element.Type.NATURE))
+	lines.append(_line("Dazzle", ["Dazzle", "Daze", "Bewilder", "Delirium"], Effect.STATUS, Element.Type.LIGHT))
+	lines.append(_line("Gloom", ["Gloom", "Wither", "Decay", "Entropy"], Effect.STATUS, Element.Type.DARK))
+	# Burst lines: x1.3 special that bursts onto nearby enemies.
+	lines.append(_line("Heat", ["Heat", "Fire", "Flame", "Inferno"], Effect.BURST, Element.Type.FIRE))
+	lines.append(_line("Shard", ["Shard", "Hail", "Shatter", "Avalanche"], Effect.BURST, Element.Type.ICE))
+	lines.append(_line("Spark", ["Spark", "Bolt", "Thunder", "Skyfall"], Effect.BURST, Element.Type.LIGHTNING))
+	lines.append(_line("Thorn", ["Thorn", "Bramble", "Briar", "Overgrowth"], Effect.BURST, Element.Type.NATURE))
+	lines.append(_line("Glint", ["Glint", "Gleam", "Radiant", "Sunburst"], Effect.BURST, Element.Type.LIGHT))
+	lines.append(_line("Shade", ["Shade", "Dusk", "Void", "Abyss"], Effect.BURST, Element.Type.DARK))
+	# Element-less lines.
+	lines.append(_line("Jarring", ["Jarring", "Staggering", "Concussive", "Pulverizing"], Effect.STUN))
+	lines.append(_line("Grim", ["Grim", "Doom", "Reaper", "Oblivion"], Effect.INSTANT_KILL))
+	lines.append(_line("Leech", ["Leech", "Siphon", "Vampire", "Sanguine"], Effect.DRAIN_HP))
+	lines.append(_line("Lucid", ["Lucid", "Focus", "Insight", "Epiphany"], Effect.STEAL_LP))
+	lines.append(_line("Mentor's", ["Mentor's", "Sage's", "Oracle's"], Effect.STEAL_EXP))
+	lines.append(_line("Rending", ["Rending", "Sundering"], Effect.CUT_HP))
+	lines.append(_line("Tithe", ["Tithe", "Zeal", "Frenzy"], Effect.CHARGE))
 	return lines
+
+
+## The line with this name, or null.
+static func find_line(name: String) -> SpecialTag:
+	for line in all_lines():
+		if line.line_name == name:
+			return line
+	return null
 
 
 static func _line(name: String, tiers: Array, effect_kind: Effect,
@@ -66,21 +100,21 @@ func name_for(tier: int) -> String:
 	return tier_names[clampi(tier, 0, tier_names.size() - 1)]
 
 
-## Only elemental lines change the weapon's damage type. Dim and Draw are
-## listed as Dark in North Star but only their special carries Dark.
+## Status and burst lines make the weapon deal their element.
 func sets_weapon_element() -> bool:
-	return effect == Effect.ELEMENT
+	return effect == Effect.STATUS or effect == Effect.BURST
 
 
 ## Short player-facing description of what the RT special does at this tier.
 func describe(tier: int) -> String:
 	tier = clampi(tier, 0, tier_count() - 1)
 	match effect:
-		Effect.ELEMENT:
-			return "%s damage, strong %s" % [Element.name_of(element),
-				["Burn", "Freeze", "Shock", "Poison", "Confuse", "Drain"][int(element) - 1]]
 		Effect.STATUS:
-			return "strong %s" % String(StatusEffects.Status.keys()[status]).capitalize()
+			return "half damage, strong %s" % ELEMENT_STATUS.get(element, "status")
+		Effect.STUN:
+			return "half damage, strong Stun"
+		Effect.BURST:
+			return "%s burst: x%.1f, hits %d nearby" % [Element.name_of(element), BURST_SPECIAL_DAMAGE, BURST_EXTRA_TARGETS]
 		Effect.INSTANT_KILL:
 			return "%d%% instant kill (not bosses)" % roundi(KILL_CHANCE[tier] * 100.0)
 		Effect.DRAIN_HP:
@@ -102,22 +136,32 @@ func describe(tier: int) -> String:
 
 
 ## Builds the RT special for a weapon carrying this tag: its first attack,
-## a bit stronger, costing LP (special attacks always cost some LP).
+## changed by the line, costing LP (special attacks always cost some LP).
 func make_special(weapon: WeaponData) -> AttackData:
 	var a := (weapon.normal_attacks[0] as AttackData).duplicate() as AttackData
 	var tier := clampi(weapon.tag_tier, 0, tier_count() - 1)
 	a.display_name = "%s Special" % name_for(tier)
-	a.damage_mult *= 1.3
-	a.lp_cost += 4.0 + tier * 2.0
-	if effect == Effect.ELEMENT or effect == Effect.INSTANT_KILL or effect == Effect.DRAIN_HP:
-		if element != Element.Type.GENERIC:
+	match effect:
+		Effect.STATUS:
+			a.damage_mult *= STATUS_SPECIAL_DAMAGE
+			a.lp_cost += 4.0 + tier * 2.0
 			a.override_damage_type = true
 			a.damage_type = element
-		a.status_power = STATUS_POWER[mini(tier, 3)]
-	if effect == Effect.STATUS:
-		a.inflicts_status = status
-		a.status_power = STATUS_POWER[mini(tier, 3)]
-	if effect == Effect.CHARGE:
-		a.damage_mult *= 3.0 / 1.3
-		a.lp_cost = 4.0
+			a.status_power = STATUS_POWER[mini(tier, 3)]
+		Effect.STUN:
+			a.damage_mult *= STATUS_SPECIAL_DAMAGE
+			a.lp_cost += 4.0 + tier * 2.0
+			a.inflicts_status = StatusEffects.Status.STUN
+			a.status_power = STATUS_POWER[mini(tier, 3)]
+		Effect.BURST:
+			a.damage_mult *= BURST_SPECIAL_DAMAGE
+			a.lp_cost += 8.0 + tier * 4.0  # a bigger chunk of LP than other specials
+			a.override_damage_type = true
+			a.damage_type = element
+		Effect.CHARGE:
+			a.damage_mult *= 3.0
+			a.lp_cost = 4.0
+		_:
+			a.damage_mult *= 1.3
+			a.lp_cost += 4.0 + tier * 2.0
 	return a
