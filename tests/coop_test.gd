@@ -111,7 +111,8 @@ func _run() -> void:
 	# --- Rings and plates ------------------------------------------------------------------------
 	_check("each Seeker's target rings are on their own layer",
 		_main.kits[0].markers.render_layers == SeekerPane.marker_layer(0)
-		and _main.kits[1].markers.render_layers == SeekerPane.marker_layer(1))
+		and _main.kits[1].markers.render_layers == SeekerPane.marker_layer(1)
+		and _main.kits[1].markers.dark_vision.layers == SeekerPane.marker_layer(1))
 	_check("and each pane hides the other Seeker's rings",
 		split.panes[0].camera.cull_mask & SeekerPane.marker_layer(1) == 0
 		and split.panes[1].camera.cull_mask & SeekerPane.marker_layer(0) == 0

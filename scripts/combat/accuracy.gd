@@ -12,6 +12,8 @@ extends RefCounted
 ##   BASE (60) is the kindness: PSO has none, and needs ATA in the hundreds.
 ##   Streak bonus: +4 per hit already landed in this combo, up to +12.
 ## Spells never miss (DamageInfo.accuracy < 0).
+## Darkness: targets beyond the attacker's sight get `dodge` extra points
+## (RoomHazard.dark_dodge, 25), taken off the hit chance before clamping.
 
 const BASE := 60.0
 const EVA_WEIGHT := 0.2
@@ -44,7 +46,8 @@ static func streak_bonus(hits_landed: int) -> float:
 
 
 ## Hit chance in percent for a hit against a defender with this EVA.
-static func hit_percent(info: DamageInfo, eva: float, defender_status: StatusEffects = null) -> float:
+static func hit_percent(info: DamageInfo, eva: float, defender_status: StatusEffects = null,
+		dodge := 0.0) -> float:
 	if info.accuracy < 0.0:
 		return 100.0
 	var eff_eva := eva
@@ -54,13 +57,14 @@ static func hit_percent(info: DamageInfo, eva: float, defender_status: StatusEff
 		elif defender_status.is_active(StatusEffects.Status.SHOCK) \
 				or defender_status.is_active(StatusEffects.Status.STUN):
 			eff_eva *= STUNNED_EVA
-	var chance := BASE + info.accuracy - eff_eva * EVA_WEIGHT + info.hit_bonus
+	var chance := BASE + info.accuracy - eff_eva * EVA_WEIGHT + info.hit_bonus - dodge
 	return clampf(chance, MIN_CHANCE, MAX_CHANCE)
 
 
 ## Rolls the hit. On a miss, marks the info and shows "Miss" at the target.
-static func roll(info: DamageInfo, eva: float, defender: Node3D, defender_status: StatusEffects = null) -> bool:
-	if randf() * 100.0 < hit_percent(info, eva, defender_status):
+static func roll(info: DamageInfo, eva: float, defender: Node3D, defender_status: StatusEffects = null,
+		dodge := 0.0) -> bool:
+	if randf() * 100.0 < hit_percent(info, eva, defender_status, dodge):
 		return true
 	info.missed = true
 	if defender and defender.is_inside_tree():

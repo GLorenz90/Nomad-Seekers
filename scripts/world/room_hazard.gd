@@ -8,8 +8,10 @@ extends Node3D
 ## - POISON_MIST: drains 2% of max HP a second from anyone inside, Goluman
 ##   included (Grayson 2026-11-09: it isn't the Poisoned status). Like PSO's
 ##   poison it never takes you below 1 HP (Claude's pick); enemies do the rest.
-## - DARKNESS: the screen goes dark around you (HUD vignette) while you're
-##   inside, and the room's own volume reads black from outside.
+## - DARKNESS (reworked 2026-11-11): while you're inside, you can't see past
+##   `sight_range` (DarkVision blacks out everything farther), though lock-on
+##   still reaches. Enemies past that range are 25 points harder to hit for
+##   you (DARK_DODGE). No box is drawn: from outside the room looks normal.
 
 enum Kind { POISON_MIST, DARKNESS }
 
@@ -17,11 +19,17 @@ const COLORS := {Kind.POISON_MIST: Color(0.45, 0.85, 0.25, 0.16), Kind.DARKNESS:
 ## Drain per second as a fraction of max HP, applied every POISON_TICK.
 const POISON_DRAIN := 0.02
 const POISON_TICK := 0.5
+## Darkness: default sight range, and the hit-chance penalty (percentage
+## points) against enemies beyond it (Grayson 2026-11-11: "25% evasion bonus").
+const DEFAULT_SIGHT := 8.0
+const DARK_DODGE := 25.0
 
 @export var kind: Kind = Kind.POISON_MIST
 @export var active := true
 ## Local boxes the hazard covers.
 @export var zones: Array[AABB] = []
+## Darkness only: how far a Seeker inside can see, in metres.
+@export var sight_range := DEFAULT_SIGHT
 
 var _inside := {}  # Player -> number of zones it's in
 var _visuals: Array[MeshInstance3D] = []
@@ -44,6 +52,8 @@ func _ready() -> void:
 		area.body_entered.connect(_on_entered)
 		area.body_exited.connect(_on_exited)
 		add_child(area)
+		if kind == Kind.DARKNESS:
+			continue  # darkness is drawn per Seeker (DarkVision), not as a box
 		var mesh := MeshInstance3D.new()
 		var bm := BoxMesh.new()
 		bm.size = zone.size - Vector3(0.05, 0.05, 0.05)
@@ -82,13 +92,34 @@ func is_inside(seeker: Player) -> bool:
 	return _inside.has(seeker)
 
 
-## True when an active darkness hazard covers this Seeker (the HUD asks).
-static func dark_for(seeker: Player) -> bool:
+## True when an active darkness hazard covers this Seeker.
+static func dark_for(seeker: Node) -> bool:
+	return sight_range_for(seeker) > 0.0
+
+
+## How far this Seeker can see in the dark: the shortest sight of the active
+## darkness hazards covering them, or -1 when they aren't in the dark.
+static func sight_range_for(seeker: Node) -> float:
+	var best := -1.0
+	if not seeker is Player:
+		return best
 	for node in Scope.group(seeker, "room_hazards"):
 		var h := node as RoomHazard
-		if h.active and h.kind == Kind.DARKNESS and h.is_inside(seeker):
-			return true
-	return false
+		if h.active and h.kind == Kind.DARKNESS and h.is_inside(seeker as Player):
+			best = h.sight_range if best < 0.0 else minf(best, h.sight_range)
+	return best
+
+
+## Extra dodge (hit-chance points) a target gets against this attacker: the
+## attacker is in the dark and the target is beyond their sight.
+static func dark_dodge(attacker: Node, target: Node3D) -> float:
+	if not attacker is Player or target == null:
+		return 0.0
+	var sight := sight_range_for(attacker)
+	if sight <= 0.0:
+		return 0.0
+	var eye := (attacker as Player).global_position + Vector3.UP * DarkVision.EYE_HEIGHT
+	return DARK_DODGE if eye.distance_to(target.global_position) > sight else 0.0
 
 
 func _on_entered(body: Node) -> void:

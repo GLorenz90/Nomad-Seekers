@@ -70,7 +70,8 @@ func is_dead() -> bool:
 func receive_hit(info: DamageInfo, attacker: Node3D, _projectile: Node = null) -> float:
 	if state == State.DEAD:
 		return 0.0
-	if not Accuracy.roll(info, data.evasion * status.stat_scale(&"evasion"), self, status):
+	var dodge := RoomHazard.dark_dodge(attacker, self)
+	if not Accuracy.roll(info, data.evasion * status.stat_scale(&"evasion"), self, status, dodge):
 		return 0.0
 	info.amount *= Defense.scale_for(info.kind, data.defense * status.stat_scale(&"defense"), data.resolve)
 	# PSO-style monster-type bonus on the weapon (e.g. +20% vs Beast).
