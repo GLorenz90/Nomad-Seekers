@@ -239,11 +239,10 @@ func _run() -> void:
 	await _idle()
 	var portal: Teleporter = null
 	for node in get_nodes_in_group("teleporters"):
-		if (node as Teleporter).destination == SpellCaster.SHIP_SCENE and (node as Teleporter).lifetime > 0.0:
+		if (node as Teleporter).destination == SpellCaster.SHIP_SCENE and (node as Teleporter).portal_owner == Party.LEADER:
 			portal = node
-	_check("Teleportal opens a pad back to the ship (the gym for now)", portal != null)
-	if portal:
-		portal.queue_free()
+	_check("Teleportal opens a pad back to Nomad-2, with no time limit", portal != null and portal.lifetime == 0.0)
+	Teleportals.close(Party.LEADER, self)
 
 	# Goluman can't cast.
 	save.character.race = CharacterData.Race.GOLUMAN

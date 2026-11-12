@@ -587,6 +587,8 @@ func _physics_process(delta: float) -> void:
 		if interact_target and is_on_floor() and status.can_move() and not health.is_dead():
 			interact_target.interact(self)
 			interact_target = null
+			if is_queued_for_deletion():
+				return  # travelled: this Seeker has left a map that's now parked
 		else:
 			_jump_buffer = jump_buffer_time
 	for i in 4:

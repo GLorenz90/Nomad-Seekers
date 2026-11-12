@@ -147,7 +147,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
   - Damage uses PSO's formula: (SOL + technique power) / 5 × the item's spell power. Fire, Ice and Lightning use the real Foie / Barta / Zonde tables; Nature, Light and Dark are my best guesses in the same shape.
   - **Shapes:** single target (Fajro, Glacio's piercing line, Fulmo, Arbo's ground thorns, Lumo, Malbo), small bursts (ring, spear fan, chain, 30° and 60° cones, rolling gravity ball), large areas (Granfajro and friends; Granmalbo pulls enemies to the center), sustained channels (hold to keep casting), buffs (+STR / DEF / DEX / SOL / ATA / EVA), debuffs on enemies around you, and auras that pulse damage near you.
   - Single-target spells and Fire / Ice / Lightning / Nature / Light auras don't inflict status; everything else can. Pasmalbo can.
-  - **Cure** clears one more status per level in order of annoyance (Slow, Burn, Poison, Confuse, Drain, Shock, Stun, Freeze); level 9 also clears debuffs. **Teleportal** opens a pad to the ship (the gym for now). **Revive** waits for co-op.
+  - **Cure** clears one more status per level in order of annoyance (Slow, Burn, Poison, Confuse, Drain, Shock, Stun, Freeze); level 9 also clears debuffs. **Teleportal** opens PSO's telepipe: a pad to Nomad-2 and one back (see Travel). **Revive** waits for co-op.
 - **Learning.** Each spell needs SOL to learn: its base, +20 a level for the first half, +40 after (Cure +25, Revive +30 / +60). Max spell level: **15**, Lumera 20, Coresian 10. **Invokers reach 30 in everything**, whatever their race. Strikers reach 5 levels less in buff spells, Rangers 5 less in debuff spells (a Human Ranger tops out at 10 in debuffs). Cure, Revive and Teleportal always reach their own max. New Seekers know Fajro, Glacio and Fulmo.
 
   | Max level | Striker (buffs) | Ranger (debuffs) | Invoker |
@@ -209,7 +209,7 @@ F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-
 - **Lock-on:** when the locked target dies, the lock moves to the next closest one.
 - **Character creation:** name (type it, or "New name" on a gamepad), race, gender, job and starter SyncAIDa, with a preview of the race and job rules and the emblem the choices make. Goluman can't pick Invoker. Creating saves the slot and drops you into Nomad-2.
 - **Nomad-2** (`scenes/hub.tscn`, built by `tools/build_hub.gd`): the lobby. Its counters (guild, bank, shops, armorer) are placeholders. Its **teleporter asks where to go**: the gym or the test arena (B or "Stay here" cancels; step off and back on to ask again).
-- The gym has a pad back to Nomad-2, and the arena's exit now returns there too. Teleportal opens a pad to Nomad-2.
+- The gym has a pad back to Nomad-2, and the arena's exit now returns there too.
 - **Saving:** every teleport, closing the menu, quitting to the title (Options tab) and closing the window save the character's slot.
 
 ![Creating a character](docs/screenshots/title_create.png)
@@ -364,7 +364,13 @@ The runtime the separate level editor needs (Grayson, 2026-11-12). The format it
 ![The demo level's bridge hall](docs/screenshots/data_level_bridge.png)
 
 ## Travel
-Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
+Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. **Press A on a pad** to use it (it saves first); standing on it does nothing.
+
+**Maps persist for the session (2026-11-12, like PSO).** A session starts when you load into Nomad-2 and ends when you quit to the title. Every map you visit stays exactly as you left it: killed enemies stay dead, items stay where they fell, rooms stay cleared, an enemy mid-chase is still there. A map nobody is on is **parked**: its scripts, physics and navigation stop and it isn't drawn, then it wakes as it was when someone arrives (`CoopDirector`). Shops restock each time Nomad-2 wakes. From the first trip you play in one full-window view (the co-op split screen with one pane).
+
+**Teleportal (PSO's telepipe):** one per Seeker. Casting it opens a pad where you stand that goes to Nomad-2, and a matching pad on Nomad-2 (in a row in front of the spawn, one spot per controller) that goes back to that spot. Anyone can use either end. The field end leaves both open; the Nomad-2 end takes you back to the spot and then **both ends close**. Going back to the area some other way (the normal teleporter) leaves it open. Casting again moves it. Neither end times out (`Teleportals`).
+
+**The game never pauses.** Menus, counters, the teleporter list and dialogue all leave the world running: you can't move or attack while one is open, but enemies can still hit you, so swapping gear or using items mid-fight is a risk.
 
 **Arena doors (PSO-style):** the way into a room stays open, and the way on is locked ("LOCKED") until the room is cleared. Clearing the last room wakes the exit pad.
 
@@ -424,7 +430,6 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - Only the arena has Lumidium nodes, and every Guild quest happens there until real levels exist. Shop stock has no character-level tiers yet (armor stops at tier 2).
 - Weapon grinding, armor and augments aren't in yet. Untagged weapons have no RT special.
 - Enemies don't scale with level or area yet: past the first few levels, the arena gets easy.
-- Teleportal goes to the gym until the ship exists.
 - Party bursts (several Seekers firing together) aren't in yet. SyncAIDa have no feeding cooldown and no personalities yet.
 - Co-op: partners' HP isn't shown in your pane yet, and menus get small text in a half-height pane.
 - The runtime navmesh bake prints a warning because the CSG blockout has no separate collision shapes. It's harmless at this size and goes away with real level geometry.
@@ -473,6 +478,7 @@ The tests always use a fresh save and never write yours.
 
 `tools/build_starter_weapons.gd`, `tools/build_enemies.gd` and `tools/build_arena.gd` regenerate the weapons, enemies and arena with their default values (this overwrites any edits).
 
+- `session_test.gd` (Nomad-2 and the arena, own slot folder): a session starting in Nomad-2; the first trip keeping Nomad-2 parked (no processing, physics or navigation) in a one-pane view; enemies hitting you while the menu is open (never paused); a Teleportal's two ends, the field end to Nomad-2 keeping both, the arena parked with nothing moving, Nomad-2 restocking on the visit, the Nomad-2 end returning you to the spot and closing both; the arena as you left it (dead enemy, the other enemy, the dropped item, cleared rooms); the normal teleporter leaving the Teleportal open; recasting moving it; quitting to the title closing every map and Teleportal.
 - `magic_test.gd` (in the arena): the spell book (46 spells, 7 traps, grid names), PSO technique power and LP tables, SOL requirements, level caps by race and job (buff / debuff caps, Invokers 30, special spells), Goluman rules, casting from loadout slots (empty and unlearned slots), the damage formula, every damage shape reaching the enemies it should, holding a sustained spell, buffs scaled by support power, debuffs around you, auras, Heal, Cure 9 keeping buffs, Teleportal, trap placing, springing and the 4-trap limit, hazards visible only to Goluman, trap devices (untouchable while hidden, even by area spells; the Trap Scanner on D-pad down revealing only the current room; destroyed by a spell once revealed), discs (learn, store, read later, sell), disc drop rates, and the Spells tab driven by a gamepad.
 
 - `materials_test.gd` (in the arena): the ten materials, the 275 / 175 / 150 shared limits and the separate HP / LP 125, Goluman restrictions (no Mind, 75 LP), STR / DEX / RES / ATA / max HP gains, Goluman +10 DEX and HP regen, LP regen for Goluman and Lumera only, Invokers refused as Goluman, the learn-at-level-1 and Infinite LP tools (and ATA improving hit chance), the limits refusing more, the save keeping materials used and re-applying them once, drops and pickups, using one from the Inventory tab with a gamepad, and Reset character forgetting them.

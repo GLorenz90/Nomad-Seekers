@@ -19,6 +19,11 @@ extends Node3D
 ## of them), and a level can run hosted in its own world beside the window's.
 ## A Seeker who falls in co-op stays down until a partner's Revive, or presses
 ## A to go back to the start; when everyone is down, everyone goes back.
+##
+## Maps persist for the session (2026-11-12): once a Seeker has travelled,
+## a level they leave is parked, not freed (CoopDirector), and wakes as it was
+## when someone comes back. Nomad-2 also holds the return end of every open
+## Teleportal (Teleportals).
 
 signal navmesh_ready
 
@@ -86,6 +91,8 @@ func _ready() -> void:
 		target_markers = leader.markers
 	else:
 		_join_director(director)
+	if Maps.id_of(self) == Session.HUB_SCENE:
+		Teleportals.place_hub_pads(self)
 	_bake_navmesh()
 
 
@@ -102,7 +109,7 @@ func _join_director(director: CoopDirector) -> void:
 	player.input = CoopDirector.input_for(first)
 	var kit := _wire(player, camera_rig, hud)
 	kit.spawn = _spawn_point(first)
-	player.global_transform = kit.spawn
+	player.global_transform = _arrival_point(first, kit.spawn)
 	loadout_menu = kit.menu
 	target_markers = kit.markers
 	director.attach(player, camera_rig, hud, kit.menu, kit.markers)
@@ -196,7 +203,19 @@ func release_director() -> void:
 	Party.leader_map = ""
 
 
-## Where a party member appears: guests beside the leader's spot.
+## Where a party member appears now: their spawn point, or the spot a
+## Teleportal sends them to (used once; falling still returns them to the
+## spawn point).
+func _arrival_point(who: int, spawn: Transform3D) -> Transform3D:
+	if not Party.arrivals.has(who):
+		return spawn
+	var spot := spawn
+	spot.origin = Party.arrivals[who]
+	Party.arrivals.erase(who)
+	return spot
+
+
+## Where a party member respawns: guests beside the leader's spot.
 func _spawn_point(who: int) -> Transform3D:
 	var at := _spawn
 	var slot := 0 if who == Party.LEADER else Party.slot_of(who)
@@ -213,7 +232,7 @@ func spawn_member(who: int) -> Kit:
 	seeker.name = "Seeker%d" % (seeker.input.slot + 1)
 	add_child(seeker)
 	var at := _spawn_point(who)
-	seeker.global_transform = at
+	seeker.global_transform = _arrival_point(who, at)
 	seeker.reset_physics_interpolation()
 	var rig := RIG_SCENE.instantiate() as CameraRig
 	rig.name = "CameraRig%d" % (seeker.input.slot + 1)
@@ -242,6 +261,19 @@ func remove_seeker(seeker: Player) -> void:
 	for node: Node in [kit.menu, kit.markers, kit.hud, kit.rig, seeker]:
 		if is_instance_valid(node):
 			node.queue_free()
+
+
+## The map woke from being parked (someone arrived): a new visit, so shops
+## roll new stock when next opened (PSO restocked on every trip back).
+func new_visit() -> void:
+	for counter in Scope.group(self, "service_counters"):
+		counter.set("_rolled", false)
+
+
+## Where a hub-side Teleportal pad stands: a row in front of the spawn point,
+## one spot per controller slot.
+func teleportal_spot(slot: int) -> Vector3:
+	return _spawn.origin - _spawn.basis.z * 5.0 + _spawn.basis.x * (float(slot) - 1.5) * 3.2
 
 
 ## A guest leaves the party (Options tab).
