@@ -234,14 +234,11 @@ static func _self_spell(ctrl: CombatController, item: WeaponData, spell: SpellDe
 			if here == SHIP_SCENE:
 				ctrl.combo_feedback.emit("Already on Nomad-2")
 				return
-			var pad := Teleporter.new()
-			pad.destination = SHIP_SCENE
-			pad.destination_name = "Back to Nomad-2"
-			pad.lifetime = 30.0
-			world.add_child(pad)
+			# PSO's telepipe: one per Seeker, both ends stay open until someone
+			# comes back through the Nomad-2 end (Teleportals).
 			var flat := Vector3(direction.x, 0.0, direction.z).normalized()
-			pad.global_position = player.global_position + flat * 2.5
-			ctrl.combo_feedback.emit("Teleportal open (30 s)")
+			Teleportals.open(player, player.global_position + flat * 2.5)
+			ctrl.combo_feedback.emit("Teleportal open")
 		SpellDef.Kind.REVIVE:
 			var revived := 0
 			for node in Scope.group(player, "player"):

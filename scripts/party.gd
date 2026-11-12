@@ -16,6 +16,9 @@ static var leader_pad := -1
 ## (Grayson, 2026-11-09: one Seeker can go to town while another explores).
 ## Guests keep theirs in their entry ("map"). "" = the window's own level.
 static var leader_map := ""
+## Where a Seeker appears on their next arrival instead of the map's spawn
+## point (a Teleportal's spot): who -> Vector3. Used once.
+static var arrivals := {}
 
 ## Party members are named by `who`: LEADER, or a guest's controller.
 const LEADER := -1
@@ -85,6 +88,7 @@ static func leave(device: int) -> void:
 static func clear() -> void:
 	guests.clear()
 	leader_map = ""
+	arrivals.clear()
 
 
 static func who_of(seeker: Player) -> int:

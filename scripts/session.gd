@@ -97,6 +97,7 @@ static func play(index: int) -> bool:
 		return false
 	use_slot(index, data)
 	Maps.new_session()  # every area picks a level again (Part 13a)
+	Teleportals.new_session()
 	_tree().change_scene_to_file.call_deferred(HUB_SCENE)
 	return true
 
@@ -107,6 +108,7 @@ static func quit_to_title() -> void:
 		(p as Player).save_game()
 	Party.clear()  # guests go back to the title with the leader (Part 12)
 	Maps.new_session()
+	Teleportals.new_session()  # the session's maps close, and every Teleportal with them
 	var director := CoopDirector.find(_tree())
 	if director:
 		director.shutdown()

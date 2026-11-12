@@ -164,24 +164,28 @@ func _run() -> void:
 	await _stand_on(player, pad)
 	await _pad(JOY_BUTTON_A)
 	await _frames(20)
-	_check("picking the gym goes there (%s)" % current_scene.scene_file_path, current_scene.scene_file_path == "res://scenes/main.tscn")
+	_check("picking the gym goes there (%s)" % _here().scene_file_path, _here().scene_file_path == "res://scenes/main.tscn")
 	_check("the trip saved the character (Oro 777 on disk)", Session.load_slot(1).inventory.oro == 777)
-	player = current_scene.get_node("Player") as Player
+	player = _here().kits[0].player
 	_check("the same character carries over", player.save.character.seeker_name == "Lirael" and player.save.inventory.oro == 777)
-	var back := current_scene.get_node("NomadTeleporter") as Teleporter
+	var back := _here().get_node("NomadTeleporter") as Teleporter
 	await _stand_on(player, back)
 	await _frames(20)
-	_check("the gym's pad goes back to Nomad-2", current_scene.scene_file_path == Session.HUB_SCENE)
-	player = current_scene.get_node("Player") as Player
-	pad = current_scene.get_node("Teleporter") as Teleporter
+	_check("the gym's pad goes back to Nomad-2", _here().scene_file_path == Session.HUB_SCENE)
+	player = _here().kits[0].player
+	pad = _here().get_node("Teleporter") as Teleporter
 	await _stand_on(player, pad)
 	await _pad(JOY_BUTTON_DPAD_DOWN)
 	await _pad(JOY_BUTTON_A)
 	await _frames(20)
-	_check("and the hub reaches the test arena", current_scene.scene_file_path == "res://scenes/arena.tscn")
+	_check("and the hub reaches the test arena", _here().scene_file_path == "res://scenes/arena.tscn")
+	_check("the session keeps every map: Nomad-2 and the gym are parked, not gone",
+		CoopDirector.is_parked(current_scene) and current_scene.scene_file_path == Session.HUB_SCENE
+		and CoopDirector.find(self).level_for("res://scenes/main.tscn") != null
+		and CoopDirector.is_parked(CoopDirector.find(self).level_for("res://scenes/main.tscn")))
 
 	# --- Quit to title, Continue ----------------------------------------------------------------
-	player = current_scene.get_node("Player") as Player
+	player = _here().kits[0].player
 	player.save.inventory.oro = 4321
 	Session.quit_to_title()
 	await _frames(10)
@@ -278,6 +282,15 @@ func _check(label: String, ok: bool) -> void:
 	print(("  ok    " if ok else "  FAIL  ") + label)
 	if not ok:
 		_failures += 1
+
+
+## The level the leader is on (maps persist after the first trip, so the
+## window's own scene may be a parked Nomad-2).
+func _here() -> Node:
+	var d := CoopDirector.find(self)
+	if d:
+		return d.level_for(Party.leader_map)
+	return current_scene
 
 
 func _frames(n: int) -> void:

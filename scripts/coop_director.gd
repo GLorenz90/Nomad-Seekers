@@ -1,26 +1,31 @@
 class_name CoopDirector
 extends Node
-## Local co-op across maps (Part 12, Grayson 2026-11-09: "one player should be
-## able to go to the hub to sell items while the other player explores").
+## The session's maps and local co-op (Part 12; persistent maps since
+## 2026-11-12).
 ##
-## Lives at the root of the scene tree from the first join until the party is
-## back to one Seeker on the window's own level. It owns:
-## - the split screen (one pane per party member, kept across map changes);
-## - "hosted" maps: a level any party member is on that isn't the window's own
-##   scene runs inside a SubViewport with its own World3D (own physics,
-##   navigation and groups, kept apart by Scope). Its panes look into that
-##   world.
+## Maps persist for the whole session, like PSO (Grayson 2026-11-12): from
+## the first trip until quitting to the title, every map anyone has been to
+## stays as it was left (enemies stay dead, items stay where they lie, rooms
+## stay cleared). A map nobody is on is parked: its scripts, physics and
+## navigation stop and it isn't drawn. A Seeker arriving wakes it.
 ##
-## Travelling (teleporters): only the Seeker who travels goes. If their map
-## empties, it's dropped (a hosted map is freed; the window's level becomes an
-## empty placeholder). If the destination is already open, they join it;
-## otherwise it opens fresh (as the window's level when that's free, else
-## hosted).
+## Lives at the root of the scene tree from the first trip or join until the
+## session ends (or, with no trip yet, until a party is back to one Seeker on
+## the window's own level). It owns:
+## - the split screen (one pane per Seeker, kept across map changes; alone
+##   that's one full-window pane);
+## - "hosted" maps: every map other than the window's own scene runs inside a
+##   SubViewport with its own World3D (own physics, navigation and groups,
+##   kept apart by Scope). Panes look into the world their Seeker is in.
+##
+## Travelling (teleporters): only the Seeker who travels goes (Grayson
+## 2026-11-09). If the destination is open (awake or parked) they join it;
+## otherwise it opens. A Teleportal sends them to a set spot
+## (Party.arrivals).
 ##
 ## Joining: Start on a controller nobody plays with opens a character picker
 ## in a new pane; the guest appears on the leader's map.
 
-const PLACEHOLDER := "res://scenes/empty.tscn"
 ## Hosted maps don't draw themselves (only the panes do).
 const HOST_SIZE := Vector2i(2, 2)
 
@@ -88,13 +93,53 @@ func host(path: String) -> Node:
 	return level
 
 
+# --- Parking (2026-11-12) -------------------------------------------------------------------
+
+## Every open map: the window's level and the hosted ones.
+func open_levels() -> Array[Node]:
+	var out: Array[Node] = []
+	var scene := get_tree().current_scene
+	if scene and scene.has_method("spawn_member"):
+		out.append(scene)
+	for path in hosts:
+		if is_instance_valid(hosts[path]):
+			out.append(hosts[path])
+	return out
+
+
+## Parks every map with nobody on it and wakes the rest.
+func refresh_parking() -> void:
+	for level in open_levels():
+		set_parked(level, Party.members_on(Maps.id_of(level)).is_empty())
+
+
+static func is_parked(level: Node) -> bool:
+	return level.process_mode == Node.PROCESS_MODE_DISABLED
+
+
+## A parked map keeps everything but stops: no processing, physics or
+## navigation (hosted maps are never drawn by themselves; the window's own
+## 3D is off while the director runs). Waking it is a new visit (shops
+## restock, like PSO's on each trip back).
+func set_parked(level: Node, parked: bool) -> void:
+	if is_parked(level) == parked:
+		return
+	level.process_mode = Node.PROCESS_MODE_DISABLED if parked else Node.PROCESS_MODE_INHERIT
+	var world := (level.get_viewport() as Viewport).find_world_3d()
+	if world:
+		PhysicsServer3D.space_set_active(world.space, not parked)
+		NavigationServer3D.map_set_active(world.navigation_map, not parked)
+	if not parked and level.has_method("new_visit"):
+		level.call("new_visit")
+
+
 func _drop_host(path: String) -> void:
 	var level: Node = hosts.get(path)
 	hosts.erase(path)
 	if level and is_instance_valid(level):
 		var viewport := level.get_parent() as SubViewport
 		# Panes still looking into that world look away first.
-		for pane in split.panes:
+		for pane in (split.panes if is_instance_valid(split) else []):
 			if pane.sub.world_3d == viewport.find_world_3d():
 				pane.sub.world_3d = get_tree().root.find_world_3d()
 		viewport.queue_free()
@@ -213,16 +258,18 @@ func joining() -> Dictionary:
 
 # --- Travelling ---------------------------------------------------------------------------
 
-## A Seeker takes a teleporter on their own. Alone (no party, no director),
-## the window's level just changes.
-static func travel(seeker: Player, destination: String) -> void:
-	var tree := seeker.get_tree()
-	var director := find(tree)
+## A Seeker takes a teleporter on their own. The first trip of a session
+## starts the director, so the map being left is kept. `arrive_at` (a
+## Teleportal's spot) replaces the map's spawn point.
+static func travel(seeker: Player, destination: String, arrive_at := Vector3.INF) -> void:
+	var director := find(seeker.get_tree())
 	if director == null:
-		for node in Scope.group(seeker, "player"):
-			(node as Player).save_game()
-		Maps.change_to(tree, destination)
-		return
+		var level := Scope.level(seeker)
+		if level == null or not level.has_method("adopt_director"):
+			return
+		director = begin(level)
+	if arrive_at != Vector3.INF:
+		Party.arrivals[Party.who_of(seeker)] = arrive_at
 	director.move(seeker, Maps.resolve(destination))
 
 
@@ -230,25 +277,20 @@ func move(seeker: Player, destination: String) -> void:
 	var who := Party.who_of(seeker)
 	var from_level := Scope.level(seeker)
 	var from_path := Maps.id_of(from_level) if from_level else ""
-	if from_path == destination:
+	if from_path == destination or destination == "":
+		Party.arrivals.erase(who)
 		return
 	seeker.save_game()
 	Party.set_map(who, destination)
 	if from_level:
 		from_level.call("remove_seeker", seeker)
-	if hosts.has(from_path) and Party.members_on(from_path).is_empty():
-		_drop_host(from_path)
-	var root_path := _root_path()
-	var root_free := root_path == PLACEHOLDER or (root_path != "" and Party.members_on(root_path).is_empty())
 	var target := level_for(destination)
 	if target:
+		set_parked(target, false)
 		target.call("spawn_member", who)
-		if root_free and root_path != PLACEHOLDER:
-			get_tree().change_scene_to_file.call_deferred(PLACEHOLDER)
-	elif root_free:
-		Maps.change_to(get_tree(), destination)
 	else:
 		host(destination)
+	refresh_parking()
 
 
 # --- Leaving and ending ----------------------------------------------------------------------
@@ -269,17 +311,13 @@ func leave(seeker: Player) -> void:
 	var pane := split.pane_for_who(who)
 	if pane:
 		split.remove_pane(pane)
-	if hosts.has(path) and Party.members_on(path).is_empty():
-		_drop_host(path)
-		var root_path := _root_path()
-		if root_path != PLACEHOLDER and Party.members_on(root_path).is_empty():
-			get_tree().change_scene_to_file.call_deferred(PLACEHOLDER)
+	refresh_parking()
 	maybe_end()
 
 
 ## Back to plain single player once the leader is alone on the window's own
-## level (a leader alone on a hosted map keeps a one-pane split until they
-## travel).
+## level and no other map is open. After the session's first trip, other maps
+## stay open, so a lone Seeker keeps a one-pane split until the title.
 func maybe_end() -> void:
 	if Party.is_active() or not _joining.is_empty() or not hosts.is_empty():
 		return
@@ -292,8 +330,11 @@ func maybe_end() -> void:
 	queue_free()
 
 
-## Quit to title: every map and pane goes.
+## Quit to title: every map and pane goes (panes first, so none is left
+## looking into a world that's gone).
 func shutdown() -> void:
+	if is_instance_valid(split):
+		split.free()
 	for path in hosts.keys():
 		_drop_host(path)
 	get_tree().root.disable_3d = false

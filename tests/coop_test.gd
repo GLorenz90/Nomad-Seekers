@@ -10,9 +10,10 @@ extends SceneTree
 ## - Falling in co-op: down until a partner's Revive (or A back to the start);
 ##   everyone down sends everyone back. EXP goes to everyone on the map.
 ## - Each Seeker travels on their own: a guest goes to Nomad-2 (a hosted map
-##   in its own world) while the leader stays; EXP stays on its map; the leader follows (the window's level
-##   becomes a placeholder); the guest leaves; the leader travels back and
-##   it's plain single player again.
+##   in its own world) while the leader stays; EXP stays on its map; the
+##   leader follows (the arena is parked, not freed); the guest leaves; the
+##   leader travels back to the arena as they left it, Nomad-2 parks, and the
+##   one-pane view stays for the rest of the session.
 ##
 ## Uses its own folder for character slots, so real characters are never touched.
 ##   godot --headless --path . --script res://tests/coop_test.gd
@@ -187,8 +188,8 @@ func _run() -> void:
 	leader.autosave = false
 	CoopDirector.travel(leader, Session.HUB_SCENE)
 	await _frames(20)
-	_check("the leader follows: both in Nomad-2, the window's level is a placeholder",
-		current_scene.scene_file_path == CoopDirector.PLACEHOLDER and hub.kits.size() == 2)
+	_check("the leader follows: both in Nomad-2, the arena is parked (kept, not freed)",
+		current_scene == _main and CoopDirector.is_parked(_main) and hub.kits.size() == 2 and _main.kits.is_empty())
 	leader = hub.kits[1].player
 	leader.autosave = false
 
@@ -199,13 +200,12 @@ func _run() -> void:
 	_check("the leader keeps playing in Nomad-2 full screen", CoopDirector.find(self) != null and split.panes[0].player == leader)
 	CoopDirector.travel(leader, "res://scenes/arena.tscn")
 	await _frames(30)
-	_main = current_scene
 	for kit in _main.kits:
 		kit.player.autosave = false
 	leader = _main.kits[0].player
-	_check("travelling back to the arena: plain single player again",
-		CoopDirector.find(self) == null and not root.disable_3d and leader.input.is_shared()
-		and _main.hud.get_parent() == _main and _main.scene_file_path == "res://scenes/arena.tscn")
+	_check("travelling back wakes the same arena; Nomad-2 parks; one pane stays for the session",
+		current_scene == _main and not CoopDirector.is_parked(_main) and CoopDirector.is_parked(hub)
+		and CoopDirector.find(self) != null and split.panes.size() == 1 and split.panes[0].player == leader)
 	await _pad(2, JOY_BUTTON_START)
 	director = CoopDirector.find(self)
 	var p2 := _find(director.split.panes[1].sub, "JoinPicker") as JoinPicker if director else null
@@ -213,7 +213,9 @@ func _run() -> void:
 	if p2:
 		p2.cancelled.emit()
 		await _frames(3)
-	_check("cancelling the picker closes the pane and the split screen", CoopDirector.find(self) == null)
+	_check("cancelling the picker closes its pane", director.split.panes.size() == 1)
+	director.shutdown()
+	await _frames(2)
 
 	_finish()
 

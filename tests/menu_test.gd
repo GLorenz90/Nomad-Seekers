@@ -215,12 +215,12 @@ func _run() -> void:
 	await _pad(JOY_BUTTON_START)
 	_menu.debug_tab._on_level("res://scenes/main.tscn")
 	await _frames(20)
-	_check("level select loads the test room (%s)" % current_scene.scene_file_path,
-		current_scene != null and current_scene.scene_file_path == "res://scenes/main.tscn" and not paused)
+	_check("level select loads the test room (%s)" % _here().scene_file_path,
+		_here() != null and _here().scene_file_path == "res://scenes/main.tscn" and not paused)
 
-	# The gym's teleporter goes to the arena, which loads fresh.
-	var gym := current_scene
-	var gym_player: Player = gym.get_node("Player")
+	# The gym's teleporter goes to the arena, which opens fresh the first time.
+	var gym := _here()
+	var gym_player: Player = gym.kits[0].player
 	gym_player.autosave = false
 	var pad := gym.get_node("ArenaTeleporter") as Teleporter
 	_check("the gym has a teleporter to the arena", pad != null and pad.destination == "res://scenes/arena.tscn")
@@ -230,20 +230,22 @@ func _run() -> void:
 		gym_player.interact_prompt().begins_with("A: To the arena"))
 	await _pad(JOY_BUTTON_A)
 	await _frames(30)
-	_check("A on it loads the arena (%s)" % current_scene.scene_file_path,
-		current_scene.scene_file_path == "res://scenes/arena.tscn")
-	var arena := current_scene
-	var arena_player: Player = arena.get_node("Player")
+	_check("A on it loads the arena (%s)" % _here().scene_file_path,
+		_here().scene_file_path == "res://scenes/arena.tscn")
+	var arena := _here()
+	var arena_player: Player = arena.kits[0].player
 	arena_player.autosave = false
 	var exit := arena.get_node("Gathering/TeleporterExit") as Teleporter
-	_check("the arena loads fresh (rooms waiting)",
-		(arena.get_node("Rooms/RoomA") as WaveRoom).state == WaveRoom.RoomState.WAITING)
+	_check("it's the same arena the test started in, kept for the session (now awake)",
+		arena == current_scene and not CoopDirector.is_parked(arena))
+	for room in Scope.group(arena, "wave_rooms"):
+		(room as WaveRoom).state = WaveRoom.RoomState.WAITING
 	arena_player.global_position = exit.global_position + Vector3.UP * 0.1
 	await _frames(20)
 	await _pad(JOY_BUTTON_A)
 	await _frames(20)
 	_check("the arena's exit stays shut until every room is cleared (%s)" % arena_player.interact_prompt(),
-		current_scene == arena and not exit.is_active())
+		_here() == arena and not exit.is_active())
 	arena_player.global_position = Vector3(0, 0.1, 20)
 	await _frames(10)
 	for room in ["Rooms/RoomA", "Rooms/RoomB", "Rooms/RoomD"]:
@@ -253,8 +255,8 @@ func _run() -> void:
 	await _frames(10)
 	await _pad(JOY_BUTTON_A)
 	await _frames(30)
-	_check("once cleared it returns to Nomad-2 (%s)" % current_scene.scene_file_path,
-		current_scene.scene_file_path == "res://scenes/hub.tscn")
+	_check("once cleared it returns to Nomad-2 (%s)" % _here().scene_file_path,
+		_here().scene_file_path == "res://scenes/hub.tscn")
 
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
@@ -320,6 +322,14 @@ func _check(label: String, ok: bool) -> void:
 	print(("  ok    " if ok else "  FAIL  ") + label)
 	if not ok:
 		_failures += 1
+
+
+## The level the leader is on (maps persist after the first trip).
+func _here() -> Node:
+	var d := CoopDirector.find(self)
+	if d:
+		return d.level_for(Party.leader_map)
+	return current_scene
 
 
 func _frames(n: int) -> void:

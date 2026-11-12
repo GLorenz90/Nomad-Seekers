@@ -4,8 +4,8 @@ extends Area3D
 ## banks Lumidium: Lumidium depots do that (LumidiumDepot), and the satchel's
 ## Lumidium travels with the Seeker.
 ##
-## With a destination it also travels there (saving first). Loading a level
-## always builds it fresh, so a trip back into the arena resets it.
+## With a destination it also travels there (saving first). Maps persist for
+## the session (2026-11-12), so a trip back finds the level as it was left.
 ## requires_rooms_cleared keeps the pad dark until every WaveRoom is cleared
 ## (the arena's exit back to the gym).
 
@@ -24,8 +24,13 @@ const COLOR_LOCKED := Color(0.25, 0.3, 0.35)
 @export var requires_rooms_cleared := false
 ## Asleep until something wakes it (a level's wiring, Part 13a).
 @export var dormant := false
-## Seconds until it closes on its own (Teleportal spell); 0 = permanent.
+## Seconds until it closes on its own; 0 = permanent.
 @export var lifetime := 0.0
+## Teleportal pads (Teleportals): whose they are, and whether this is the
+## Nomad-2 end (which goes back to `arrive_at` and then closes both ends).
+var portal_owner := Teleportals.NO_OWNER
+var portal_return := false
+var arrive_at := Vector3.INF
 ## Part 8: a pad with several destinations (Nomad-2's) asks where to go.
 ## Scene paths and the names shown for them, in the same order.
 @export var destinations: PackedStringArray = []
@@ -36,7 +41,6 @@ var picker: DestinationPicker
 var _material: StandardMaterial3D
 var _label: Label3D
 var _active := true
-var _leaving := false
 
 
 func _ready() -> void:
@@ -149,7 +153,7 @@ func interact_range() -> float:
 
 
 func can_interact(_seeker: Player) -> bool:
-	return not _leaving and picker == null
+	return picker == null
 
 
 func interact_prompt() -> String:
@@ -199,10 +203,15 @@ func _open_picker(seeker: Player) -> void:
 			travel(seeker), seeker)
 
 
-## Takes the Seeker to the destination (fresh every time). In a party only
-## they go (Grayson, 2026-11-09); see CoopDirector.travel.
+## Takes the Seeker to the destination. Only they go (Grayson, 2026-11-09);
+## see CoopDirector.travel. A Teleportal's Nomad-2 end sends them back to its
+## spot, then the Teleportal closes.
 func travel(seeker: Player) -> void:
-	# Alone, the whole level is about to go; in a party the pad stays for the rest.
-	_leaving = CoopDirector.find(get_tree()) == null
 	travelling.emit(destination)
+	if portal_return:
+		var owner_was := portal_owner
+		var tree := get_tree()
+		CoopDirector.travel(seeker, destination, arrive_at)
+		Teleportals.close(owner_was, tree)
+		return
 	CoopDirector.travel(seeker, destination)
