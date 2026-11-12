@@ -11,13 +11,6 @@ extends RefCounted
 static func apply(body: Node, info: DamageInfo, attacker: Node3D, projectile: Node = null) -> float:
 	if body == null:
 		return 0.0
-	# A blinded attacker misses half the time.
-	var attacker_status := StatusEffects.find(attacker)
-	if attacker_status and randf() > attacker_status.hit_chance():
-		info.missed = true
-		if body is Node3D:
-			DamageNumber.spawn_text(body.get_parent(), (body as Node3D).global_position + Vector3.UP * 1.9, "Miss")
-		return 0.0
 	if body.has_method("receive_hit"):
 		return body.receive_hit(info, attacker, projectile)
 	var health := Health.find(body)

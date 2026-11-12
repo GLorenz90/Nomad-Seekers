@@ -33,6 +33,8 @@ var render_layers := 1:
 
 ## Darkness rooms: this Seeker's short sight (drawn under the rings).
 var dark_vision: DarkVision
+## Confusion: everyone looks like the same ghost to this Seeker.
+var confusion_view: ConfusionView
 
 var _small_texture: Texture2D
 var _large_texture: Texture2D
@@ -54,6 +56,9 @@ func setup(controller: CombatController, rig: CameraRig) -> void:
 	dark_vision.layers = render_layers
 	add_child(dark_vision)
 	dark_vision.setup(controller.get_parent() as Player)
+	confusion_view = ConfusionView.new()
+	add_child(confusion_view)
+	confusion_view.setup(controller.get_parent() as Player)
 
 
 ## Enemies currently marked, with which hands would hit them (for tests).
@@ -76,9 +81,12 @@ func _physics_process(delta: float) -> void:
 		return
 	_time += delta
 	_hands_on.clear()
-	for target in combat.predict_targets(CombatController.Hand.PRIMARY):
+	# Confused: no prediction rings (they'd show which ghosts are enemies).
+	var seeker := combat.get_parent() as Player
+	var confused := seeker != null and seeker.status != null and seeker.status.is_confused()
+	for target in ([] if confused else combat.predict_targets(CombatController.Hand.PRIMARY)):
 		_hands_on[target] = _hands_on.get(target, 0) | RIGHT_BIT
-	for target in combat.predict_targets(CombatController.Hand.OFF):
+	for target in ([] if confused else combat.predict_targets(CombatController.Hand.OFF)):
 		_hands_on[target] = _hands_on.get(target, 0) | LEFT_BIT
 
 	var used := 0

@@ -5,13 +5,15 @@ extends Resource
 ## The tag unlocks the weapon's RT special. Elemental lines also give the
 ## weapon that damage type. Tag names stay PSO's (they're generic words).
 
-enum Effect { ELEMENT, INSTANT_KILL, DRAIN_HP, STEAL_LP, STEAL_EXP, CUT_HP, CHARGE }
+enum Effect { ELEMENT, INSTANT_KILL, DRAIN_HP, STEAL_LP, STEAL_EXP, CUT_HP, CHARGE, STATUS }
 
 @export var line_name := ""
 @export var tier_names := PackedStringArray()
 @export var effect: Effect = Effect.ELEMENT
 ## ELEMENT lines: the element (and status) they bring.
 @export var element: Element.Type = Element.Type.GENERIC
+## STATUS lines: the status their special builds (StatusEffects.Status).
+@export var status := -1
 
 ## Per-tier strengths (index = tier).
 const STATUS_POWER := [3.0, 5.0, 7.0, 9.0]
@@ -32,8 +34,10 @@ static func all_lines() -> Array[SpecialTag]:
 	lines.append(_line("Heat", ["Heat", "Fire", "Flame", "Burning"], Effect.ELEMENT, Element.Type.FIRE))
 	lines.append(_line("Ice", ["Ice", "Frost", "Freeze", "Blizzard"], Effect.ELEMENT, Element.Type.ICE))
 	lines.append(_line("Shock", ["Shock", "Thunder", "Storm", "Tempest"], Effect.ELEMENT, Element.Type.LIGHTNING))
-	# North Star SP2 (open): the Bind line maps to Nature until decided.
-	lines.append(_line("Bind", ["Bind", "Hold", "Seize", "Arrest"], Effect.ELEMENT, Element.Type.NATURE))
+	# Bind stuns (Grayson 2026-11-12, PSO's paralysis); the weapon keeps its element.
+	var bind := _line("Bind", ["Bind", "Hold", "Seize", "Arrest"], Effect.STATUS)
+	bind.status = StatusEffects.Status.STUN
+	lines.append(bind)
 	lines.append(_line("Panic", ["Panic", "Riot", "Havoc", "Chaos"], Effect.ELEMENT, Element.Type.LIGHT))
 	lines.append(_line("Dim", ["Dim", "Shadow", "Dark", "Hell"], Effect.INSTANT_KILL, Element.Type.DARK))
 	lines.append(_line("Draw", ["Draw", "Drain", "Fill", "Gush"], Effect.DRAIN_HP, Element.Type.DARK))
@@ -74,7 +78,9 @@ func describe(tier: int) -> String:
 	match effect:
 		Effect.ELEMENT:
 			return "%s damage, strong %s" % [Element.name_of(element),
-				["Burn", "Freeze", "Shock", "Poison", "Blind", "Drain"][int(element) - 1]]
+				["Burn", "Freeze", "Shock", "Poison", "Confuse", "Drain"][int(element) - 1]]
+		Effect.STATUS:
+			return "strong %s" % String(StatusEffects.Status.keys()[status]).capitalize()
 		Effect.INSTANT_KILL:
 			return "%d%% instant kill (not bosses)" % roundi(KILL_CHANCE[tier] * 100.0)
 		Effect.DRAIN_HP:
@@ -107,6 +113,9 @@ func make_special(weapon: WeaponData) -> AttackData:
 		if element != Element.Type.GENERIC:
 			a.override_damage_type = true
 			a.damage_type = element
+		a.status_power = STATUS_POWER[mini(tier, 3)]
+	if effect == Effect.STATUS:
+		a.inflicts_status = status
 		a.status_power = STATUS_POWER[mini(tier, 3)]
 	if effect == Effect.CHARGE:
 		a.damage_mult *= 3.0 / 1.3

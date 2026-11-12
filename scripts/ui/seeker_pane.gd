@@ -16,6 +16,7 @@ var player: Player
 var rig: CameraRig
 var sub: SubViewport
 var camera: Camera3D
+var _base_mask := 0xFFFFF
 
 
 func _init() -> void:
@@ -44,6 +45,7 @@ func attach(seeker: Player, camera_rig: CameraRig) -> void:
 	for i in PlayerInput.MAX_PLAYERS:
 		if i != slot:
 			mask &= ~(1 << (MARKER_LAYER_BASE + i))
+	_base_mask = mask
 	camera.cull_mask = mask
 	sub.audio_listener_enable_3d = slot == 0
 
@@ -67,3 +69,4 @@ func _process(_delta: float) -> void:
 		rig.view_aspect = aspect
 		camera.near = rig.camera.near
 		camera.far = rig.camera.far
+		camera.cull_mask = _base_mask & ~rig.hidden_layers

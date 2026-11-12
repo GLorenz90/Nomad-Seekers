@@ -4,28 +4,46 @@ extends Node
 ## "StatusEffects" next to a Health node.
 ##
 ## Every elemental hit adds buildup for its element (damage x status_power).
-## When buildup passes `threshold`, that element's status starts:
-##   Fire      Burn    damage over time
-##   Ice       Slow    half speed; Ice buildup while already slowed = Freeze
-##   Freeze            can't move or act
-##   Lightning Shock   stunned: can't move or act (short). Seekers who aren't
-##                     Goluman can still move while shocked, they just can't
-##                     attack (shock_stuns = false; Grayson 2026-11-09)
-##   Nature    Poison  damage over time (longer, weaker than Burn)
-##   Light     Blind   own attacks miss half the time
-##   Dark      Drain   damage over time that heals whoever applied it
+## When buildup passes `threshold`, that element's status starts. Rules set by
+## Grayson 2026-11-12:
+##   Fire      Burn     damage over time, 5 s; wiggling the stick burns it off
+##                      faster ("rolling on the ground")
+##   Ice       Slow     half speed, 7 s; Ice buildup while slowed = Freeze
+##   Freeze             can't move or act, 5 s; mash buttons and wiggle the
+##                      stick to break out sooner
+##   Lightning Shock    Seekers (not Goluman) can move but not attack, until
+##                      cured. Goluman and enemies are stopped in place for
+##                      5 s (shock_stuns), which mashing shortens
+##   Nature    Poison   damage over time until cured, or until it brings you
+##                      to 1 HP (it never kills)
+##   Light     Confuse  enemies attack whoever is closest, friend or foe;
+##                      Seekers hit and heal friend and foe alike and see
+##                      everyone as the same ghost (ConfusionView)
+##   Dark      Drain    damage over time that heals whoever applied it
+##   (Bind)    Stun     can't move or act, 5 s; on Seekers any hit ends it
+## Cure (spell, Cure Salt, Mending Bloom) clears any of them. Burn and Poison
+## damage on Seekers scales with difficulty (DIFFICULTY_DOT).
 ## Buildup decays over time. Generic damage builds nothing.
 
 signal status_started(status: Status)
 signal status_ended(status: Status)
 
-## STUN was Paralyze (renamed by Grayson, 2026-11-09).
-enum Status { BURN, SLOW, FREEZE, SHOCK, POISON, BLIND, DRAIN, STUN }
+## STUN was Paralyze (renamed by Grayson, 2026-11-09). CONFUSE was Blind
+## (2026-11-12).
+enum Status { BURN, SLOW, FREEZE, SHOCK, POISON, CONFUSE, DRAIN, STUN }
 
+## Seconds. INF lasts until cured (Shock on Seekers; Poison, which also ends
+## at 1 HP). Confuse and Drain kept their old lengths (Claude's pick).
 const DURATIONS := {
-	Status.BURN: 4.0, Status.SLOW: 3.0, Status.FREEZE: 1.5, Status.SHOCK: 1.0,
-	Status.POISON: 6.0, Status.BLIND: 4.0, Status.DRAIN: 4.0, Status.STUN: 2.5,
+	Status.BURN: 5.0, Status.SLOW: 7.0, Status.FREEZE: 5.0, Status.SHOCK: 5.0,
+	Status.POISON: INF, Status.CONFUSE: 4.0, Status.DRAIN: 4.0, Status.STUN: 5.0,
 }
+## Struggling (Seekers): each button press or stick swing takes this many
+## seconds off Freeze, Burn (stick only) or a Goluman's Shock (Claude's number:
+## steady mashing about halves a 5 s Freeze).
+const STRUGGLE_STEP := 0.25
+## Burn and Poison damage on Seekers by difficulty tier (Claude's numbers).
+const DIFFICULTY_DOT := {"normal": 1.0, "hard": 1.5, "very_hard": 2.0, "ultimate": 3.0}
 ## Stats that buffs / debuffs scale (Part 6 spells): percent changes over time.
 const MODIFIED_STATS: Array[StringName] = [&"strength", &"dexterity", &"soul", &"defense", &"accuracy", &"evasion"]
 ## Damage per second as a fraction of max HP.
@@ -55,6 +73,8 @@ var shock_stuns := true
 ## punishing as Freeze). Damage over time and hazard drains don't break it.
 ## Off for enemies, so a stun trap still holds them while you hit them.
 var stun_breaks_on_hit := false
+## Seekers: Burn and Poison damage follows the difficulty tier.
+var difficulty_scaled := false
 
 
 static func find(node: Node) -> StatusEffects:
@@ -74,22 +94,30 @@ static func for_element(element: Element.Type) -> int:
 		Element.Type.NATURE:
 			return Status.POISON
 		Element.Type.LIGHT:
-			return Status.BLIND
+			return Status.CONFUSE
 		Element.Type.DARK:
 			return Status.DRAIN
 	return -1
 
 
+## Buildup key for a status that comes without an element (Bind's Stun).
+const _STATUS_KEY_BASE := 100
+
+
 func add_buildup(info: DamageInfo, source: Node = null) -> void:
-	if info.damage_type == Element.Type.GENERIC or info.amount <= 0.0:
+	if info.amount <= 0.0:
 		return
-	var element := info.damage_type
-	var value: float = buildup.get(element, 0.0) + info.amount * info.status_power * buildup_scale
+	var key := int(info.damage_type)
+	if info.inflicts_status >= 0:
+		key = _STATUS_KEY_BASE + info.inflicts_status
+	elif info.damage_type == Element.Type.GENERIC:
+		return
+	var value: float = buildup.get(key, 0.0) + info.amount * info.status_power * buildup_scale
 	if value < threshold:
-		buildup[element] = value
+		buildup[key] = value
 		return
-	buildup[element] = 0.0
-	var status := for_element(element)
+	buildup[key] = 0.0
+	var status := info.inflicts_status if info.inflicts_status >= 0 else for_element(info.damage_type)
 	if status == Status.SLOW and is_active(Status.SLOW):
 		status = Status.FREEZE
 	if status == Status.DRAIN:
@@ -101,9 +129,42 @@ func apply(status: int, seconds: float = -1.0) -> void:
 	if status in immune:
 		return
 	var fresh := not active.has(status)
-	active[status] = seconds if seconds > 0.0 else float(DURATIONS[status])
+	active[status] = seconds if seconds > 0.0 else duration_of(status)
 	if fresh:
 		status_started.emit(status)
+
+
+## How long a status lasts on this target (INF = until cured).
+func duration_of(status: int) -> float:
+	if status == Status.SHOCK and not shock_stuns:
+		return INF  # Seekers who aren't Goluman: until cured
+	return float(DURATIONS[status])
+
+
+## Statuses the target can struggle out of: Freeze, Shock where it stops you
+## (Goluman), and Burn (stick only).
+func struggle_targets(button: bool) -> Array[int]:
+	var list: Array[int] = []
+	if button:
+		list.append(Status.FREEZE)
+		if shock_stuns:
+			list.append(Status.SHOCK)
+	else:
+		list.append_array([Status.FREEZE, Status.BURN])
+		if shock_stuns:
+			list.append(Status.SHOCK)
+	return list
+
+
+## A button press (button = true) or a stick swing: shortens what it can.
+## Returns true if anything was shortened.
+func struggle(button: bool) -> bool:
+	var any := false
+	for status in struggle_targets(button):
+		if active.has(status) and is_finite(float(active[status])):
+			active[status] = float(active[status]) - STRUGGLE_STEP
+			any = true
+	return any
 
 
 ## Called when a hit lands on whoever this belongs to.
@@ -132,12 +193,13 @@ func cure(count: int) -> void:
 		var element := _element_for(status)
 		if element >= 0:
 			buildup.erase(element)
+		buildup.erase(_STATUS_KEY_BASE + status)
 	if count > CURE_ORDER.size():
 		clear_debuffs()
 
 
 ## Statuses in order of annoyance, least first (Cure level 1 clears the first).
-const CURE_ORDER: Array[int] = [Status.SLOW, Status.BURN, Status.POISON, Status.BLIND,
+const CURE_ORDER: Array[int] = [Status.SLOW, Status.BURN, Status.POISON, Status.CONFUSE,
 	Status.DRAIN, Status.SHOCK, Status.STUN, Status.FREEZE]
 
 
@@ -151,7 +213,7 @@ func _element_for(status: int) -> int:
 			return Element.Type.LIGHTNING
 		Status.POISON:
 			return Element.Type.NATURE
-		Status.BLIND:
+		Status.CONFUSE:
 			return Element.Type.LIGHT
 		Status.DRAIN:
 			return Element.Type.DARK
@@ -203,15 +265,15 @@ func can_act() -> bool:
 	return not (is_active(Status.FREEZE) or is_active(Status.SHOCK) or is_active(Status.STUN))
 
 
-## Chance that this target's own attacks land (Blind halves it).
-func hit_chance() -> float:
-	return 0.5 if is_active(Status.BLIND) else 1.0
+func is_confused() -> bool:
+	return is_active(Status.CONFUSE)
 
 
 func describe() -> String:
 	var parts := PackedStringArray()
 	for status in active:
-		parts.append("%s %.1fs" % [Status.keys()[status].capitalize(), active[status]])
+		var left := float(active[status])
+		parts.append(Status.keys()[status].capitalize() + (" %.1fs" % left if is_finite(left) else ""))
 	for stat in modifiers:
 		var m: Dictionary = modifiers[stat]
 		parts.append("%s %+d%% %.0fs" % [String(stat).capitalize(), roundi(float(m.fraction) * 100.0), float(m.seconds)])
@@ -235,6 +297,8 @@ func _physics_process(delta: float) -> void:
 		active[status] -= delta
 		if do_tick and DOT_FRACTION.has(status):
 			_damage_over_time(status)
+		if not active.has(status):
+			continue  # ended by its own tick (Poison at 1 HP)
 		if active[status] <= 0.0:
 			active.erase(status)
 			status_ended.emit(status)
@@ -246,11 +310,23 @@ func _damage_over_time(status: int) -> void:
 		return
 	var info := DamageInfo.new()
 	info.amount = health.max_hp * float(DOT_FRACTION[status]) * TICK
+	if difficulty_scaled and (status == Status.BURN or status == Status.POISON):
+		info.amount *= float(DIFFICULTY_DOT.get(Session.difficulty, 1.0))
+	if status == Status.POISON:
+		# Poison never kills: it ends when it brings you to 1 HP.
+		info.amount = minf(info.amount, health.hp - 1.0)
+		if info.amount <= 0.0:
+			active.erase(status)
+			status_ended.emit(status)
+			return
 	info.damage_type = DOT_ELEMENT[status]
 	var parent := get_parent() as Node3D
 	if parent:
 		info.hit_position = parent.global_position + Vector3.UP * 1.6
 	var dealt := health.take_damage(info)
+	if status == Status.POISON and health.hp <= 1.0 and active.has(status):
+		active.erase(status)
+		status_ended.emit(status)
 	if status == Status.DRAIN and is_instance_valid(_drain_source):
 		var source_health := Health.find(_drain_source)
 		if source_health and not source_health.is_dead():

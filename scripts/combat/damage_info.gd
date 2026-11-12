@@ -24,6 +24,9 @@ var special := false
 ## Effective ATA of the attack (Accuracy.effective_ata). Negative = never
 ## misses (spells, traps, hazards).
 var accuracy := -1.0
+## A status this hit builds toward instead of its element's (Bind -> Stun);
+## -1 = the element's own.
+var inflicts_status := -1
 ## Chrono Cross-style bonus from hits already landed in this combo (percent).
 var hit_bonus := 0.0
 
@@ -44,6 +47,7 @@ func duplicate_info() -> DamageInfo:
 	d.damage_type = damage_type
 	d.kind = kind
 	d.status_power = status_power
+	d.inflicts_status = inflicts_status
 	d.is_hard = is_hard
 	d.is_crit = is_crit
 	d.source = source

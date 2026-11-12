@@ -21,7 +21,7 @@ const KIND_ELEMENT := {
 const KIND_STATUS := {
 	Kind.FREEZE: StatusEffects.Status.FREEZE, Kind.SLOW: StatusEffects.Status.SLOW,
 	Kind.SHOCK: StatusEffects.Status.SHOCK, Kind.POISON: StatusEffects.Status.POISON,
-	Kind.CONFUSE: StatusEffects.Status.BLIND, Kind.STUN: StatusEffects.Status.STUN,
+	Kind.CONFUSE: StatusEffects.Status.CONFUSE, Kind.STUN: StatusEffects.Status.STUN,
 }
 
 @export var kind: Kind = Kind.DAMAGE

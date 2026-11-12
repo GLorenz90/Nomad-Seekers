@@ -172,6 +172,7 @@ func apply_bonuses() -> void:
 	status.immune = save.character.status_immunities() if save else []
 	status.shock_stuns = save.character.shock_stuns() if save else false
 	status.stun_breaks_on_hit = true
+	status.difficulty_scaled = true
 	for gone in status.immune:
 		if status.is_active(gone):
 			status.active.erase(gone)
@@ -410,6 +411,32 @@ static func nearest(tree_node: Node, at: Vector3, include_down: bool = false) ->
 	return best
 
 
+## Buttons that count as struggling against Freeze (and a Goluman's Shock).
+const STRUGGLE_BUTTONS: Array[StringName] = [&"jump", &"dash", &"hand_x", &"hand_y"]
+## Last stick direction that counted as a swing (Burn, Freeze).
+var _struggle_dir := Vector2.ZERO
+
+
+## Mashing and wiggling (Grayson 2026-11-12): every button press and every
+## stick swing (a turn of more than 90 degrees) shortens Freeze, Burn (stick
+## only) and a Goluman's Shock.
+func _struggle() -> void:
+	if input_locked or health.is_dead() or status.active.is_empty():
+		_struggle_dir = Vector2.ZERO
+		return
+	for action in STRUGGLE_BUTTONS:
+		if input.just_pressed(action):
+			status.struggle(true)
+	var stick := input.vector("move_left", "move_right", "move_forward", "move_back")
+	if stick.length() < 0.5:
+		return
+	if _struggle_dir == Vector2.ZERO:
+		_struggle_dir = stick.normalized()
+	elif _struggle_dir.dot(stick.normalized()) < 0.0:
+		_struggle_dir = stick.normalized()
+		status.struggle(false)
+
+
 ## The node this Seeker's menus are added to.
 func ui_root() -> Node:
 	if ui_parent and is_instance_valid(ui_parent):
@@ -545,6 +572,7 @@ func _physics_process(delta: float) -> void:
 	_recalculate_jump()
 	_tick_timers(delta)
 	_regen_hp(delta)
+	_struggle()
 
 	# A is the action button (Grayson, 2026-11-09): next to a teleporter or an
 	# item it activates / picks up instead of jumping.

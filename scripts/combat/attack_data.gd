@@ -21,6 +21,9 @@ enum Support { NONE, HEAL, CURE }
 @export var lp_cost := 0.0
 ## Multiplies the status buildup this attack's elemental damage adds.
 @export var status_power := 1.0
+## A status this attack builds toward regardless of element (Bind -> Stun;
+## StatusEffects.Status value). -1 = the element's own status.
+@export var inflicts_status := -1
 @export var swing: Swing = Swing.SLASH_RIGHT
 
 @export_group("Movement")

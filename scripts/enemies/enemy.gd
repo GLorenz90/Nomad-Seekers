@@ -9,7 +9,7 @@ extends CharacterBody3D
 ## distance, backing off inside min_range. Every attack is telegraphed: the
 ## enemy glows in its element's color for `windup`, then strikes, then
 ## recovers. Big hits and parries stagger it; statuses slow, freeze, stun or
-## blind it.
+## confuse it (a confused enemy attacks whoever is closest, friend or foe).
 ##
 ## Level editor settings (Part 13a, Grayson 2026-11-12; see configure()):
 ## stats and attacks never change, but a placed enemy can
@@ -210,7 +210,11 @@ func _physics_process(delta: float) -> void:
 	if not _home_set:
 		_home_set = true
 		home = global_position
-	var seeker := Player.nearest(self, global_position)
+	var seeker: Node3D = Player.nearest(self, global_position)
+	if status.is_confused():
+		seeker = _nearest_anyone()
+		if seeker and state in [State.IDLE, State.RETURN]:
+			state = State.CHASE  # confused: forgets its aggro and goes for whoever's closest
 	var move := Vector3.ZERO
 	var acting := status.can_act()
 	if not acting and state == State.WINDUP:
@@ -226,7 +230,22 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 
-func _think(seeker: Player, delta: float) -> Vector3:
+## Confused (Grayson 2026-11-12): the closest living thing, Seeker or enemy.
+func _nearest_anyone() -> Node3D:
+	var best: Node3D = Player.nearest(self, global_position)
+	var best_dist := best.global_position.distance_squared_to(global_position) if best else INF
+	for node in Scope.group(self, "enemies"):
+		var other := node as Enemy
+		if other == null or other == self or other.is_dead():
+			continue
+		var d := other.global_position.distance_squared_to(global_position)
+		if d < best_dist:
+			best_dist = d
+			best = other
+	return best
+
+
+func _think(seeker: Node3D, delta: float) -> Vector3:
 	var to := seeker.global_position - global_position
 	to.y = 0.0
 	var dist := to.length()
@@ -252,7 +271,7 @@ func _think(seeker: Player, delta: float) -> Vector3:
 				_aggro = false
 			return step_home
 		State.CHASE:
-			if is_beyond_leash(seeker.global_position):
+			if is_beyond_leash(seeker.global_position) and not status.is_confused():
 				state = State.RETURN  # limited chase: gives up and walks home
 				_aggro = false
 				return Vector3.ZERO
@@ -281,13 +300,13 @@ func _think(seeker: Player, delta: float) -> Vector3:
 	return Vector3.ZERO
 
 
-func _can_attack_from_here(seeker: Player, dist: float) -> bool:
+func _can_attack_from_here(seeker: Node3D, dist: float) -> bool:
 	if data.attack_style == EnemyData.AttackStyle.MELEE:
 		return dist <= data.attack_range
 	return dist <= data.attack_range and _has_line_of_sight(seeker)
 
 
-func _approach(seeker: Player, to: Vector3, dist: float, delta: float) -> Vector3:
+func _approach(seeker: Node3D, to: Vector3, dist: float, delta: float) -> Vector3:
 	var speed := data.move_speed * status.move_scale()
 	var goal := seeker.global_position
 	if data.attack_style != EnemyData.AttackStyle.MELEE and dist < data.min_range and dist > 0.01:
@@ -354,7 +373,7 @@ func _flat_step() -> Vector3:
 	return Vector3.ZERO
 
 
-func _attack(seeker: Player) -> void:
+func _attack(seeker: Node3D) -> void:
 	var info := DamageInfo.new()
 	info.amount = data.attack_damage * status.stat_scale(_attack_stat())
 	info.damage_type = data.attack_element
@@ -382,8 +401,10 @@ func _attack(seeker: Player) -> void:
 			shot.projectile_range = data.attack_range + 6.0
 			var from := get_lock_point()
 			var aim := (seeker.global_position + Vector3.UP * 1.1 - from).normalized()
-			Projectile.spawn(get_parent(), from, aim, shot, info, _element_color(), self, null,
-				Projectile.PLAYER_MASK)
+			var mask := Projectile.PLAYER_MASK
+			if status.is_confused():
+				mask |= Projectile.ENEMY_MASK  # its shots hit friend and foe
+			Projectile.spawn(get_parent(), from, aim, shot, info, _element_color(), self, null, mask)
 
 
 ## Which of its stats a debuff lowers: melee STR, ranged DEX, casters SOL.
@@ -396,7 +417,7 @@ func _attack_stat() -> StringName:
 	return &"soul"
 
 
-func _has_line_of_sight(seeker: Player) -> bool:
+func _has_line_of_sight(seeker: Node3D) -> bool:
 	var query := PhysicsRayQueryParameters3D.create(get_lock_point(),
 		seeker.global_position + Vector3.UP * 1.1, WORLD_MASK)
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
