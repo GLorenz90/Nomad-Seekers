@@ -1,0 +1,13 @@
+{
+	"id": "demo_run",
+	"title": "Demo Run",
+	"client": "Level editor team",
+	"text": "Run the demo level made from data: reach the end and beat what waits there.",
+	"objective": "event",
+	"key": "demo_boss",
+	"goal": "Beat the boss at the end of the demo level.",
+	"count": 1,
+	"scene": "area:test_1",
+	"place": "The demo level",
+	"reward": 500
+}

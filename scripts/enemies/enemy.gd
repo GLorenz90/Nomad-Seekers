@@ -10,10 +10,24 @@ extends CharacterBody3D
 ## enemy glows in its element's color for `windup`, then strikes, then
 ## recovers. Big hits and parries stagger it; statuses slow, freeze, stun or
 ## blind it.
+##
+## Level editor settings (Part 13a, Grayson 2026-11-12; see configure()):
+## stats and attacks never change, but a placed enemy can
+## - wander within wander_radius of where it spawned (otherwise it stands
+##   still until it notices someone);
+## - give up a chase once its target is more than chase_radius from where
+##   it spawned (limited chase), walk back home without healing, and be
+##   pulled again once it's there;
+## - notice Seekers at a shorter or longer aggro range (aggro_scale).
 
 signal defeated(enemy: Enemy)
 
-enum State { IDLE, CHASE, WINDUP, RECOVER, STAGGER, DEAD }
+enum State { IDLE, CHASE, WINDUP, RECOVER, STAGGER, DEAD, RETURN }
+
+const ENEMY_DIR := "res://data/enemies/"
+## Wandering: walks at this share of its speed and pauses between walks.
+const WANDER_SPEED := 0.45
+const WANDER_PAUSE := Vector2(1.2, 3.0)
 
 const ENEMY_LAYER := 4
 ## Hit reactions (Part 6).
@@ -41,12 +55,67 @@ var _aggro := false
 var _knockback := Vector3.ZERO
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 
+## Level editor placement (Part 13a). Home is where it spawned.
+var placement_id := ""
+var home := Vector3.ZERO
+var wander := false
+var wander_radius := 0.0
+var limited_chase := false
+var chase_radius := 0.0
+var aggro_scale := 1.0
+var _home_set := false
+var _wander_target := Vector3.INF
+var _wander_wait := 0.0
+
 
 static func create(enemy_data: EnemyData) -> Enemy:
 	var e := Enemy.new()
 	e.data = enemy_data
 	e.name = enemy_data.display_name.replace(" ", "")
 	return e
+
+
+## The EnemyData for an id ("grub_hound"): only files in data/enemies/, so a
+## level can't point anywhere else. Null if there's no such enemy.
+static func data_for(id: String) -> EnemyData:
+	if id == "" or not id.is_valid_filename() or id.contains("/") or id.contains("."):
+		return null
+	var path := ENEMY_DIR + id + ".tres"
+	return load(path) as EnemyData if ResourceLoader.exists(path) else null
+
+
+## Every enemy id the game has (for checking levels).
+static func known_ids() -> PackedStringArray:
+	var out := PackedStringArray()
+	for file in DirAccess.get_files_at(ENEMY_DIR):
+		var f := file.trim_suffix(".remap")
+		if f.ends_with(".tres"):
+			out.append(f.get_basename())
+	return out
+
+
+## Applies a level placement (docs/level_format.md, combat.json). `alert`
+## enemies come straight for the Seekers (wave enemies, like PSO).
+func configure(p: Dictionary) -> void:
+	placement_id = String(p.get("id", ""))
+	wander = bool(p.get("wander", false))
+	wander_radius = maxf(float(p.get("wander_radius", 0.0)), 0.0)
+	limited_chase = bool(p.get("limited_chase", false))
+	chase_radius = maxf(float(p.get("chase_radius", 0.0)), 0.0)
+	if wander and limited_chase and chase_radius < wander_radius:
+		push_warning("Enemy %s: chase radius below wander radius; using the wander radius" % placement_id)
+		chase_radius = wander_radius
+	aggro_scale = float(LevelData.AGGRO.get(String(p.get("aggro", "normal")), 1.0))
+	_aggro = bool(p.get("alert", false))
+
+
+## Where it gives up (limited chase): the target is too far from home.
+func is_beyond_leash(point: Vector3) -> bool:
+	if not limited_chase:
+		return false
+	var d := point - home
+	d.y = 0.0
+	return d.length() > chase_radius
 
 
 func _ready() -> void:
@@ -138,6 +207,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
+	if not _home_set:
+		_home_set = true
+		home = global_position
 	var seeker := Player.nearest(self, global_position)
 	var move := Vector3.ZERO
 	var acting := status.can_act()
@@ -161,10 +233,29 @@ func _think(seeker: Player, delta: float) -> Vector3:
 	_cooldown -= delta
 	match state:
 		State.IDLE:
-			if _aggro or dist <= data.aggro_range:
+			if _aggro or (dist <= data.aggro_range * aggro_scale \
+					and not is_beyond_leash(seeker.global_position)):
 				_aggro = true
 				state = State.CHASE
+			elif wander and wander_radius > 0.0:
+				return _wander_step(delta)
+		State.RETURN:
+			var back := home - global_position
+			back.y = 0.0
+			if back.length() <= 0.8:
+				state = State.IDLE
+				_aggro = false
+				return Vector3.ZERO
+			var step_home := _move_toward(home, data.move_speed * status.move_scale(), delta)
+			if step_home == Vector3.ZERO and _agent.is_navigation_finished():
+				state = State.IDLE  # can't path any closer
+				_aggro = false
+			return step_home
 		State.CHASE:
+			if is_beyond_leash(seeker.global_position):
+				state = State.RETURN  # limited chase: gives up and walks home
+				_aggro = false
+				return Vector3.ZERO
 			if _can_attack_from_here(seeker, dist):
 				_face(to, delta, 20.0)
 				if _cooldown <= 0.0:
@@ -212,6 +303,42 @@ func _approach(seeker: Player, to: Vector3, dist: float, delta: float) -> Vector
 		return Vector3.ZERO
 	_face(step, delta, 8.0)
 	return step.normalized() * speed
+
+
+## Walks toward a point on the navmesh (wandering, going home).
+func _move_toward(goal: Vector3, speed: float, delta: float) -> Vector3:
+	_agent.target_desired_distance = 0.4
+	_agent.target_position = goal
+	if NavigationServer3D.map_get_iteration_id(_agent.get_navigation_map()) == 0 \
+			or _agent.is_navigation_finished():
+		return Vector3.ZERO
+	_agent.get_next_path_position()
+	var step := _flat_step()
+	if step == Vector3.ZERO:
+		return Vector3.ZERO
+	_face(step, delta, 8.0)
+	return step.normalized() * speed
+
+
+## Idle wandering: a short walk to a random spot near home, then a pause.
+func _wander_step(delta: float) -> Vector3:
+	if _wander_wait > 0.0:
+		_wander_wait -= delta
+		return Vector3.ZERO
+	var to_target := _wander_target - global_position
+	to_target.y = 0.0
+	if _wander_target == Vector3.INF or to_target.length() < 0.6:
+		if _wander_target != Vector3.INF:
+			_wander_wait = randf_range(WANDER_PAUSE.x, WANDER_PAUSE.y)
+		var angle := randf() * TAU
+		var r := sqrt(randf()) * wander_radius
+		_wander_target = home + Vector3(cos(angle), 0.0, sin(angle)) * r
+		return Vector3.ZERO
+	var step := _move_toward(_wander_target, data.move_speed * WANDER_SPEED * status.move_scale(), delta)
+	if step == Vector3.ZERO:
+		_wander_target = Vector3.INF  # unreachable or there: pick another spot
+		_wander_wait = randf_range(WANDER_PAUSE.x, WANDER_PAUSE.y)
+	return step
 
 
 ## First waypoint that's actually ahead horizontally. The navmesh sits above

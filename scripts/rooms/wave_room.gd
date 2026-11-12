@@ -13,9 +13,19 @@ extends Node3D
 ##               doorways open.
 ##   SpawnPoints Marker3D nodes; enemies take them in order
 ## The trigger volume is built from trigger_size, centered on this node.
+##
+## Part 13a (level editor): a room can wait for its level's wiring instead of
+## starting when walked into (start_on_enter off, then "start_combat"), waves
+## can place each enemy themselves (WaveData.placements, with spawn delays),
+## and it reports combat_started / wave_cleared / room_cleared (combat
+## ended) for the wiring.
 
 signal wave_started(room: WaveRoom, index: int, total: int)
 signal room_cleared(room: WaveRoom)
+signal combat_started(room: WaveRoom)
+signal wave_cleared(room: WaveRoom, index: int)
+## Every enemy a wave spawns (the level hooks up its events).
+signal enemy_spawned(room: WaveRoom, enemy: Enemy)
 
 enum RoomState { WAITING, ACTIVE, CLEARED }
 
@@ -27,10 +37,16 @@ enum RoomState { WAITING, ACTIVE, CLEARED }
 @export var wave_delay := 1.0
 ## Old behaviour: shut every door while the room is active.
 @export var lock_all_while_active := false
+## The room's id in a data level ("" in hand-built scenes).
+@export var room_id := ""
+## Off: only the level's wiring (or a button) starts the fight.
+@export var start_on_enter := true
 
 var state: RoomState = RoomState.WAITING
 var current_wave := -1
 var alive: Array[Enemy] = []
+## Enemies of the current wave still waiting out their spawn delay.
+var _pending := 0
 
 @onready var _doors: Node3D = $Doors
 @onready var _spawn_points: Node3D = $SpawnPoints
@@ -62,19 +78,24 @@ func start() -> void:
 		return
 	state = RoomState.ACTIVE
 	_update_doors()
+	combat_started.emit(self)
 	await get_tree().create_timer(start_delay).timeout
 	_spawn_wave(0)
 
 
 func _on_body_entered(body: Node) -> void:
-	if body is Player:
+	if body is Player and start_on_enter:
 		start()
 
 
 func _spawn_wave(index: int) -> void:
 	current_wave = index
-	var points := _spawn_points.get_children()
 	var wave := waves[index]
+	if not wave.placements.is_empty():
+		_spawn_placements(wave)
+		wave_started.emit(self, index, waves.size())
+		return
+	var points := _spawn_points.get_children()
 	for i in wave.enemies.size():
 		var enemy := Enemy.create(wave.enemies[i])
 		_enemies.add_child(enemy)
@@ -86,13 +107,51 @@ func _spawn_wave(index: int) -> void:
 		enemy._aggro = true  # wave enemies come straight for you
 		enemy.defeated.connect(_on_enemy_defeated)
 		alive.append(enemy)
+		enemy_spawned.emit(self, enemy)
 	wave_started.emit(self, index, waves.size())
+
+
+## Level editor waves: each enemy where it was placed, after its delay.
+func _spawn_placements(wave: WaveData) -> void:
+	for p in wave.placements:
+		var delay := maxf(float(p.get("spawn_delay", 0.0)), 0.0)
+		if delay <= 0.0:
+			_spawn_placed(p)
+		else:
+			_pending += 1
+			get_tree().create_timer(delay).timeout.connect(func():
+				_pending -= 1
+				if state == RoomState.ACTIVE and is_inside_tree():
+					_spawn_placed(p))
+
+
+func _spawn_placed(p: Dictionary) -> void:
+	var data := Enemy.data_for(String(p.get("enemy", "")))
+	if data == null:
+		push_warning("Room %s: unknown enemy %s" % [room_id, p.get("enemy", "")])
+		_check_wave_done.call_deferred()
+		return
+	var enemy := Enemy.create(data)
+	var settings := {"alert": true}  # wave enemies come straight for you (PSO)
+	settings.merge(p, true)
+	enemy.configure(settings)
+	_enemies.add_child(enemy)
+	enemy.global_position = LevelData.vec3(p.get("pos"), global_position)
+	enemy.rotation = Vector3(0.0, deg_to_rad(float(p.get("yaw", 0.0))), 0.0)
+	enemy.defeated.connect(_on_enemy_defeated)
+	alive.append(enemy)
+	enemy_spawned.emit(self, enemy)
 
 
 func _on_enemy_defeated(enemy: Enemy) -> void:
 	alive.erase(enemy)
-	if not alive.is_empty() or state != RoomState.ACTIVE:
+	_check_wave_done()
+
+
+func _check_wave_done() -> void:
+	if not alive.is_empty() or _pending > 0 or state != RoomState.ACTIVE:
 		return
+	wave_cleared.emit(self, current_wave)
 	if current_wave + 1 < waves.size():
 		await get_tree().create_timer(wave_delay).timeout
 		_spawn_wave(current_wave + 1)
@@ -120,7 +179,7 @@ func _update_doors() -> void:
 ## True when a point is inside this room (its trigger box).
 ## Buttons (Part 11): "start" starts the waves.
 func switch_action(action: String) -> void:
-	if action == "start" and state == RoomState.WAITING:
+	if action in ["start", "start_combat"] and state == RoomState.WAITING:
 		start()
 
 

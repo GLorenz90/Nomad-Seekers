@@ -230,7 +230,7 @@ static func _self_spell(ctrl: CombatController, item: WeaponData, spell: SpellDe
 				DamageNumber.spawn_text(world, seeker.global_position + Vector3.UP * 2.2, "Cured")
 		SpellDef.Kind.TELEPORTAL:
 			var map_level := Scope.level(player)
-			var here := map_level.scene_file_path if map_level else ""
+			var here := Maps.id_of(map_level) if map_level else ""
 			if here == SHIP_SCENE:
 				ctrl.combo_feedback.emit("Already on Nomad-2")
 				return

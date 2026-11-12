@@ -1,0 +1,425 @@
+{
+	"button_groups": [
+		{
+			"buttons": [
+				"plate_a",
+				"plate_b"
+			],
+			"id": "plates",
+			"once": true
+		}
+	],
+	"dialogues": [
+		{
+			"id": "hello",
+			"lines": [
+				{
+					"speaker": "SyncAIDa",
+					"text": "Demo level loaded. Every layer of the level editor is in here."
+				},
+				{
+					"speaker": "SyncAIDa",
+					"text": "The gate opens with the button on the left."
+				}
+			]
+		},
+		{
+			"choices": [
+				{
+					"id": "ready",
+					"text": "Ready."
+				},
+				{
+					"id": "go",
+					"text": "Let's go."
+				}
+			],
+			"id": "boss_intro",
+			"lines": [
+				{
+					"speaker": "Commander Brandt",
+					"text": "Something big is in there, Seeker. Ready?"
+				}
+			]
+		}
+	],
+	"flags": {
+		"enraged": false
+	},
+	"objects": [
+		{
+			"id": "depot_start",
+			"pos": [
+				4,
+				0,
+				5
+			],
+			"type": "lumidium_depot"
+		},
+		{
+			"id": "crate_1",
+			"pos": [
+				-5,
+				0,
+				-3
+			],
+			"type": "box"
+		},
+		{
+			"color": "nature",
+			"id": "crystal_1",
+			"pos": [
+				5,
+				0,
+				-4
+			],
+			"type": "lumidium_node",
+			"yield": 3
+		},
+		{
+			"id": "gate_button",
+			"mode": "press",
+			"pos": [
+				-4,
+				0,
+				-5
+			],
+			"type": "button"
+		},
+		{
+			"id": "gate",
+			"label": "Press the button",
+			"pos": [
+				0,
+				0,
+				-8.5
+			],
+			"size": [
+				4,
+				4,
+				0.6
+			],
+			"start": "closed",
+			"type": "door"
+		},
+		{
+			"id": "hello_zone",
+			"pos": [
+				0,
+				0,
+				2
+			],
+			"size": [
+				6,
+				3,
+				4
+			],
+			"type": "trigger_zone"
+		},
+		{
+			"id": "arena_in",
+			"pos": [
+				0,
+				0,
+				-15.5
+			],
+			"shut_during_combat": "room_2",
+			"start": "open",
+			"type": "door"
+		},
+		{
+			"id": "arena_out",
+			"label": "LOCKED",
+			"open_when_cleared": "room_2",
+			"pos": [
+				0,
+				0,
+				-32.5
+			],
+			"start": "closed",
+			"type": "door"
+		},
+		{
+			"id": "trap_1",
+			"kind": "slow",
+			"pos": [
+				0,
+				0,
+				-36
+			],
+			"type": "trap"
+		},
+		{
+			"id": "plate_a",
+			"mode": "floor",
+			"pos": [
+				-5,
+				0,
+				-42
+			],
+			"type": "button"
+		},
+		{
+			"id": "plate_b",
+			"mode": "floor",
+			"pos": [
+				5,
+				0,
+				-42
+			],
+			"type": "button"
+		},
+		{
+			"id": "bridge_1",
+			"length": 8,
+			"pos": [
+				0,
+				0,
+				-44
+			],
+			"type": "bridge",
+			"width": 4,
+			"yaw": 0
+		},
+		{
+			"id": "ferry",
+			"mode": "ping_pong",
+			"points": [
+				[
+					0,
+					0,
+					-70
+				],
+				[
+					0,
+					0,
+					-74
+				]
+			],
+			"size": [
+				4,
+				0.5,
+				4
+			],
+			"speed": 2.5,
+			"type": "platform",
+			"wait": 1.5
+		},
+		{
+			"id": "mist",
+			"kind": "poison_mist",
+			"type": "hazard",
+			"zones": [
+				{
+					"pos": [
+						0,
+						0,
+						-84
+					],
+					"size": [
+						4,
+						3,
+						8
+					]
+				}
+			]
+		},
+		{
+			"id": "mist_button",
+			"mode": "press",
+			"pos": [
+				6,
+				0,
+				-66
+			],
+			"type": "button"
+		},
+		{
+			"id": "boss_door",
+			"pos": [
+				0,
+				0,
+				-89.5
+			],
+			"size": [
+				4,
+				3,
+				3
+			],
+			"type": "trigger_zone",
+			"whole_party": true
+		},
+		{
+			"id": "boss_in",
+			"pos": [
+				0,
+				0,
+				-87.5
+			],
+			"shut_during_combat": "room_5",
+			"start": "open",
+			"type": "door"
+		},
+		{
+			"destination": "hub",
+			"dormant": true,
+			"id": "exit",
+			"label": "Back to Nomad-2",
+			"pos": [
+				0,
+				0,
+				-100
+			],
+			"type": "teleporter"
+		},
+		{
+			"id": "depot_end",
+			"pos": [
+				4,
+				0,
+				-100
+			],
+			"type": "lumidium_depot"
+		}
+	],
+	"rules": [
+		{
+			"do": [
+				{
+					"action": "start_dialogue",
+					"target": "hello"
+				}
+			],
+			"id": "say_hello",
+			"when": {
+				"event": "entered",
+				"source": "hello_zone"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "open",
+					"target": "gate"
+				}
+			],
+			"id": "open_gate",
+			"when": {
+				"event": "pressed",
+				"source": "gate_button"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "extend",
+					"target": "bridge_1"
+				},
+				{
+					"action": "banner",
+					"text": "The bridge slides out"
+				}
+			],
+			"id": "bridge_out",
+			"when": {
+				"event": "pressed",
+				"source": "plates"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "disable",
+					"target": "mist"
+				}
+			],
+			"id": "clear_mist",
+			"when": {
+				"event": "pressed",
+				"source": "mist_button"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "start_dialogue",
+					"target": "boss_intro"
+				}
+			],
+			"id": "boss_call",
+			"when": {
+				"event": "party_present",
+				"source": "boss_door"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "start_combat",
+					"target": "room_5"
+				}
+			],
+			"id": "boss_fight",
+			"when": {
+				"event": "dialogue_ended",
+				"source": "boss_intro"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "set_flag",
+					"flag": "enraged",
+					"value": true
+				},
+				{
+					"action": "banner",
+					"text": "The Umbral Eye is enraged!"
+				}
+			],
+			"id": "enrage",
+			"if": [
+				{
+					"check": "flag",
+					"flag": "enraged",
+					"is": false
+				}
+			],
+			"when": {
+				"event": "health_below",
+				"source": "boss",
+				"value": 50
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "wait",
+					"seconds": 1.0
+				},
+				{
+					"action": "wake",
+					"target": "exit"
+				},
+				{
+					"action": "complete_objective",
+					"key": "demo_boss"
+				},
+				{
+					"action": "give_item",
+					"amount": 250,
+					"item": "oro"
+				},
+				{
+					"action": "banner",
+					"text": "The exit pad is awake"
+				}
+			],
+			"id": "won",
+			"when": {
+				"event": "combat_ended",
+				"source": "room_5"
+			}
+		}
+	]
+}

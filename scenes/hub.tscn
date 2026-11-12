@@ -204,8 +204,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 10)
 [node name="Teleporter" type="Area3D" parent="." unique_id=106300052]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
 script = ExtResource("7_phvbg")
-destinations = PackedStringArray("res://scenes/main.tscn", "res://scenes/arena.tscn")
-destination_names = PackedStringArray("The gym (test room)", "The test arena (wave rooms)")
+destinations = PackedStringArray("res://scenes/main.tscn", "res://scenes/arena.tscn", "area:test_1")
+destination_names = PackedStringArray("The gym (test room)", "The test arena (wave rooms)", "Demo level (made from data)")
 
 [node name="LumidiumDepot" type="Node3D" parent="." unique_id=1817442213]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 7.5)

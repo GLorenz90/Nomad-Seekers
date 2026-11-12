@@ -220,7 +220,11 @@ func _clear_all_loadouts() -> void:
 
 func _build_levels(box: VBoxContainer) -> void:
 	box.add_child(_label("Level select", 20))
-	for level in LEVELS:
+	var levels := LEVELS.duplicate()
+	# Data levels (Part 13a): every area's levels, then user://levels/.
+	for path in Maps.all_data_levels():
+		levels.append([Maps.display_name(path) + " (data)", path])
+	for level in levels:
 		var b := _button(box, String(level[0]), _on_level.bind(level[1]))
 		b.set_meta("scene", level[1])
 		b.set_meta("title", level[0])
@@ -255,7 +259,7 @@ func _on_level(scene: String) -> void:
 	if seeker:
 		CoopDirector.travel(seeker, scene)
 	else:
-		get_tree().change_scene_to_file(scene)
+		Maps.change_to(get_tree(), scene)
 
 
 func _toggle_infinite_lp(on: bool) -> void:
@@ -483,7 +487,7 @@ func refresh() -> void:
 	_debug_toggle.set_pressed_no_signal(hud != null and hud.is_debug_visible())
 	_hitbox_toggle.set_pressed_no_signal(_combat() != null and _combat().show_hitboxes)
 	var level := Scope.level(seeker) if seeker else null
-	var current := level.scene_file_path if level else ""
+	var current := Maps.id_of(level) if level else ""
 	for b in _level_buttons:
 		var here: bool = b.get_meta("scene") == current
 		b.text = ("> " if here else "   ") + String(b.get_meta("title")) + ("  (here)" if here else "")

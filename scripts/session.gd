@@ -21,6 +21,9 @@ static var settings_path := "user://session.cfg"
 ## The slot being played (-1 = none yet).
 static var slot := -1
 static var save: SaveData
+## Difficulty tier (North Star §10: normal, hard, very_hard, ultimate). Tiers
+## aren't built yet; data levels can already check it (Part 13a).
+static var difficulty := "normal"
 
 
 static func slot_path(index: int) -> String:
@@ -93,6 +96,7 @@ static func play(index: int) -> bool:
 	if data == null:
 		return false
 	use_slot(index, data)
+	Maps.new_session()  # every area picks a level again (Part 13a)
 	_tree().change_scene_to_file.call_deferred(HUB_SCENE)
 	return true
 
@@ -102,6 +106,7 @@ static func quit_to_title() -> void:
 	for p in _tree().get_nodes_in_group("player"):
 		(p as Player).save_game()
 	Party.clear()  # guests go back to the title with the leader (Part 12)
+	Maps.new_session()
 	var director := CoopDirector.find(_tree())
 	if director:
 		director.shutdown()

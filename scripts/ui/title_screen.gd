@@ -43,6 +43,9 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().paused = false
 	Session.migrate_legacy()
+	Maps.new_session()  # the title screen starts a new session (Part 13a)
+	if _playtest_launch():
+		return
 	var bg := ColorRect.new()
 	bg.color = Color(0.05, 0.07, 0.11)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -364,3 +367,16 @@ func _create() -> void:
 		return
 	Session.use_slot(_create_slot, data)
 	get_tree().change_scene_to_file.call_deferred(Session.HUB_SCENE)
+
+
+## The level editor's Playtest button (Part 13a) runs the game with
+## `-- --level=<level folder or scene>`: straight into that level with the
+## last played character (or a fresh one), skipping the title.
+func _playtest_launch() -> bool:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--level="):
+			var path := arg.trim_prefix("--level=")
+			Session.current_save(CombatController.make_default_loadouts())
+			Maps.change_to(get_tree(), path)
+			return true
+	return false

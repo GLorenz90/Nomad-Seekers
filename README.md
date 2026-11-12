@@ -2,7 +2,7 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 8, title screen, characters and Nomad-2**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 13a, levels made from data (the level editor's runtime)**.
 
 F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-2 (`scenes/hub.tscn`), whose teleporter goes to the gym test room (`scenes/main.tscn`) and the test arena (`scenes/arena.tscn`, two wave rooms of real enemies). Any level can still be opened and run on its own with F6; it plays your last character.
 
@@ -316,6 +316,26 @@ Couch co-op for up to four, split-screen.
 - **Lumidium depots:** teleporters no longer bank Lumidium. Depots do, and only when you press A at one. There's one at the start and at each exit of the arena, one in the gym, and one by Nomad-2's bank. Carried Lumidium now stays in your satchel across maps (it's in the save) and is still lost if you fall.
 - **The bank's Oro counter is now Resources:** Oro, plus deposit and withdraw for each Lumidium color, so you can take Lumidium out to trade. The bank holds up to 99,999 Lumidium. The satchel's size is saved per character (15 for now), so quests can raise it later.
 
+## Part 13a: levels made from data (for the level editor)
+The runtime the separate level editor needs (Grayson, 2026-11-12). The format itself is documented in **[docs/level_format.md](docs/level_format.md)**; this is what the game does with it.
+
+![The demo data level's landing](docs/screenshots/data_level_landing.png)
+
+- **Levels are folders of JSON** (`level.json`, `map.json`, `interaction.json`, `combat.json`) plus glTF models, never scenes or scripts, so shared levels (the Steam Workshop, some day) can't run code. `addons/seeker_data/level_data.gd` (`LevelData`) reads, writes and checks them and doesn't depend on the game, so the editor can use the same file.
+- **Sizes**: Arena (1 room, no corridors), Small 5-9, Medium 10-14, Large 15-19, Huge 20-25 rooms; corridors don't count.
+- **Area folders and session picks** (`Maps`): `res://levels/<area>/` holds an area's levels (Forest 1, Forest 2, Forest Boss each get one). A destination of `area:forest_1` becomes this session's pick from that folder, kept until you quit to the title; co-op shares the picks. Teleporters, quests, co-op and the Debug tab now work with **map ids** (a scene path or a level folder), so data levels travel, host in co-op and count for quests like any scene.
+- **`DataLevel`** (`scenes/data_level.tscn`) builds a level at load:
+  - Layer 1: lighting presets with sliders clamped to safe ranges, the start point, rooms and corridors (`LevelRoom`: room areas the Trap Scanner uses), pieces (built-in boxes, cylinders and ramps, or imported glTF loaded at runtime with box or mesh collision; `LevelAssets`), invisible walls (everyone, or **Seekers only** on the new physics layer 5), decorations (fireflies, lights, searchlights, models) with animation presets (`DecorAnimator`: sway, bob, spin, pulse, sweep). The navmesh is baked from anything solid.
+  - Layer 2: doors (with "open when room X is cleared" and "shut while room X fights"), teleporters (now able to sleep until woken), Lumidium depots and nodes, **breakable supply boxes** (`SupplyBox`), traps, buttons and button groups, hazards, **trigger zones** (`TriggerZone`, optionally waiting for the whole party), **moving platforms** (`MovingPlatform`: loop, ping-pong or step), **bridges** (`Bridge`: slide out; their navigation link only works while they're out, so enemies chase across only then) and **dialogue** (`DialogueBox`, lines and choices).
+  - **Wiring** (`LevelEvents`): when an event happens (a zone entered, a button group pressed, combat started / a wave cleared / combat ended, an enemy defeated, a boss below N% HP, a dialogue ended with a choice, a box or crystal broken, a timer, a flag), if conditions hold (flags, party size, difficulty, an active quest), do actions (any object's switch action, start a room's fight, dialogue, flags, timers, give items, complete a quest objective, a banner, wait).
+  - Layer 3: wave rooms whose enemies are placed one by one with **spawn delays**, rooms that wait for the wiring instead of starting on entry, and **corridor enemies** outside waves.
+- **Enemy leashes** (`Enemy.configure`): wander within a radius of the spawn point, and limited chase (give up past a radius from the spawn point, walk home without healing, pullable again once back); a chase radius below the wander radius is invalid. Aggro range short / normal / long. Stats and attacks never change.
+- **Quests from data**: `quests/*.json` add Guild quests; a new `event` objective is completed by a level's wiring. Quests can point at `area:` destinations.
+- **Playtest**: `godot --path . -- --level=res://levels/test_1/demo` goes straight into a level with your last character (the editor's Playtest button will use this).
+- **The demo level** (`levels/test_1/demo`, written by `tools/build_demo_level.gd`): a Small level using every layer, reachable from Nomad-2's teleporter ("Demo level (made from data)") and the Debug tab's level list, with the quest "Demo Run" at the Guild.
+
+![The demo level's bridge hall](docs/screenshots/data_level_bridge.png)
+
 ## Travel
 Nomad-2's teleporter goes to the gym or the arena. The gym has pads to the arena and back to Nomad-2. The arena's exit pad at the far end of Room B stays dark until every room is cleared, then takes you back to Nomad-2. Every trip loads the level fresh. **Press A on a pad** to use it (it banks carried Lumidium and saves first); standing on it does nothing.
 
@@ -369,7 +389,7 @@ Every feel value is an exported variable or a `.tres` field. Edit them in the In
 - **Each attack** in a weapon `.tres`: `move_speed_scale`, `face_movement`, `sustained_tick`, `duration`, `active_start`/`active_end` (hit timing), `window_open`/`window_close` (combo timing), `damage_mult`, `lp_cost`, lunge, hitbox size, projectile settings.
 
 ## Physics layers
-1 = world, 2 = player, 3 = enemy. The camera, lock-on line-of-sight checks and navmesh bake only use layer 1.
+1 = world, 2 = player, 3 = enemy, 5 = seeker_walls (Part 13a: invisible walls only Seekers collide with). The camera, lock-on line-of-sight checks and navmesh bake only use layer 1.
 
 ## Known limits (deliberate for now)
 - No animation: capsules, with weapons swung by simple tweens. Melee hitboxes show as red boxes (`show_hitboxes`).
@@ -388,6 +408,7 @@ Run from the project folder. Each prints `ok` or `FAIL` per check and exits with
 
 ```
 godot --headless --path . --script res://tests/movement_test.gd
+godot --headless --path . --script res://tests/level_test.gd
 godot --headless --path . --script res://tests/combat_test.gd
 godot --headless --path . --script res://tests/loadout_test.gd
 godot --headless --path . --script res://tests/targeting_test.gd
@@ -431,7 +452,7 @@ The tests always use a fresh save and never write yours.
 
 - `armor_test.gd` (in the arena): the armor book (24 tiered pieces, 5 rares, slot rules, job-locked sets), drop rolls (0-4 / 0-1 slots, DEF / EVA bonus), the starter Field Frame, who can wear what (Invokers Light only, job, race and gender locks), swapping pieces with their augments, stat augments, Fire Wards and a Beast Guard in real hits, Double-Heavy from an augment, unwearable armor coming off after a race change, drop rates (Blue emblem 2x), pickups, the save, old saves, and the Armor tab with a gamepad.
 
-- `flow_test.gd`: the old single save moving into slot 1, the title screen with a gamepad (main menu, character select, B back, Start, focus surviving a background click and coming back after it's lost, in the title, the teleporter picker and the pause menu), creation (Goluman can't be Invokers, the preview), the new character's starter kit (Sword, Pistol, Wand; only loadout 1 filled), saved to its slot with its SyncAIDa and Field Frame, Nomad-2's teleporter (pauses, lists the gym, arena and stay; B cancels), travel to the gym and back and to the arena with saves on the way, quitting to the title, Continue, deleting with a double X, and full slots. It uses its own folder, so real characters are never touched.
+- `flow_test.gd`: the old single save moving into slot 1, the title screen with a gamepad (main menu, character select, B back, Start, focus surviving a background click and coming back after it's lost, in the title, the teleporter picker and the pause menu), creation (Goluman can't be Invokers, the preview), the new character's starter kit (Sword, Pistol, Wand; only loadout 1 filled), saved to its slot with its SyncAIDa and Field Frame, Nomad-2's teleporter (pauses, lists the gym, arena, the demo data level and stay; B cancels), travel to the gym and back and to the arena with saves on the way, quitting to the title, Continue, deleting with a double X, and full slots. It uses its own folder, so real characters are never touched.
 
 - `inventory_test.gd` (in the arena): a new Seeker's pack (Sword, Pistol, Wand; palette 1 holding the pack's own Pistol and Sword), worn armor and palette weapons taking slots, stacks of 10 in one slot, a stack pickup taking only what fits and leaving the rest, the 30-slot limit (items refused, Oro still taken, existing stacks still filling), the 15-Lumidium satchel, and the Inventory tab with a gamepad: equip to a palette, equipped and worn gear refusing to drop, use, wear, a material, dropping part of a stack, Oro and Lumidium as one pickup each, dropped Oro and Lumidium waiting for A, and the palette picker listing only the pack.
 
@@ -440,3 +461,5 @@ The tests always use a fresh save and never write yours.
 - `leveling_test.gd` (in the arena): PSO's EXP curve at its anchor levels and rising every level, level lookups, the seven tables (and nothing gained at level 1), Human Striker = HUmar's growth, Coresian Striker above it like HUcast, Lumera Invoker above a Human Invoker like a Newman Force, Rangers' ATA, LCK never growing, a level-up (stats, HP / LP refill, banner, gains list, flash, the EXP bar under LP), a multi-level jump, armor level requirements (tiers and rares), weapon stat requirements (Pistol, Great Sword, Arbalest, rares; the palette refusing), shop tiers by level, the Debug tab's level tools, Reset character, and the save.
 
 - `hazards_test.gd` (in the arena): poison mist (draining HP, never below 1, not the Poisoned status, spanning the corridor, draining Goluman too), Goluman statuses (immune to Poison and Stun, stopped by Shock; others still move while shocked), Stun ending on Cure or a hit but not on damage over time, its button opening the door and clearing it, the four floor plates (three latch alone, the fourth needs you; with two Seekers two latch and the last two need one each), darkness (the HUD darkens, the corner button clears it, the exit still waits for every enemy), buttons starting waves and turning traps off, and the menu not pausing (no movement while it's open, poison still ticking).
+
+- `level_test.gd` (Part 13a): the level format (sizes, the publish check, the leash rule, lighting limits, save and load), area folders and session picks, quests from JSON, a glTF written at runtime loading back with collision (and files outside the level folder refused), then the demo data level played: lighting, room areas, the navmesh, a dialogue zone (input locked, dialogue_ended), a button-opened gate, the corridor hound wandering, giving up its chase past its leash and walking home, the arena's doors (shut during the fight, open when cleared) and spawn delays, the Seeker-only wall, floor plates extending the bridge (no path over the pit before, a path across after), the moving platform, the mist button, the whole-party zone starting the boss call whose end starts the fight, the boss's 50% HP rule, and the dormant exit waking and completing the quest.
