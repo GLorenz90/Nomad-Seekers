@@ -12,7 +12,6 @@ extends Resource
 ## - Element-less lines (stun, instant kill, HP / LP / EXP steal, HP cut,
 ##   Charge): the weapon keeps its own damage type. The stun line's special
 ##   hits for half and builds Stun, like a status line.
-## Weapons never Slow: their Ice builds Freeze directly (CombatController).
 
 enum Effect { STATUS, BURST, INSTANT_KILL, DRAIN_HP, STEAL_LP, STEAL_EXP, CUT_HP, CHARGE, STUN }
 

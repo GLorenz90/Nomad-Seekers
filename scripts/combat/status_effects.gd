@@ -8,9 +8,9 @@ extends Node
 ## Grayson 2026-11-12:
 ##   Fire      Burn     damage over time, 5 s; wiggling the stick burns it off
 ##                      faster ("rolling on the ground")
-##   Ice       Slow     half speed, 7 s; Ice buildup while slowed = Freeze
-##   Freeze             can't move or act, 5 s; mash buttons and wiggle the
+##   Ice       Freeze   can't move or act, 5 s; mash buttons and wiggle the
 ##                      stick to break out sooner
+##   (traps)   Slow     half speed, 7 s; only Slow traps cause it
 ##   Lightning Shock    Seekers (not Goluman) can move but not attack, until
 ##                      cured. Goluman and enemies are stopped in place for
 ##                      5 s (shock_stuns), which mashing shortens
@@ -88,7 +88,7 @@ static func for_element(element: Element.Type) -> int:
 		Element.Type.FIRE:
 			return Status.BURN
 		Element.Type.ICE:
-			return Status.SLOW
+			return Status.FREEZE  # Slow only comes from traps (Grayson 2026-11-12)
 		Element.Type.LIGHTNING:
 			return Status.SHOCK
 		Element.Type.NATURE:
@@ -118,8 +118,6 @@ func add_buildup(info: DamageInfo, source: Node = null) -> void:
 		return
 	buildup[key] = 0.0
 	var status := info.inflicts_status if info.inflicts_status >= 0 else for_element(info.damage_type)
-	if status == Status.SLOW and is_active(Status.SLOW):
-		status = Status.FREEZE
 	if status == Status.DRAIN:
 		_drain_source = source
 	apply(status)
@@ -207,7 +205,7 @@ func _element_for(status: int) -> int:
 	match status:
 		Status.BURN:
 			return Element.Type.FIRE
-		Status.SLOW, Status.FREEZE:
+		Status.FREEZE:
 			return Element.Type.ICE
 		Status.SHOCK:
 			return Element.Type.LIGHTNING

@@ -121,13 +121,12 @@ func _run() -> void:
 		is_equal_approx(special.damage_mult, sword.normal_attacks[0].damage_mult * 0.5) and special.status_power >= 10.0)
 	var target := _spawn("grub_hound", Vector3(8, 0, -6))
 	await _frames(2)
-	# Weapons never Slow: their Ice goes straight to Freeze (spells keep Slow first).
+	# Ice never Slows (weapons or spells): it goes straight to Freeze. Slow is traps only.
 	var chill := (load("res://data/weapons/sword.tres") as WeaponData).duplicate() as WeaponData
 	chill.base_name = chill.display_name
 	Loot.apply_tag(chill, SpecialTag.find_line("Chill"), 1)
 	var ice_hit: DamageInfo = _player.combat._make_damage(chill, chill.normal_attacks[0], false, 1.0)
-	_check("an Ice weapon's hit builds Freeze, not Slow", ice_hit.damage_type == Element.Type.ICE
-		and ice_hit.inflicts_status == S.FREEZE)
+	_check("an Ice weapon's hit deals Ice", ice_hit.damage_type == Element.Type.ICE)
 	ice_hit.amount = target.status.threshold
 	target.status.add_buildup(ice_hit)
 	_check("and freezes without slowing first", target.status.is_active(S.FREEZE) and not target.status.is_active(S.SLOW))
@@ -136,7 +135,10 @@ func _run() -> void:
 	spell_ice.amount = target.status.threshold
 	spell_ice.damage_type = Element.Type.ICE
 	target.status.add_buildup(spell_ice)
-	_check("other Ice (spells) still Slows first", target.status.is_active(S.SLOW) and not target.status.is_active(S.FREEZE))
+	_check("other Ice (spells) freezes too, without Slow", target.status.is_active(S.FREEZE) and not target.status.is_active(S.SLOW))
+	target.status.clear_all()
+	var trap := SpellBook.get_spell(&"slow_trap")
+	_check("Slow comes from the Slow trap", trap.trap_status == S.SLOW)
 	target.status.clear_all()
 	var info := DamageInfo.new()
 	info.amount = target.status.threshold
