@@ -10,7 +10,7 @@ render_mode unshaded, cull_disabled, depth_test_disabled, depth_draw_never, blen
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest, repeat_disable;
 uniform vec3 center = vec3(0.0);
 uniform float radius = 8.0;
-uniform float fade = 2.5;
+uniform float fade = 1.5;
 uniform float strength = 1.0;
 
 void vertex() {

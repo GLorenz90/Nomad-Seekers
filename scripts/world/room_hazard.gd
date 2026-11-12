@@ -21,7 +21,7 @@ const POISON_DRAIN := 0.02
 const POISON_TICK := 0.5
 ## Darkness: default sight range, and the hit-chance penalty (percentage
 ## points) against enemies beyond it (Grayson 2026-11-11: "25% evasion bonus").
-const DEFAULT_SIGHT := 8.0
+const DEFAULT_SIGHT := 4.0
 const DARK_DODGE := 25.0
 
 @export var kind: Kind = Kind.POISON_MIST
