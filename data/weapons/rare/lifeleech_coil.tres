@@ -86,12 +86,11 @@ lunge_distance = 0.4
 reach = 1.3
 hitbox_size = Vector3(2.6, 1.6, 2)
 
-[sub_resource type="Resource" id="Resource_dhn2q"]
+[sub_resource type="Resource" id="Resource_jpw0q"]
 script = ExtResource("4_gvr2i")
-line_name = "Draw"
-tier_names = PackedStringArray("Draw", "Drain", "Fill", "Gush")
-effect = 2
-element = 6
+line_name = "Leech"
+tier_names = PackedStringArray("Leech", "Siphon", "Vampire", "Sanguine")
+effect = 3
 
 [resource]
 script = ExtResource("2_p0ydh")
@@ -100,7 +99,7 @@ weapon_type = &"flail"
 weight = 1
 base_damage = 39.0
 jobs = PackedStringArray("S")
-tag = SubResource("Resource_dhn2q")
+tag = SubResource("Resource_jpw0q")
 tag_tier = 3
 type_bonus = {
 1: 0.2

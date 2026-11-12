@@ -85,20 +85,19 @@ lunge_distance = 0.4
 reach = 0.9
 hitbox_size = Vector3(1, 1.4, 1.5)
 
-[sub_resource type="Resource" id="Resource_pytbn"]
+[sub_resource type="Resource" id="Resource_oeo1a"]
 script = ExtResource("4_i4q3w")
-line_name = "Dim"
-tier_names = PackedStringArray("Dim", "Shadow", "Dark", "Hell")
-effect = 1
-element = 6
+line_name = "Grim"
+tier_names = PackedStringArray("Grim", "Doom", "Reaper", "Oblivion")
+effect = 2
 
 [resource]
 script = ExtResource("2_7swlo")
 display_name = "Gravesong"
 weapon_type = &"dagger"
-base_damage = 15.600000000000001
+base_damage = 15.6
 jobs = PackedStringArray("S", "R", "I")
-tag = SubResource("Resource_pytbn")
+tag = SubResource("Resource_oeo1a")
 tag_tier = 3
 type_bonus = {
 5: 0.2

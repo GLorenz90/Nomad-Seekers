@@ -79,7 +79,7 @@ func _run() -> void:
 		and emblems[0] != emblems[1] and emblems[1] != emblems[2] and emblems[0] != emblems[2])
 	_check("the job can only be changed from the Debug tab", (_main.loadout_menu as LoadoutMenu).get("_job") == null)
 	var ember := _rare("Emberfang")
-	_check("Emberfang: rare, Burning (Heat tier 4), Fire, +30%% base",
+	_check("Emberfang: rare, Inferno (Heat tier 4), Fire, +30%% base",
 		ember != null and ember.rare and ember.tag.line_name == "Heat" and ember.tag_tier == 3
 		and ember.damage_type == Element.Type.FIRE and is_equal_approx(ember.base_damage, _w("sword").base_damage * 1.3))
 
@@ -131,9 +131,37 @@ func _run() -> void:
 	var special := flame_sword.get_attack(1, false, 0, true)
 	_check("a Heat-line sword is named \"Flame Sword\" and deals Fire (%s)" % flame_sword.display_name,
 		flame_sword.display_name == "Flame Sword" and flame_sword.damage_type == Element.Type.FIRE)
-	_check("its RT special is stronger, costs LP and builds status faster",
-		special != null and special.damage_mult > flame_sword.normal_attacks[0].damage_mult
-		and special.lp_cost > 0.0 and special.status_power > 1.0)
+	_check("Heat is a burst line: its special hits x1.3 for a bigger chunk of LP",
+		special != null and is_equal_approx(special.damage_mult, flame_sword.normal_attacks[0].damage_mult * 1.3)
+		and special.lp_cost >= flame_sword.normal_attacks[0].lp_cost + 8.0 and special.damage_type == Element.Type.FIRE)
+	var scorch := Loot.make_item(_w("sword"), rng)
+	Loot.apply_tag(scorch, _line("Smolder"), 1)
+	var scorch_special := scorch.get_attack(1, false, 0, true)
+	_check("a Smolder-line sword (\"%s\") deals Fire; its special hits for half and builds Burn hard" % scorch.display_name,
+		scorch.display_name == "Scorch Sword" and scorch.damage_type == Element.Type.FIRE
+		and is_equal_approx(scorch_special.damage_mult, scorch.normal_attacks[0].damage_mult * 0.5)
+		and scorch_special.status_power >= 10.0)
+	var leech_sword := Loot.make_item(_w("sword"), rng)
+	Loot.apply_tag(leech_sword, _line("Leech"), 0)
+	_check("element-less lines keep the weapon's own damage type", leech_sword.damage_type == Element.Type.GENERIC
+		and leech_sword.get_attack(1, false, 0, true).damage_type == Element.Type.GENERIC)
+	_check("18 lines: 6 status, 6 burst, 6 element-less", SpecialTag.all_lines().size() == 18
+		and SpecialTag.all_lines().filter(func(l): return l.effect == SpecialTag.Effect.STATUS).size() == 6
+		and SpecialTag.all_lines().filter(func(l): return l.effect == SpecialTag.Effect.BURST).size() == 6)
+	# A weapon tagged before the rework (old Bind line, Nature) moves to the new line.
+	var old := _w("sword").duplicate() as WeaponData
+	old.base_name = "Sword"
+	var old_tag := SpecialTag.new()
+	old_tag.line_name = "Bind"
+	old_tag.tier_names = PackedStringArray(["Bind", "Hold", "Seize", "Arrest"])
+	old_tag.element = Element.Type.NATURE
+	old.tag = old_tag
+	old.tag_tier = 2
+	old.damage_type = Element.Type.NATURE
+	old.display_name = "Seize Sword"
+	Loot.refresh_tag(old)
+	_check("an old Bind weapon becomes Static, Lightning (%s)" % old.display_name,
+		old.tag.line_name == "Static" and old.display_name == "Shock Sword" and old.damage_type == Element.Type.LIGHTNING)
 
 	# Monster-type bonus: +30% vs Beast.
 	var hound := _spawn("grub_hound", ARENA + Vector3(0, 0, -6))
@@ -148,24 +176,24 @@ func _run() -> void:
 	hound.queue_free()
 
 	# Tag effects through report_hit.
-	var drain := _tagged("sword", "Draw", 3)
+	var drain := _tagged("sword", "Leech", 3)
 	_player.health.hp = 100.0
 	var dummy := _spawn("grub_hound", ARENA + Vector3(0, 0, -6))
 	_combat.report_hit(dummy, _info(100.0, drain, true), 100.0)
-	_check("Gush heals 25%% of damage dealt (hp %.0f)" % _player.health.hp, is_equal_approx(_player.health.hp, 125.0))
+	_check("Sanguine heals 25%% of damage dealt (hp %.0f)" % _player.health.hp, is_equal_approx(_player.health.hp, 125.0))
 	_combat.lp = 10.0
-	_combat.report_hit(dummy, _info(100.0, _tagged("sword", "Mind", 0), true), 100.0)
-	_check("Mind restores LP (10 -> %.0f)" % _combat.lp, is_equal_approx(_combat.lp, 20.0))
+	_combat.report_hit(dummy, _info(100.0, _tagged("sword", "Lucid", 0), true), 100.0)
+	_check("Lucid restores LP (10 -> %.0f)" % _combat.lp, is_equal_approx(_combat.lp, 20.0))
 	var exp_before := _player.save.character.experience
-	_combat.report_hit(dummy, _info(10.0, _tagged("sword", "Master's", 2), true), 10.0)
-	_check("King's steals EXP (+%d)" % (_player.save.character.experience - exp_before), _player.save.character.experience > exp_before)
+	_combat.report_hit(dummy, _info(10.0, _tagged("sword", "Mentor's", 2), true), 10.0)
+	_check("Oracle's steals EXP (+%d)" % (_player.save.character.experience - exp_before), _player.save.character.experience > exp_before)
 	_combat.report_hit(dummy, _info(10.0, drain, false), 10.0)
 	_check("a normal (non-RT) hit has no tag effect", is_equal_approx(_player.health.hp, 125.0))
-	var dim := _tagged("sword", "Dim", 3)
+	var dim := _tagged("sword", "Grim", 3)
 	dummy.data.boss = true
 	for i in 200:
 		_combat.report_hit(dummy, _info(1.0, dim, true), 1.0)
-	_check("Hell never instant-kills a boss", not dummy.health.is_dead())
+	_check("Oblivion never instant-kills a boss", not dummy.health.is_dead())
 	dummy.data.boss = false
 	var kills_after := -1
 	for i in 200:
@@ -173,11 +201,36 @@ func _run() -> void:
 		if dummy.health.is_dead():
 			kills_after = i + 1
 			break
-	_check("Hell instant-kills a normal enemy (after %d hits at 20%%)" % kills_after, kills_after > 0)
+	_check("Oblivion instant-kills a normal enemy (after %d hits at 20%%)" % kills_after, kills_after > 0)
 	await _frames(30)
 
+	# Burst lines: the special bursts onto up to two enemies nearby.
+	var center := _spawn("grub_hound", ARENA + Vector3(0, 0, -8))
+	var near_a := _spawn("grub_hound", ARENA + Vector3(1.5, 0, -8))
+	var near_b := _spawn("grub_hound", ARENA + Vector3(-1.5, 0, -8))
+	var near_c := _spawn("grub_hound", ARENA + Vector3(0, 0, -10.5))
+	var far := _spawn("grub_hound", ARENA + Vector3(6, 0, -8))
+	await _frames(2)
+	for e in [near_a, near_b, near_c, far]:
+		e.data.defense = 0.0
+	var spark := _tagged("sword", "Spark", 1)
+	var hp_before := [near_a.health.hp, near_b.health.hp, near_c.health.hp, far.health.hp]
+	_combat.report_hit(center, _info(20.0, spark, true), 20.0)
+	var burnt := 0
+	for i in 3:
+		if [near_a, near_b, near_c][i].health.hp < hp_before[i]:
+			burnt += 1
+	_check("a Bolt special bursts onto two nearby enemies (%d hit), not the far one" % burnt,
+		burnt == 2 and is_equal_approx(far.health.hp, hp_before[3]))
+	var hp_after := [near_a.health.hp, near_b.health.hp, near_c.health.hp]
+	_combat.report_hit(center, _info(20.0, spark, false), 20.0)
+	_check("a normal hit doesn't burst", [near_a.health.hp, near_b.health.hp, near_c.health.hp] == hp_after)
+	for e in [center, near_a, near_b, near_c, far]:
+		e.queue_free()
+	await _frames(2)
+
 	# Charge-line special pays Oro.
-	var charged := _tagged("sword", "Charge", 0)
+	var charged := _tagged("sword", "Tithe", 0)
 	_equip(null, charged)
 	_player.save.inventory.oro = 150
 	await _place(ARENA)
@@ -185,7 +238,7 @@ func _run() -> void:
 	await _tap("hand_x")
 	Input.action_release("shift")
 	await _idle()
-	_check("Charge special costs 100 Oro (150 -> %d)" % _player.save.inventory.oro, _player.save.inventory.oro == 50)
+	_check("Tithe special costs 100 Oro (150 -> %d)" % _player.save.inventory.oro, _player.save.inventory.oro == 50)
 	_feedback.clear()
 	Input.action_press("shift")
 	await _tap("hand_x")

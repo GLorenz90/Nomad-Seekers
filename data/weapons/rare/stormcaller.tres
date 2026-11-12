@@ -109,10 +109,11 @@ projectile_speed = 60.0
 projectile_range = 45.0
 projectile_pierce = true
 
-[sub_resource type="Resource" id="Resource_mdgrq"]
+[sub_resource type="Resource" id="Resource_qrugb"]
 script = ExtResource("4_jtkch")
-line_name = "Shock"
-tier_names = PackedStringArray("Shock", "Thunder", "Storm", "Tempest")
+line_name = "Spark"
+tier_names = PackedStringArray("Spark", "Bolt", "Thunder", "Skyfall")
+effect = 1
 element = 3
 
 [resource]
@@ -125,7 +126,7 @@ two_handed = true
 base_damage = 28.6
 damage_type = 3
 jobs = PackedStringArray("R")
-tag = SubResource("Resource_mdgrq")
+tag = SubResource("Resource_qrugb")
 tag_tier = 3
 type_bonus = {
 2: 0.25

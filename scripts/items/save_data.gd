@@ -184,10 +184,22 @@ func _fill_missing(default_loadouts: LoadoutSet) -> void:
 	if bank == null:
 		bank = Inventory.new()
 	loadouts.ensure_slots()
+	refresh_weapon_tags()
 	give_starter_armor()
 	pack_palette_weapons()
 	ensure_quick_slots()
 
+
+
+## Weapons tagged before the 2026-11-12 rework move to the current lines.
+func refresh_weapon_tags() -> void:
+	for inv in [inventory, bank]:
+		for w in inv.weapons:
+			Loot.refresh_tag(w)
+	for l in loadouts.loadouts:
+		if l:
+			Loot.refresh_tag(l.primary)
+			Loot.refresh_tag(l.off_hand)
 
 
 # --- The pack (Part 9) -------------------------------------------------------------

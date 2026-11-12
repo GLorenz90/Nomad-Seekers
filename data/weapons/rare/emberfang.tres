@@ -79,10 +79,11 @@ window_close = 1.0333333333333334
 lunge_distance = 0.8
 hitbox_size = Vector3(1.2, 1.6, 1.8)
 
-[sub_resource type="Resource" id="Resource_quy6i"]
+[sub_resource type="Resource" id="Resource_jdie8"]
 script = ExtResource("4_fkwed")
 line_name = "Heat"
-tier_names = PackedStringArray("Heat", "Fire", "Flame", "Burning")
+tier_names = PackedStringArray("Heat", "Fire", "Flame", "Inferno")
+effect = 1
 element = 1
 
 [resource]
@@ -92,7 +93,7 @@ weapon_type = &"sword"
 base_damage = 26.0
 damage_type = 1
 jobs = PackedStringArray("S", "R", "I")
-tag = SubResource("Resource_quy6i")
+tag = SubResource("Resource_jdie8")
 tag_tier = 3
 type_bonus = {
 0: 0.2

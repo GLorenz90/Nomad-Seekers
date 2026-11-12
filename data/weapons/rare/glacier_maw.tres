@@ -86,10 +86,10 @@ lunge_distance = 0.6
 reach = 1.4
 hitbox_size = Vector3(3, 1.6, 2.2)
 
-[sub_resource type="Resource" id="Resource_furiq"]
+[sub_resource type="Resource" id="Resource_l215j"]
 script = ExtResource("4_6ocqe")
-line_name = "Ice"
-tier_names = PackedStringArray("Ice", "Frost", "Freeze", "Blizzard")
+line_name = "Chill"
+tier_names = PackedStringArray("Chill", "Frost", "Rime", "Glacial")
 element = 2
 
 [resource]
@@ -102,7 +102,7 @@ block_strength = 0.35
 base_damage = 44.2
 damage_type = 2
 jobs = PackedStringArray("S")
-tag = SubResource("Resource_furiq")
+tag = SubResource("Resource_l215j")
 tag_tier = 3
 type_bonus = {
 4: 0.2

@@ -86,10 +86,10 @@ lunge_distance = 0.0
 reach = 0.0
 hitbox_size = Vector3(4.4, 1.6, 4.4)
 
-[sub_resource type="Resource" id="Resource_pbrsi"]
+[sub_resource type="Resource" id="Resource_kgxw3"]
 script = ExtResource("4_wtw2b")
-line_name = "Panic"
-tier_names = PackedStringArray("Panic", "Riot", "Havoc", "Chaos")
+line_name = "Dazzle"
+tier_names = PackedStringArray("Dazzle", "Daze", "Bewilder", "Delirium")
 element = 5
 
 [resource]
@@ -100,7 +100,7 @@ two_handed = true
 base_damage = 22.1
 damage_type = 5
 jobs = PackedStringArray("S", "I")
-tag = SubResource("Resource_pbrsi")
+tag = SubResource("Resource_kgxw3")
 tag_tier = 3
 type_bonus = {
 3: 0.25
