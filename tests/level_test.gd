@@ -168,6 +168,32 @@ func _shape_checks() -> void:
 	level.map.materials[0].erase("license")
 	level.map.materials[0].erase("author")
 	_check("licenses aren't required", not "\n".join(level.validate()).contains("license"))
+	# Every map: a glTF-style packed image (occlusion, roughness, metallic), glow,
+	# cut-out transparency, and a height map on UV mapping.
+	level.map.materials.append({"id": "full", "albedo": "assets/moss.png", "normal": "assets/moss.png", "normal_strength": 2.0,
+		"roughness": 1.0, "roughness_map": "assets/moss.png", "roughness_channel": "green",
+		"metallic": 1.0, "metallic_map": "assets/moss.png", "metallic_channel": "blue",
+		"ao_map": "assets/moss.png", "ao_channel": "red", "ao_strength": 0.5,
+		"emission": [1, 0.5, 0], "emission_energy": 3.0, "emission_map": "assets/moss.png",
+		"transparency": "cutout", "alpha_cutoff": 0.4, "opacity": 0.9,
+		"mapping": "uv", "uv_repeat": 2.0, "height_map": "assets/moss.png", "height_scale": 3.0})
+	var full := LevelMaterials.build(level, "full")
+	_check("roughness and metallic maps read their channel", full.roughness_texture != null and full.metallic_texture != null
+		and full.roughness_texture_channel == BaseMaterial3D.TEXTURE_CHANNEL_GREEN and full.metallic_texture_channel == BaseMaterial3D.TEXTURE_CHANNEL_BLUE)
+	_check("ambient occlusion", full.ao_enabled and full.ao_texture != null and full.ao_texture_channel == BaseMaterial3D.TEXTURE_CHANNEL_RED
+		and is_equal_approx(full.ao_light_affect, 0.5))
+	_check("glow", full.emission_enabled and full.emission_texture != null and is_equal_approx(full.emission_energy_multiplier, 3.0)
+		and full.emission.is_equal_approx(Color(1, 0.5, 0)))
+	_check("cut-out transparency", full.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR and is_equal_approx(full.alpha_scissor_threshold, 0.4)
+		and is_equal_approx(full.albedo_color.a, 0.9) and is_equal_approx(full.normal_scale, 2.0))
+	_check("UV mapping with a height map", not full.uv1_triplanar and is_equal_approx(full.uv1_scale.x, 2.0)
+		and full.heightmap_enabled and is_equal_approx(full.heightmap_scale, 3.0))
+	level.map.materials[2].mapping = "world"
+	_check("height maps need UV mapping (Godot can't do them triplanar)", not LevelMaterials.build(level, "full").heightmap_enabled)
+	level.map.materials[2].merge({"transparency": "glass", "ao_channel": "purple", "emission_map": "../x.png"}, true)
+	problems = "\n".join(level.validate())
+	_check("and the check catches bad settings", problems.contains("transparency must be") and problems.contains("ao_channel must be")
+		and problems.contains("emission_map image"))
 
 
 func _map_checks() -> void:

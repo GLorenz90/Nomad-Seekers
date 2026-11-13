@@ -138,13 +138,29 @@ other count (2–4, or over 25) fits no size and can't be published.
   Licenses live in `licenses/`.)
   `category` (`decoration` or `prefab`) and `folder` (names joined with `/`)
   only organise the editor's list; the game ignores them.
-- **materials**: paint for pieces. `albedo` and `normal` are optional images
-  (`.png`, `.jpg`, `.jpeg`, `.webp`) inside the level folder. `color` tints it, `roughness` and `metallic` are
-  0–1, `normal_strength` 0–4. Materials are mapped in world space
-  (triplanar), so stretching a shape doesn't stretch the image; `tile` is how
-  many metres one copy of the image covers (0.1–100, default 2). `name` and
-  `folder` are for the editor. Built by `LevelMaterials.build`, shared by both
-  repos.
+- **materials**: paint for pieces, built by `LevelMaterials.build` (shared by
+  both repos; its header lists every key). All keys but `id` are optional.
+  - Images (`.png`, `.jpg`, `.jpeg`, `.webp`, inside the level folder):
+    `albedo` (colour), `normal`, `roughness_map`, `metallic_map`, `ao_map`
+    (ambient occlusion), `emission_map` and `height_map`.
+  - `roughness_map`, `metallic_map` and `ao_map` each read one channel
+    (`roughness_channel` etc.: `red`, `green`, `blue`, `alpha` or `gray`).
+    glTF packs occlusion, roughness and metallic into one image (red, green,
+    blue), so the same file can serve all three.
+  - `color` tints the colour image. `roughness` and `metallic` (0–1)
+    multiply their maps. `normal_strength` 0–4, `ao_strength` 0–1.
+  - `emission` (a color) and `emission_energy` (0–16) make it glow; with an
+    `emission_map` and no color, the map glows in its own colors.
+  - `transparency`: `none`, `cutout` (pixels below `alpha_cutoff` are
+    dropped and both sides show: leaves, fences) or `alpha` (blended, times
+    `opacity`). Transparency is only visual: solid pieces still collide.
+  - `mapping`: `world` (default) projects the images in world space
+    (triplanar), so stretching a shape doesn't stretch them; `tile` is how
+    many metres one copy covers (0.1–100, default 2). `uv` uses the mesh's
+    own UVs, repeated `uv_repeat` times: right for a model's own textures, and
+    the only mapping where `height_map` (with `height_scale` 0–16) shows,
+    since Godot can't draw height maps triplanar.
+  - `name` and `folder` are for the editor.
 - **folders**: the editor's empty folders, per category (`decoration`,
   `prefab`, `material`). The game ignores them.
 - **pieces**: everything the level is built from. `asset` is an asset id, or
