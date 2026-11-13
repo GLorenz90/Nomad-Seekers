@@ -32,6 +32,7 @@ func _run() -> void:
 	_data_checks()
 	_map_checks()
 	_asset_checks()
+	_shape_checks()
 	await _play_demo()
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
@@ -91,6 +92,82 @@ func _data_checks() -> void:
 
 
 # --- Maps ---------------------------------------------------------------------------------
+
+## Curved walls, stairs and materials (Grayson, 2026-11-13).
+func _shape_checks() -> void:
+	# Stairs: 2 m up over 6 m. Three steps (0.67 m each) are too tall to walk;
+	# eight (0.25 m) make a path from the bottom to the top.
+	for spec in [[3, false], [8, true]]:
+		var lv := LevelData.create("Stairs")
+		lv.map.pieces = [
+			{"id": "ground", "asset": "builtin:box", "size": [6, 0.5, 20], "pos": [0, -0.5, 0], "surface": "floor"},
+			{"id": "stairs", "asset": "builtin:stairs", "size": [4, 2, 6], "steps": spec[0], "pos": [0, 0, 0], "surface": "floor"},
+			{"id": "deck", "asset": "builtin:box", "size": [6, 0.5, 6], "pos": [0, 1.5, -6], "surface": "floor"}]
+		var nm := LevelNav.bake(lv, Callable())
+		var bottom := -1
+		var top := -1
+		var isl := LevelNav.islands(nm)
+		for i in isl.size():
+			if LevelNav._island_has(isl[i], Vector3(0, 0, 7)):
+				bottom = i
+			if LevelNav._island_has(isl[i], Vector3(0, 2, -6)):
+				top = i
+		_check("stairs with %d steps %s" % [spec[0], "connect the two floors" if spec[1] else "are too steep to walk"],
+			bottom >= 0 and top >= 0 and (bottom == top) == spec[1])
+	var stairs := LevelNav.builtin_meshes("builtin:stairs", Vector3(4, 2, 6), {"steps": 8})
+	_check("stairs are one box per step", stairs.size() == 8 and is_equal_approx((stairs[7][0] as BoxMesh).size.y, 2.0))
+	# Curved walls: 90 degrees over 8 m of length.
+	var wall: Array = LevelNav.builtin_meshes("builtin:curved_wall", Vector3(8, 3, 0.5), {"bend": 90.0})
+	var mesh: ArrayMesh = wall[0][0]
+	var box := mesh.get_aabb()
+	var radius := 8.0 / (PI * 0.5)
+	_check("a 90° curved wall spans its arc (%s)" % box, is_equal_approx(box.size.y, 3.0)
+		and absf(box.size.x - (2.0 * (radius + 0.25) * sin(PI * 0.25))) < 0.05)
+	var faces := mesh.get_faces()
+	var outward := 0
+	var arrays := mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	for i in range(0, verts.size(), 3):
+		var face_n := (verts[i + 2] - verts[i]).cross(verts[i + 1] - verts[i])  # Godot faces are clockwise
+		if face_n.dot(normals[i] + normals[i + 1] + normals[i + 2]) > 0.0:
+			outward += 1
+	_check("its faces all face outward (%d of %d)" % [outward, verts.size() / 3], outward == verts.size() / 3 and faces.size() > 0)
+	_check("no bend makes a straight wall", LevelNav.builtin_meshes("builtin:curved_wall", Vector3(8, 3, 0.5), {"bend": 0.0})[0][0] is BoxMesh)
+	var lv := LevelData.create("Curve")
+	lv.map.pieces = [{"id": "c", "asset": "builtin:curved_wall", "size": [8, 3, 0.5], "bend": 90.0, "pos": [0, 0, 0], "surface": "obstacle"}]
+	var hit := LevelNav.hitbox(lv.map.pieces[0], lv, Callable())
+	_check("a curved wall gets an exact (concave) hitbox", hit.shapes.size() == 1 and hit.shapes[0][0] is ConcavePolygonShape3D)
+	lv.map.pieces[0].bend = 400.0
+	lv.map.pieces.append({"id": "s", "asset": "builtin:stairs", "steps": 0})
+	var problems := "\n".join(lv.validate())
+	_check("bends over 360° and stairs with no steps are refused", problems.contains("bends at most") and problems.contains("need 1-"))
+
+	# Materials: an image in the level folder, tiled in world space.
+	var dir := "user://material_test"
+	DirAccess.make_dir_recursive_absolute(dir + "/assets")
+	var img := Image.create(8, 8, false, Image.FORMAT_RGB8)
+	img.fill(Color(0.2, 0.6, 0.3))
+	img.save_png(dir + "/assets/moss.png")
+	var level := LevelData.create("Mats")
+	level.dir = ProjectSettings.globalize_path(dir)
+	level.map.materials = [{"id": "moss", "albedo": "assets/moss.png", "tile": 2.0, "roughness": 0.7, "license": "CC0"},
+		{"id": "sneaky", "albedo": "../../secret.png", "license": "CC0"}]
+	var mat := LevelMaterials.build(level, "moss")
+	_check("a material loads its image from the level folder", mat != null and mat.albedo_texture != null
+		and mat.uv1_world_triplanar and is_equal_approx(mat.uv1_scale.x, 0.5) and is_equal_approx(mat.roughness, 0.7))
+	var sneaky := LevelMaterials.build(level, "sneaky")
+	_check("but never from outside it", sneaky != null and sneaky.albedo_texture == null)
+	var shape := LevelAssets.builtin("builtin:box", Vector3(2, 2, 2), Color.WHITE, {}, mat)
+	_check("shapes wear a material", (shape.get_child(0) as MeshInstance3D).material_override == mat)
+	shape.free()
+	level.map.pieces = [{"id": "p", "asset": "builtin:box", "material": "nope"}]
+	problems = "\n".join(level.validate())
+	_check("the check catches missing materials and unsafe images",
+		problems.contains("isn't in the level (nope)") and problems.contains("Material sneaky: its albedo image"))
+	level.map.materials[0].erase("license")
+	_check("and images without a license", "\n".join(level.validate()).contains("Material moss has images but no license"))
+
 
 func _map_checks() -> void:
 	_check("res://levels/test_1 is an area", Maps.areas().has("test_1"))

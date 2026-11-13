@@ -99,9 +99,16 @@ other count (2–4, or over 25) fits no size and can't be published.
                "exposure": 1.0, "fog_density": 0.0, "sun_angle": [-50, 35], "tint": [1, 1, 1]},
   "start": {"pos": [0, 0.1, 4], "yaw": 0},
   "assets": [{"id": "rock_big", "file": "assets/rock_big.glb", "license": "CC0", "author": "Kenney",
-              "surface": "obstacle", "hitbox": "convex"}],
+              "surface": "obstacle", "hitbox": "convex", "category": "decoration", "folder": "Rocks"}],
+  "materials": [{"id": "flagstone", "name": "Flagstone", "albedo": "assets/flagstone.png", "color": [1, 1, 1],
+                 "tile": 4.0, "roughness": 0.9, "license": "CC0", "author": "Me", "folder": "Stone"}],
+  "folders": {"prefab": ["Buildings/Ruins"]},
   "pieces": [{"id": "floor_1", "asset": "builtin:box", "pos": [0, -0.5, 0], "size": [16, 0.5, 16],
               "color": [0.4, 0.45, 0.4], "surface": "floor"},
+             {"id": "stairs_1", "asset": "builtin:stairs", "pos": [4, 0, -3.5], "size": [4, 1, 3],
+              "steps": 5, "material": "flagstone", "surface": "floor"},
+             {"id": "curve_1", "asset": "builtin:curved_wall", "pos": [-3, 0, -4], "size": [6, 0.8, 0.4],
+              "bend": 90, "surface": "obstacle"},
              {"id": "rock_1", "asset": "rock_big", "pos": [3, 0, 2], "rot": [0, 30, 0], "scale": [1, 1.5, 1]},
              {"id": "grass_1", "asset": "grass", "pos": [5, 0, 1], "surface": "intangible",
               "animation": {"preset": "sway", "amount": 1.0, "speed": 1.0}}],
@@ -121,9 +128,30 @@ other count (2–4, or over 25) fits no size and can't be published.
 - **assets**: imported models. `file` must be inside the level folder and end
   in `.glb` or `.gltf`. Each asset needs a `license` before it can be
   published. `surface` and `hitbox` are the defaults for every copy of it.
+  `category` (`decoration` or `prefab`) and `folder` (names joined with `/`)
+  only organise the editor's list; the game ignores them.
+- **materials**: paint for pieces. `albedo` and `normal` are optional images
+  (`.png`, `.jpg`, `.jpeg`, `.webp`) inside the level folder; a material with
+  an image needs a `license`. `color` tints it, `roughness` and `metallic` are
+  0–1, `normal_strength` 0–4. Materials are mapped in world space
+  (triplanar), so stretching a shape doesn't stretch the image; `tile` is how
+  many metres one copy of the image covers (0.1–100, default 2). `name` and
+  `folder` are for the editor. Built by `LevelMaterials.build`, shared by both
+  repos.
+- **folders**: the editor's empty folders, per category (`decoration`,
+  `prefab`, `material`). The game ignores them.
 - **pieces**: everything the level is built from. `asset` is an asset id, or
-  one of `builtin:box`, `builtin:cylinder` or `builtin:ramp` (each takes `size`
-  and `color`; the pivot is the bottom centre, ramps rise toward -Z).
+  one of `builtin:box`, `builtin:cylinder`, `builtin:ramp`, `builtin:stairs` or
+  `builtin:curved_wall` (each takes `size` and `color`; the pivot is the bottom
+  centre, ramps and stairs rise toward -Z).
+  - `builtin:stairs` takes `steps` (1–64, default 8): each step is
+    `size.y / steps` tall. Seekers climb about 0.4 m, so a flight with taller
+    steps breaks the navmesh at it, which is how a builder finds the right pitch.
+  - `builtin:curved_wall` takes `bend` in degrees (up to 360 either way,
+    default 90; 0 is a plain box). `size.x` is its length along the curve,
+    `size.z` its thickness; a positive bend curves the ends toward -Z.
+  - `material` (optional): a material id. It replaces a shape's `color`, and
+    overrides an imported model's own materials.
   - `surface` (on the piece, else its asset's, else `obstacle`):
     **`floor`**: solid, and the navmesh is built on top of it.
     **`obstacle`**: solid, and blocks the navmesh; nothing walks on top of it

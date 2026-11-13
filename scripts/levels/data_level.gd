@@ -157,13 +157,16 @@ func _build_map() -> void:
 func _add_piece(spec: Dictionary) -> Node3D:
 	var asset := String(spec.get("asset", "builtin:box"))
 	var model: Node3D
+	var material := LevelMaterials.build(data, String(spec.get("material", "")))
 	if asset.begins_with("builtin:"):
 		model = LevelAssets.builtin(asset, LevelData.vec3(spec.get("size"), Vector3(4, 0.5, 4)),
-			_color(spec.get("color"), Color(0.55, 0.57, 0.6)))
+			_color(spec.get("color"), Color(0.55, 0.57, 0.6)), LevelNav.shape_params(spec), material)
 	else:
 		model = LevelAssets.model(data, asset)
 		if model == null:
 			return null
+		if material:
+			LevelAssets.apply_material(model, material)
 	model.name = String(spec.get("id", "Piece"))
 	var surface := data.surface_of(spec)
 	model.transform = LevelNav.transform_of(spec)

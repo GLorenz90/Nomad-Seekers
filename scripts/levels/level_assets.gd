@@ -58,17 +58,29 @@ static func clear_cache() -> void:
 
 ## A built-in blockout shape: box, cylinder or ramp, `size` metres, colored
 ## (the same shapes the editor and the navmesh use: LevelNav.builtin_meshes).
-static func builtin(kind: String, size: Vector3, color: Color) -> Node3D:
+## `params` are its shape settings (a curved wall's bend, a stair's steps);
+## `material`, when given, replaces the plain color.
+static func builtin(kind: String, size: Vector3, color: Color, params := {}, material: Material = null) -> Node3D:
 	var root := Node3D.new()
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	for m in LevelNav.builtin_meshes(kind, size):
+	var mat := material
+	if mat == null:
+		var plain := StandardMaterial3D.new()
+		plain.albedo_color = color
+		mat = plain
+	for m in LevelNav.builtin_meshes(kind, size, params):
 		var mesh := MeshInstance3D.new()
 		mesh.mesh = m[0]
 		mesh.material_override = mat
 		mesh.transform = m[1]
 		root.add_child(mesh)
 	return root
+
+
+## Puts one material on every mesh of a model (a level material on an
+## imported model).
+static func apply_material(root: Node, material: Material) -> void:
+	for mi in _meshes(root):
+		mi.material_override = material
 
 
 ## A static body on the world layer holding a piece's hitbox (LevelNav.hitbox).
