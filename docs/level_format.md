@@ -1,9 +1,17 @@
-# Nomad's Seekers level format (version 1)
+# Nomad's Seekers level format (version 2)
 
-The contract between the game and the level editor (Part 13a). The editor
-writes this format and the game builds levels from it. The code that reads,
-writes and checks it is `addons/seeker_data/level_data.gd` (`LevelData`). It
-doesn't depend on the game's classes, so the editor can use the same file.
+The contract between the game and the level editor. The editor writes this
+format and the game builds levels from it. The code that reads, writes and
+checks it is `addons/seeker_data/level_data.gd` (`LevelData`); the navmesh,
+rooms and hitboxes come from `addons/seeker_data/level_nav.gd` (`LevelNav`).
+Neither depends on the game's classes, so the editor uses the same two files
+(copy them across when they change).
+
+**Version 2** (Grayson, 2026-11-13): levels are built only from placed pieces.
+There are no generated rooms or corridors. Every piece is a **floor**, an
+**obstacle** or **intangible**. Rooms and corridors are **areas of the
+navmesh**, split by **room boundaries**, and the size follows the room
+count. Version 1 levels aren't read any more.
 
 The worked example is `levels/test_1/demo/`, written by
 `tools/build_demo_level.gd`. It uses something from every layer, and
@@ -56,21 +64,23 @@ Shared conventions:
 - **Positions** are `[x, y, z]` in metres, in world space. `y = 0` is the
   usual floor height and -Z is "north".
 - **Rotation** is either `"yaw"` (degrees around Y) or `"rot": [x, y, z]`
-  (degrees). `"scale": [x, y, z]` is optional.
+  (degrees, Godot's rotation order). Map pieces, walls, boundaries and
+  decorations use `rot`; objects and enemies use `yaw`. Imported models take
+  `"scale": [x, y, z]`; built-in shapes take `"size"` instead.
 - **Colors** are `[r, g, b]` or `[r, g, b, a]`, from 0 to 1.
-- **Every** room, piece, wall, decoration, object, button group, dialogue and
-  enemy has an `"id"` that is unique across the whole level. The layers refer
+- **Every** area, piece, wall, boundary, decoration, object, button group,
+  dialogue and enemy has an `"id"` that is unique across the whole level. The layers refer
   to each other only by id.
 
 ### level.json
 
 ```json
-{"format": 1, "name": "Glade", "size": "small", "area": "forest_1",
- "author": "", "description": ""}
+{"format": 2, "name": "Glade", "area": "forest_1", "author": "", "description": ""}
 ```
 
-`size` is one of the following (Grayson, 2026-11-12). Only rooms count;
-corridors never do.
+There's no size to choose: it follows from the number of **rooms**
+(`LevelData.size_for`). Corridors never count (Grayson, 2026-11-12). Any
+other count (2–4, or over 25) fits no size and can't be published.
 
 | size | rooms |
 |---|---|
@@ -88,44 +98,77 @@ corridors never do.
   "lighting": {"preset": "dusk", "sun_energy": 1.0, "ambient_energy": 1.0,
                "exposure": 1.0, "fog_density": 0.0, "sun_angle": [-50, 35], "tint": [1, 1, 1]},
   "start": {"pos": [0, 0.1, 4], "yaw": 0},
-  "assets": [{"id": "rock_big", "file": "assets/rock_big.glb", "license": "CC0", "author": "Kenney"}],
-  "rooms": [{"id": "room_1", "kind": "room", "name": "Landing", "pos": [0, 0, 0], "size": [16, 6, 16]}],
-  "pieces": [{"id": "floor_1", "asset": "builtin:box", "pos": [0, -1, 0], "size": [16, 1, 16],
-              "color": [0.4, 0.45, 0.4], "collision": "box"}],
-  "walls": [{"id": "pen", "pos": [-6, 0, -30], "size": [0.4, 2, 4], "yaw": 0, "blocks": "seekers"}],
-  "decorations": [{"id": "tree_1", "asset": "tree", "pos": [3, 0, 2], "collision": "none",
-                   "animation": {"preset": "sway", "amount": 1.0, "speed": 1.0}}]
+  "assets": [{"id": "rock_big", "file": "assets/rock_big.glb", "license": "CC0", "author": "Kenney",
+              "surface": "obstacle", "hitbox": "convex"}],
+  "pieces": [{"id": "floor_1", "asset": "builtin:box", "pos": [0, -0.5, 0], "size": [16, 0.5, 16],
+              "color": [0.4, 0.45, 0.4], "surface": "floor"},
+             {"id": "rock_1", "asset": "rock_big", "pos": [3, 0, 2], "rot": [0, 30, 0], "scale": [1, 1.5, 1]},
+             {"id": "grass_1", "asset": "grass", "pos": [5, 0, 1], "surface": "intangible",
+              "animation": {"preset": "sway", "amount": 1.0, "speed": 1.0}}],
+  "walls": [{"id": "pen", "pos": [-6, 0, -30], "size": [0.4, 2, 4], "rot": [0, 0, 0], "blocks": "seekers"}],
+  "boundaries": [{"id": "boundary_1", "pos": [8, 0, 0], "rot": [0, 90, 0], "size": [4, 3]}],
+  "areas": [{"id": "room_1", "kind": "room", "name": "Landing", "seed": [0, 0.2, 0],
+             "color": [0.43, 0.64, 0.95], "polys": [[[-7.6, 0.2, -7.6], [7.6, 0.2, -7.6], [7.6, 0.2, 7.6]], ...]}],
+  "decorations": [{"id": "lamp", "asset": "builtin:light", "pos": [0, 3, 0], "energy": 1.5, "range": 10}]
 }
 ```
 
-- **grid**: rooms and corridors snap to 4 m. Pieces and decorations can go
-  anywhere.
 - **lighting**: `preset` is one of `day`, `dusk`, `overcast`, `night`,
   `cave`, `interior`. The game clamps each slider: `sun_energy` 0.3–1.6,
   `ambient_energy` 0.5–1.5, `exposure` 0.8–1.3, `fog_density` 0–0.03. The
   tint is held to 0.6–1 per channel, and the sun stays 10–90° up. A room
   meant to be dark uses the Darkness hazard instead.
-- **rooms**: `kind` is `room` or `corridor`. `pos` is the bottom centre of
-  the room's box. A room's box is its room area: combat starts there, and the
-  Trap Scanner reveals traps inside it.
 - **assets**: imported models. `file` must be inside the level folder and end
   in `.glb` or `.gltf`. Each asset needs a `license` before it can be
-  published.
-- **pieces**: the map's solid parts. `asset` is an asset id, or one of
-  `builtin:box`, `builtin:cylinder` or `builtin:ramp` (each takes `size` and
-  `color`). `collision` is `none`, `box` (the model's bounds) or `mesh` (its
-  triangles). The default is `box` for built-in shapes, and `mesh` for ramps
-  and imported models. The navmesh is baked from anything with collision.
-- **walls**: invisible walls. `blocks` is `all`, which also shapes the
-  navmesh, or `seekers`, which uses physics layer 5: enemies walk through it,
-  so it can keep players in an arena while enemies still come in.
-- **decorations**: anything that doesn't interact. `collision` defaults to
-  `none` (a rock with `box` collision blocks movement and the navmesh).
-  Built-in decorations: `builtin:fireflies` (`size`, `amount`, `color`),
-  `builtin:light` (`color`, `energy` 0–3, `range` 1–20 m),
-  `builtin:searchlight` (sweeps by default), plus the built-in shapes.
-  Animation presets are `sway`, `bob`, `spin`, `pulse` and `sweep`, with
-  `amount` 0–2 and `speed` 0.1–4.
+  published. `surface` and `hitbox` are the defaults for every copy of it.
+- **pieces**: everything the level is built from. `asset` is an asset id, or
+  one of `builtin:box`, `builtin:cylinder` or `builtin:ramp` (each takes `size`
+  and `color`; the pivot is the bottom centre, ramps rise toward -Z).
+  - `surface` (on the piece, else its asset's, else `obstacle`):
+    **`floor`**: solid, and the navmesh is built on top of it.
+    **`obstacle`**: solid, and blocks the navmesh; nothing walks on top of it
+    or inside it.
+    **`intangible`**: no collision, ignored by the navmesh. Only intangible
+    pieces may have an `animation` (`sway`, `bob`, `spin`, `pulse`,
+    `sweep`; `amount` 0–2, `speed` 0.1–4), so collision and the navmesh stay put.
+  - `hitbox` (on the piece, else its asset's, else `concave`): how a solid
+    piece's collision is made from its own meshes with Godot's shape tools
+    (`LevelNav.hitbox`). **`concave`** follows every triangle (exact, static
+    only). **`convex`** wraps each mesh in one hull (faster, but fills in
+    arches). Built-in boxes and cylinders always get their exact primitive
+    shape. Scale is baked into the shapes. The editor shows the same hitbox
+    the game builds.
+- **walls**: invisible walls. `blocks` is `all`, which also blocks the
+  navmesh, or `seekers`, which uses physics layer 5: enemies walk through it
+  and the navmesh ignores it, so it can keep players in an arena while
+  enemies still come in.
+- **boundaries**: room boundaries. Each is an invisible vertical plane
+  (`size` [wide, tall], in its local X and Y; `pos` is the middle of its
+  bottom edge) that cuts the navmesh when rooms are worked out. It never
+  blocks anything in the game. Put one across every doorway or gap between
+  two rooms; it has to close the opening, or the navmesh goes round it.
+- **areas**: the rooms and corridors, worked out by the editor and saved with
+  the level. The editor bakes the navmesh a second time with every boundary
+  cut in; each separate piece of that navmesh (2 m² or more) is an area
+  (`LevelNav.assign_areas`). `kind` is `room` or `corridor`. `seed` is a
+  point on the area's navmesh: it keeps the area's id, name, kind and color
+  when the level changes. `also` lists extra seeds whose pieces count as part
+  of the same area (a room split by a pit). `polys` are the area's navmesh
+  polygons (convex, world space). The game uses them to tell which room a
+  point is in (`LevelData.area_at`): combat starts when a Seeker enters a
+  room's polygons, and the Trap Scanner reveals the traps in your room.
+- **decorations**: built-in effects only: `builtin:fireflies` (`size`,
+  `amount`, `color`), `builtin:light` (`color`, `energy` 0–3, `range`
+  1–20 m) and `builtin:searchlight` (sweeps by default).
+
+#### The navmesh
+
+`LevelNav.bake` builds it the same way in the editor and the game. It's sized
+for a Seeker (`LevelData.NAV`: radius 0.4 m, 1.8 m tall, steps up to 0.4 m,
+slopes up to 45°, 0.2 m cells). It's baked from floors and obstacles, and from
+invisible walls that block everyone. Afterwards anything standing on top of
+an obstacle, or inside one, is dropped. The game sets its navigation map to
+the same cell size.
 
 ### interaction.json (Layer 2: Interaction)
 
@@ -230,6 +273,8 @@ Rules run once by default (`"once": false` repeats them).
   dialogue.
 - Each wave starts when the previous wave's last enemy dies. When no waves
   are left, the room reports `combat_ended`.
+- `room` is an area id (map.json). The fight's trigger is the area's
+  navmesh polygons, so it covers exactly the floor of the room.
 - `free`: enemies outside waves, such as in corridors. They're there when the
   level loads, don't respawn and lock no doors.
 
@@ -279,7 +324,9 @@ after the built-in ones:
 
 `LevelData.validate(Enemy.known_ids())` lists the problems that block
 publishing:
-- the room count doesn't fit the size, or an Arena has corridors
+- the room count fits no size, or an Arena has corridors
+- an area has no navmesh polygons saved (it wasn't saved by the editor)
+- an animated piece isn't intangible, or a surface / hitbox is unknown
 - there's no start, or no exit (a teleporter with a destination)
 - an id is missing or used twice
 - something points at an id that doesn't exist
@@ -289,5 +336,7 @@ publishing:
 - a combat room has no waves, or an empty wave
 - an enemy is invalid, or is one the game doesn't have
 
-Reachability (every room reachable, a way out of every combat room) needs
-the navmesh, so the editor checks it.
+The editor checks more before export, since it has the navmesh: the start
+stands on it, every enemy stands on it (in a room or corridor), every room
+can be walked to from the start (bridges and moving platforms count as
+joining their two ends), and every boundary actually splits something.

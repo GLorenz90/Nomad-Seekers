@@ -6,9 +6,9 @@ extends RefCounted
 ## and, later, the workshop's). Built-in pieces ("builtin:box"...) let a
 ## level be blocked out without importing anything.
 ##
-## Collision ("collision" on a piece): "none", "box" (the model's bounds) or
-## "mesh" (its exact triangles; static only). Collision goes on the world
-## layer, so the navmesh is baked from it.
+## Collision (format 2): a piece that's a floor or an obstacle gets a hitbox
+## made from its meshes, "concave" (every triangle; static only) or "convex"
+## (one hull per mesh); intangible pieces get none (LevelData.SURFACES).
 
 const MODEL_EXTENSIONS := ["glb", "gltf"]
 
@@ -56,60 +56,42 @@ static func clear_cache() -> void:
 	_cache.clear()
 
 
-## A built-in blockout shape: box, cylinder or ramp, `size` metres, colored.
+## A built-in blockout shape: box, cylinder or ramp, `size` metres, colored
+## (the same shapes the editor and the navmesh use: LevelNav.builtin_meshes).
 static func builtin(kind: String, size: Vector3, color: Color) -> Node3D:
 	var root := Node3D.new()
-	var mesh := MeshInstance3D.new()
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
-	match kind:
-		"builtin:cylinder":
-			var cm := CylinderMesh.new()
-			cm.top_radius = size.x * 0.5
-			cm.bottom_radius = size.x * 0.5
-			cm.height = size.y
-			cm.material = mat
-			mesh.mesh = cm
-		"builtin:ramp":
-			# A wedge rising toward -Z.
-			var pm := PrismMesh.new()
-			pm.left_to_right = 0.0
-			pm.size = Vector3(size.z, size.y, size.x)
-			pm.material = mat
-			mesh.mesh = pm
-			mesh.rotation_degrees.y = 90.0
-		_:
-			var bm := BoxMesh.new()
-			bm.size = size
-			bm.material = mat
-			mesh.mesh = bm
-	mesh.position.y = size.y * 0.5
-	root.add_child(mesh)
+	for m in LevelNav.builtin_meshes(kind, size):
+		var mesh := MeshInstance3D.new()
+		mesh.mesh = m[0]
+		mesh.material_override = mat
+		mesh.transform = m[1]
+		root.add_child(mesh)
 	return root
 
 
-## Adds collision on the world layer under `root`, from its meshes.
-static func add_collision(root: Node3D, mode: String) -> void:
-	if mode == "none":
-		return
+## A static body on the world layer holding a piece's hitbox (LevelNav.hitbox).
+static func collision_body(hit: Dictionary) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = "Collision"
 	body.collision_layer = 1
 	body.collision_mask = 0
-	root.add_child(body)
-	for mi in _meshes(root):
+	body.transform = hit.xform
+	for pair in hit.shapes:
 		var shape := CollisionShape3D.new()
-		shape.transform = _relative(root, mi)
-		if mode == "mesh":
-			shape.shape = mi.mesh.create_trimesh_shape()
-		else:
-			var aabb := mi.mesh.get_aabb()
-			var box := BoxShape3D.new()
-			box.size = aabb.size
-			shape.shape = box
-			shape.transform = shape.transform * Transform3D(Basis(), aabb.get_center())
-		if shape.shape:
-			body.add_child(shape)
+		shape.shape = pair[0]
+		shape.transform = pair[1]
+		body.add_child(shape)
+	return body
+
+
+## Adds a hitbox under an unscaled model ("concave" or "convex").
+static func add_collision(root: Node3D, hitbox: String) -> void:
+	if hitbox == "none" or hitbox == "":
+		return
+	var shapes := LevelNav.shapes_for(LevelNav.node_meshes(root), Vector3.ONE, hitbox == "convex")
+	root.add_child(collision_body({"xform": Transform3D.IDENTITY, "shapes": shapes}))
 
 
 static func _meshes(node: Node) -> Array[MeshInstance3D]:

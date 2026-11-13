@@ -2,7 +2,7 @@
 
 Godot 4.7, 3D, Forward+. Open `project.godot` in the editor and press **F5**.
 
-Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 13a, levels made from data (the level editor's runtime)**.
+Built in playable parts (see the Prototype Roadmap in the Claude project). Current: **Part 13a, levels made from data (the level editor's runtime)**, now on **level format 2** (pieces, navmesh rooms).
 
 F5 starts at the title screen (`scenes/title.tscn`). From there you reach Nomad-2 (`scenes/hub.tscn`), whose teleporter goes to the gym test room (`scenes/main.tscn`) and the test arena (`scenes/arena.tscn`, two wave rooms of real enemies). Any level can still be opened and run on its own with F6; it plays your last character.
 
@@ -345,6 +345,8 @@ Couch co-op for up to four, split-screen.
 
 ## Part 13a: levels made from data (for the level editor)
 The runtime the separate level editor needs (Grayson, 2026-11-12). The format itself is documented in **[docs/level_format.md](docs/level_format.md)**; this is what the game does with it.
+
+**Format 2** (Grayson, 2026-11-13): levels are built only from placed pieces, each a **floor** (walked on), an **obstacle** (blocks the navmesh) or **intangible** (no collision), with a **concave** or **convex** hitbox generated from the model (`LevelNav.hitbox`, shared with the editor so the game builds exactly what the editor previews). Rooms and corridors are **areas of the navmesh**, split by invisible **room boundaries**; the editor saves each area's navmesh polygons and the game turns them into the room's trigger (`WaveRoom.trigger_area`) and the Trap Scanner's "room you're in" (`LevelRoom`). The navmesh is baked at load by `LevelNav.bake`, sized for a Seeker (radius 0.4 m, 0.2 m cells) and the same bake the editor shows. The size follows the room count. Version 1 levels aren't read any more; the demo level was rebuilt from boxes and boundaries.
 
 ![The demo data level's landing](docs/screenshots/data_level_landing.png)
 

@@ -7,23 +7,24 @@ extends "res://scripts/main.gd"
 ## Built only from the game's own pieces (a whitelist): models come from
 ## glTF files and the level's JSON; nothing in a level can run code.
 ##
-## Layer 1 (map.json)          lighting, start, rooms, pieces, invisible walls,
-##                             decorations
+## Layer 1 (map.json)          lighting, start, pieces (floor / obstacle /
+##                             intangible), invisible walls, areas (rooms and
+##                             corridors), decorations
 ## Layer 2 (interaction.json)  doors, teleporters, depots, Lumidium, boxes,
 ##                             traps, buttons, hazards, trigger zones,
 ##                             platforms, bridges, dialogue, wiring (LevelEvents)
 ## Layer 3 (combat.json)       wave rooms and corridor enemies
 ##
-## Anything with collision goes under Navigation/Level, so the navmesh is
-## baked from it; doors, platforms, bridges and Seeker-only walls stay
-## outside it (Part 4's rule for doors).
+## The navmesh comes from LevelNav (shared with the editor): floors are
+## walked on, obstacles block it, sized for a Seeker. Doors, platforms,
+## bridges and Seeker-only walls stay out of it (Part 4's rule for doors).
 
 ## The level folder (set by Maps.instantiate before it enters the tree).
 @export var level_path := ""
 
 var data: LevelData
 var events: LevelEvents
-## id -> LevelRoom for every room and corridor.
+## id -> LevelRoom for every room and corridor (navmesh areas).
 var rooms := {}
 var _props: Node3D
 var _objects: Node3D
@@ -94,20 +95,18 @@ static func _color(v, fallback: Color) -> Color:
 # --- Layer 1: map -----------------------------------------------------------------------------
 
 func _build_map() -> void:
-	for r in data.map.rooms:
+	for a in data.map.areas:
 		var room := LevelRoom.new()
-		room.room_id = String(r.get("id", ""))
+		room.room_id = String(a.get("id", ""))
 		room.name = "Room_" + room.room_id
-		room.kind = String(r.get("kind", "room"))
-		room.size = LevelData.vec3(r.get("size"), Vector3(16, 6, 16))
-		room.position = LevelData.vec3(r.get("pos"))
+		room.kind = String(a.get("kind", "room"))
+		room.area = a
+		room.position = LevelData.vec3(a.get("seed"))
 		add_child(room)
 		rooms[room.room_id] = room
 		events.objects[room.room_id] = room
 	for p in data.map.pieces:
-		var asset := String(p.get("asset", "builtin:box"))
-		var default_collision := "mesh" if asset == "builtin:ramp" or not asset.begins_with("builtin:") else "box"
-		_add_model(p, default_collision, _solid())
+		_add_piece(p)
 	for w in data.map.walls:
 		var wall := InvisibleWall.new()
 		wall.name = "Wall_" + String(w.get("id", ""))
@@ -144,8 +143,7 @@ func _build_map() -> void:
 					d = d.duplicate()
 					d.animation = {"preset": "sweep"}
 			_:
-				var collision := String(d.get("collision", "none"))
-				node = _add_model(d, collision, _props if collision == "none" else _solid())
+				push_warning("Unknown decoration %s" % asset)
 		if node and d.get("animation") is Dictionary:
 			var anim := DecorAnimator.new()
 			anim.preset = String(d.animation.get("preset", "none"))
@@ -154,8 +152,9 @@ func _build_map() -> void:
 			node.add_child(anim)
 
 
-## A piece or decoration: an imported model or a built-in shape, with collision.
-func _add_model(spec: Dictionary, default_collision: String, parent: Node3D) -> Node3D:
+## A piece: an imported model or a built-in shape. Floors and obstacles get a
+## hitbox (concave or convex); intangible pieces get none and may be animated.
+func _add_piece(spec: Dictionary) -> Node3D:
 	var asset := String(spec.get("asset", "builtin:box"))
 	var model: Node3D
 	if asset.begins_with("builtin:"):
@@ -166,12 +165,36 @@ func _add_model(spec: Dictionary, default_collision: String, parent: Node3D) -> 
 		if model == null:
 			return null
 	model.name = String(spec.get("id", "Piece"))
-	var collision := String(spec.get("collision", default_collision))
-	if LevelData.COLLISION.has(collision):
-		LevelAssets.add_collision(model, collision)
-	_place(model, spec)
-	parent.add_child(model)
+	var surface := data.surface_of(spec)
+	model.transform = LevelNav.transform_of(spec)
+	(_props if surface == "intangible" else _solid()).add_child(model)
+	if surface != "intangible":
+		var hit := LevelNav.hitbox(spec, data, func(id: String) -> Node3D: return LevelAssets.model(data, id))
+		var body := LevelAssets.collision_body(hit)
+		body.name = model.name + "_Collision"
+		_solid().add_child(body)
+	if surface == "intangible" and spec.get("animation") is Dictionary:
+		var anim := DecorAnimator.new()
+		anim.preset = String(spec.animation.get("preset", "none"))
+		anim.amount = float(spec.animation.get("amount", 1.0))
+		anim.speed = float(spec.animation.get("speed", 1.0))
+		model.add_child(anim)
 	return model
+
+
+## The navmesh: LevelNav's bake (the same one the editor shows), on a
+## navigation map with the matching cell size.
+func _bake_navmesh() -> void:
+	await get_tree().process_frame
+	if data != null:
+		var map_rid := get_world_3d().navigation_map
+		NavigationServer3D.map_set_cell_size(map_rid, LevelData.NAV.cell)
+		NavigationServer3D.map_set_cell_height(map_rid, LevelData.NAV.cell_height)
+		navigation.navigation_mesh = LevelNav.bake(data, func(id: String) -> Node3D: return LevelAssets.model(data, id))
+	else:
+		await get_tree().physics_frame
+		navigation.bake_navigation_mesh(false)
+	navmesh_ready.emit()
 
 
 func _fireflies(d: Dictionary) -> Node3D:
@@ -371,9 +394,10 @@ func _build_combat() -> void:
 		var wave_room := WaveRoom.new()
 		wave_room.name = "Waves_" + room_id
 		wave_room.room_id = room_id
-		var room_spec := data.find_room(room_id)
-		wave_room.room_name = String(room_spec.get("name", room_id.capitalize()))
-		wave_room.trigger_size = area.size
+		var room_spec := data.find_area(room_id)
+		var shown := String(room_spec.get("name", ""))
+		wave_room.room_name = shown if shown != "" else room_id.capitalize()
+		wave_room.trigger_area = room_spec
 		wave_room.start_on_enter = String(c.get("start", "enter")) == "enter"
 		wave_room.start_delay = clampf(float(c.get("start_delay", 0.8)), 0.0, 10.0)
 		wave_room.wave_delay = clampf(float(c.get("wave_delay", 1.0)), 0.0, 10.0)
