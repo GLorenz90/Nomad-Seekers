@@ -44,18 +44,29 @@ func _data_checks() -> void:
 	_check("the demo level loads", demo != null)
 	if demo == null:
 		return
-	_check("it's Small with 5 rooms and 4 corridors", demo.meta.size == "small"
+	_check("it's Small (from its 5 rooms) with 4 corridors", demo.size() == "small"
 		and demo.room_count() == 5 and demo.corridor_count() == 4)
+	_check("its rooms are found from the navmesh", demo.area_at(Vector3(0, 0, -26)) == "room_2"
+		and demo.area_at(Vector3(0, 0, -12)) == "hall_1" and demo.area_at(Vector3(0, 0, -54)) == "room_3"
+		and demo.area_at(Vector3(40, 0, 0)) == "")
 	var problems := demo.validate(Enemy.known_ids())
 	_check("it passes the publish check (%s)" % ", ".join(problems), problems.is_empty())
 
-	var arena := LevelData.create("Pit", "arena")
-	arena.map.rooms = [{"id": "r", "kind": "room"}, {"id": "c", "kind": "corridor"}]
+	var arena := LevelData.create("Pit")
+	var poly := [[[-1, 0, -1], [1, 0, -1], [1, 0, 1], [-1, 0, 1]]]
+	arena.map.areas = [{"id": "r", "kind": "room", "polys": poly}, {"id": "c", "kind": "corridor", "polys": poly}]
 	var p := "\n".join(arena.validate())
+	_check("one room makes an Arena", arena.size() == "arena")
 	_check("an Arena with a corridor fails", p.contains("no corridors"))
 	_check("a level without an exit fails", p.contains("No exit"))
-	arena.map.rooms.append({"id": "r2", "kind": "room"})
-	_check("an Arena with two rooms fails", "\n".join(arena.validate()).contains("Arena levels have 1 rooms"))
+	arena.map.areas.append({"id": "r2", "kind": "room", "polys": poly})
+	_check("two rooms fit no size", arena.size() == "" and "\n".join(arena.validate()).contains("fits no size"))
+	for i in 3:
+		arena.map.areas.append({"id": "r%d" % (i + 3), "kind": "room", "polys": poly})
+	_check("five rooms make a Small level", arena.size() == "small")
+	var piece := {"id": "x", "asset": "builtin:box", "surface": "obstacle", "animation": {"preset": "spin"}}
+	arena.map.pieces = [piece]
+	_check("solid pieces can't be animated", "\n".join(arena.validate()).contains("Only intangible pieces can move"))
 
 	var ok := {"id": "e", "enemy": "grub_hound", "wander": true, "wander_radius": 4.0,
 		"limited_chase": true, "chase_radius": 6.0}
@@ -117,7 +128,7 @@ func _asset_checks() -> void:
 	var written := doc.write_to_filesystem(state, dir.path_join("assets/crate.glb"))
 	scene.free()
 	_check("a glb can be written (%s)" % error_string(written), written == OK)
-	var level := LevelData.create("Assets", "arena")
+	var level := LevelData.create("Assets")
 	level.dir = dir
 	level.map.assets = [{"id": "crate", "file": "assets/crate.glb", "license": "CC0"},
 		{"id": "sneaky", "file": "../../outside.glb", "license": "CC0"},
@@ -126,13 +137,23 @@ func _asset_checks() -> void:
 	var model := LevelAssets.model(level, "crate")
 	_check("an imported glb loads at runtime", model != null and model.find_children("*", "MeshInstance3D").size() == 1)
 	if model:
-		LevelAssets.add_collision(model, "box")
+		LevelAssets.add_collision(model, "concave")
 		var body := model.get_node_or_null("Collision") as StaticBody3D
 		var shape := body.get_child(0) as CollisionShape3D if body and body.get_child_count() > 0 else null
-		_check("box collision fits the model (%s)" % (str((shape.shape as BoxShape3D).size) if shape else "none"),
-			shape != null and (shape.shape as BoxShape3D).size.is_equal_approx(Vector3(2, 1, 3))
+		_check("a concave hitbox follows the triangles", shape != null and shape.shape is ConcavePolygonShape3D
 			and body.collision_layer == 1)
 		model.free()
+		model = LevelAssets.model(level, "crate")
+		LevelAssets.add_collision(model, "convex")
+		body = model.get_node_or_null("Collision") as StaticBody3D
+		shape = body.get_child(0) as CollisionShape3D if body and body.get_child_count() > 0 else null
+		_check("a convex hitbox is one hull", shape != null and shape.shape is ConvexPolygonShape3D)
+		model.free()
+		level.map.assets[0].surface = "obstacle"
+		level.map.pieces = [{"id": "c1", "asset": "crate", "pos": [0, 0, 0]},
+			{"id": "c2", "asset": "crate", "pos": [3, 0, 0], "surface": "floor"}]
+		_check("a piece uses its model's surface unless it overrides it",
+			level.surface_of(level.map.pieces[0]) == "obstacle" and level.surface_of(level.map.pieces[1]) == "floor")
 	_check("files outside the level folder are refused", LevelAssets.model(level, "sneaky") == null)
 	_check("only model files load (no scenes or scripts)", LevelAssets.model(level, "scene") == null)
 

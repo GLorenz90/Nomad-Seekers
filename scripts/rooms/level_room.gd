@@ -1,13 +1,14 @@
 class_name LevelRoom
 extends Node3D
-## A room or corridor of a data level (Part 13a, level editor Layer 1): the
-## box its room area covers. The Trap Scanner reveals traps in the room
-## you're in; a room with combat also gets a WaveRoom on the same spot.
-## This node sits at the bottom centre of the box.
+## A room or corridor of a data level (format 2): an area of the navmesh,
+## found by the level editor and saved as its navmesh polygons. The Trap
+## Scanner reveals traps in the room you're in; a room with combat also gets
+## a WaveRoom with the same shape. The node sits at the area's seed point.
 
 @export var room_id := ""
 @export_enum("room", "corridor") var kind := "room"
-@export var size := Vector3(16.0, 6.0, 16.0)
+## The area's spec from map.json (polys in world space).
+var area := {}
 
 
 func _ready() -> void:
@@ -15,6 +16,4 @@ func _ready() -> void:
 
 
 func contains(point: Vector3) -> bool:
-	var local := to_local(point)
-	return absf(local.x) <= size.x * 0.5 and absf(local.z) <= size.z * 0.5 \
-		and local.y >= -1.0 and local.y <= size.y + 2.0
+	return LevelData.area_contains(area, point)

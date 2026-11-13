@@ -33,6 +33,9 @@ enum RoomState { WAITING, ACTIVE, CLEARED }
 @export var waves: Array[WaveData] = []
 ## Size of the box that starts the room when the Seeker steps inside it.
 @export var trigger_size := Vector3(18.0, 4.0, 18.0)
+## A data level's room (format 2): its navmesh polygons in world space. When
+## set, the trigger is one prism per polygon instead of the trigger_size box.
+var trigger_area := {}
 @export var start_delay := 0.8
 @export var wave_delay := 1.0
 ## Old behaviour: shut every door while the room is active.
@@ -62,12 +65,25 @@ func _ready() -> void:
 	area.name = "Trigger"
 	area.collision_layer = 0
 	area.collision_mask = 2  # the Seeker
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = trigger_size
-	shape.shape = box
-	shape.position.y = trigger_size.y * 0.5
-	area.add_child(shape)
+	if trigger_area.is_empty():
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = trigger_size
+		shape.shape = box
+		shape.position.y = trigger_size.y * 0.5
+		area.add_child(shape)
+	else:
+		for poly in trigger_area.get("polys", []):
+			var points := PackedVector3Array()
+			for v in poly:
+				var p := LevelData.vec3(v) - position
+				points.append(p + Vector3(0, -0.5, 0))
+				points.append(p + Vector3(0, 3.0, 0))
+			var prism := ConvexPolygonShape3D.new()
+			prism.points = points
+			var shape := CollisionShape3D.new()
+			shape.shape = prism
+			area.add_child(shape)
 	add_child(area)
 	area.body_entered.connect(_on_body_entered)
 	_update_doors()
@@ -184,6 +200,8 @@ func switch_action(action: String) -> void:
 
 
 func contains(point: Vector3) -> bool:
+	if not trigger_area.is_empty():
+		return LevelData.area_contains(trigger_area, point)
 	var local := to_local(point)
 	return absf(local.x) <= trigger_size.x * 0.5 and absf(local.z) <= trigger_size.z * 0.5 \
 		and local.y >= -1.0 and local.y <= trigger_size.y + 2.0

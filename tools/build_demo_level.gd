@@ -1,10 +1,12 @@
 extends SceneTree
-## Writes the demo data level (Part 13a) to res://levels/test_1/demo/, using
+## Writes the demo data level (format 2) to res://levels/test_1/demo/, using
 ## LevelData the way the level editor will. It's a Small level (5 rooms)
 ## that uses something from every layer, so it doubles as the format's
 ## worked example and as the level the tests play:
 ##   godot --headless --path . --script res://tools/build_demo_level.gd
 ##
+## Built from boxes (floors and obstacle walls); room boundaries across each
+## corridor's ends split the navmesh into rooms and corridors.
 ## Layout (looking north, -Z), rooms 16 x 16 m on the 4 m grid:
 ##   Landing (z 0)      start, depot, box, Lumidium, a dialogue zone, a button
 ##                      that opens the gate north
@@ -31,7 +33,7 @@ var _n := 0
 
 
 func _initialize() -> void:
-	level = LevelData.create("Demo Run", "small", "test_1")
+	level = LevelData.create("Demo Run", "test_1")
 	level.meta.author = "Nomad's Seekers"
 	level.meta.description = "A worked example of every level editor layer."
 	level.map.lighting = {"preset": "dusk", "sun_energy": 1.1, "ambient_energy": 1.1}
@@ -39,6 +41,13 @@ func _initialize() -> void:
 	_rooms()
 	_interaction()
 	_combat()
+	# Rooms are areas of the navmesh: bake with the room boundaries cut in
+	# and save each area's polygons (what the editor does on save).
+	var found := LevelNav.assign_areas(level, LevelNav.bake(level, Callable(), true))
+	for id in found.added:
+		printerr("problem: an unplanned area appeared: ", id, " at ", level.find_area(id).seed)
+	for id in found.removed:
+		printerr("problem: area ", id, " found no navmesh")
 	var problems := level.validate(Enemy.known_ids())
 	for p in problems:
 		printerr("problem: ", p)
@@ -52,9 +61,14 @@ func _id(prefix: String) -> String:
 	return "%s_%d" % [prefix, _n]
 
 
-func _box(pos: Vector3, size: Vector3, color: Array) -> void:
+## A built-in box: floors are walked on, walls are obstacles.
+func _box(pos: Vector3, size: Vector3, color: Array, surface := "obstacle") -> void:
 	level.map.pieces.append({"id": _id("piece"), "asset": "builtin:box", "pos": LevelData.arr3(pos),
-		"size": LevelData.arr3(size), "color": color, "collision": "box"})
+		"size": LevelData.arr3(size), "color": color, "surface": surface})
+
+
+func _floor(pos: Vector3, size: Vector3) -> void:
+	_box(pos, size, FLOOR_COLOR, "floor")
 
 
 # --- Layer 1 -------------------------------------------------------------------------------
@@ -63,15 +77,17 @@ func _rooms() -> void:
 	var names := ["Landing", "Arena", "Bridge hall", "Platform room", "Boss room"]
 	for i in 5:
 		var z := -24.0 * i
-		level.map.rooms.append({"id": "room_%d" % (i + 1), "kind": "room", "name": names[i],
-			"pos": [0, 0, z], "size": [ROOM, 6, ROOM]})
 		var pit := i == 2 or i == 3
+		var area := {"id": "room_%d" % (i + 1), "kind": "room", "name": names[i],
+			"seed": [0, 0, z + 6 if pit else z - 2], "color": LevelNav.area_color(i)}
 		if pit:
-			# Floor before and after an 8 m pit (z+4 .. z-4).
-			_box(Vector3(0, -1, z + 6), Vector3(ROOM, 1, 4), FLOOR_COLOR)
-			_box(Vector3(0, -1, z - 6), Vector3(ROOM, 1, 4), FLOOR_COLOR)
+			# Floor before and after an 8 m pit (z+4 .. z-4): both halves are one room.
+			area.also = [[0, 0, z - 6]]
+			_floor(Vector3(0, -1, z + 6), Vector3(ROOM, 1, 4))
+			_floor(Vector3(0, -1, z - 6), Vector3(ROOM, 1, 4))
 		else:
-			_box(Vector3(0, -1, z), Vector3(ROOM, 1, ROOM), FLOOR_COLOR)
+			_floor(Vector3(0, -1, z), Vector3(ROOM, 1, ROOM))
+		level.map.areas.append(area)
 		_box(Vector3(-ROOM / 2 - 0.5, 0, z), Vector3(1, WALL_H, ROOM), WALL_COLOR)
 		_box(Vector3(ROOM / 2 + 0.5, 0, z), Vector3(1, WALL_H, ROOM), WALL_COLOR)
 		for side: float in [-1.0, 1.0]:  # north (-1) and south (+1) walls
@@ -84,9 +100,12 @@ func _rooms() -> void:
 				_box(Vector3(0, 0, wz), Vector3(ROOM + 2, WALL_H, 1), WALL_COLOR)
 		if i < 4:
 			var cz := z - 12.0
-			level.map.rooms.append({"id": "hall_%d" % (i + 1), "kind": "corridor",
-				"pos": [0, 0, cz], "size": [4, 6, 8]})
-			_box(Vector3(0, -1, cz), Vector3(4, 1, 8), FLOOR_COLOR)
+			level.map.areas.append({"id": "hall_%d" % (i + 1), "kind": "corridor", "name": "",
+				"seed": [0, 0, cz], "color": LevelNav.area_color(5 + i)})
+			_floor(Vector3(0, -1, cz), Vector3(4, 1, 8))
+			# Room boundaries where the corridor meets each room's doorway.
+			for bz: float in [z - 8.5, z - 15.5]:
+				level.map.boundaries.append({"id": _id("boundary"), "pos": [0, -0.5, bz], "rot": [0, 0, 0], "size": [4, 5]})
 			_box(Vector3(-2.5, 0, cz), Vector3(1, WALL_H, 8), WALL_COLOR)
 			_box(Vector3(2.5, 0, cz), Vector3(1, WALL_H, 8), WALL_COLOR)
 	# A Seeker-only wall: the arena's north-west corner is a pen enemies can
@@ -97,10 +116,10 @@ func _rooms() -> void:
 		{"id": "fireflies", "asset": "builtin:fireflies", "pos": [0, 0, -2], "size": [12, 3, 12]},
 		{"id": "lamp", "asset": "builtin:light", "pos": [6, 3, 6], "color": [1, 0.8, 0.55],
 			"energy": 1.5, "range": 10},
-		{"id": "sapling", "asset": "builtin:cylinder", "pos": [-6, 0, 6], "size": [0.6, 3, 0.6],
-			"color": [0.3, 0.55, 0.3], "animation": {"preset": "sway", "amount": 1.0}},
 		{"id": "beacon", "asset": "builtin:searchlight", "pos": [6, 3.5, -102]},
 	])
+	level.map.pieces.append({"id": "sapling", "asset": "builtin:cylinder", "pos": [-6, 0, 6], "size": [0.6, 3, 0.6],
+		"color": [0.3, 0.55, 0.3], "surface": "intangible", "animation": {"preset": "sway", "amount": 1.0}})
 
 
 # --- Layer 2 -------------------------------------------------------------------------------
