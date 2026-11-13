@@ -151,8 +151,8 @@ func _shape_checks() -> void:
 	img.save_png(dir + "/assets/moss.png")
 	var level := LevelData.create("Mats")
 	level.dir = ProjectSettings.globalize_path(dir)
-	level.map.materials = [{"id": "moss", "albedo": "assets/moss.png", "tile": 2.0, "roughness": 0.7, "license": "CC0"},
-		{"id": "sneaky", "albedo": "../../secret.png", "license": "CC0"}]
+	level.map.materials = [{"id": "moss", "albedo": "assets/moss.png", "tile": 2.0, "roughness": 0.7},
+		{"id": "sneaky", "albedo": "../../secret.png"}]
 	var mat := LevelMaterials.build(level, "moss")
 	_check("a material loads its image from the level folder", mat != null and mat.albedo_texture != null
 		and mat.uv1_world_triplanar and is_equal_approx(mat.uv1_scale.x, 0.5) and is_equal_approx(mat.roughness, 0.7))
@@ -166,7 +166,8 @@ func _shape_checks() -> void:
 	_check("the check catches missing materials and unsafe images",
 		problems.contains("isn't in the level (nope)") and problems.contains("Material sneaky: its albedo image"))
 	level.map.materials[0].erase("license")
-	_check("and images without a license", "\n".join(level.validate()).contains("Material moss has images but no license"))
+	level.map.materials[0].erase("author")
+	_check("licenses aren't required", not "\n".join(level.validate()).contains("license"))
 
 
 func _map_checks() -> void:
@@ -207,9 +208,9 @@ func _asset_checks() -> void:
 	_check("a glb can be written (%s)" % error_string(written), written == OK)
 	var level := LevelData.create("Assets")
 	level.dir = dir
-	level.map.assets = [{"id": "crate", "file": "assets/crate.glb", "license": "CC0"},
-		{"id": "sneaky", "file": "../../outside.glb", "license": "CC0"},
-		{"id": "scene", "file": "assets/thing.tscn", "license": "CC0"}]
+	level.map.assets = [{"id": "crate", "file": "assets/crate.glb"},
+		{"id": "sneaky", "file": "../../outside.glb"},
+		{"id": "scene", "file": "assets/thing.tscn"}]
 	LevelAssets.clear_cache()
 	var model := LevelAssets.model(level, "crate")
 	_check("an imported glb loads at runtime", model != null and model.find_children("*", "MeshInstance3D").size() == 1)

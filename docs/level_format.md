@@ -51,8 +51,15 @@ my_level/
   map.json          Layer 1: Map
   interaction.json  Layer 2: Interaction
   combat.json       Layer 3: Combat
-  assets/           glb / gltf models (and their textures)
+  assets/           glb / gltf models (and their textures), material images
+  licenses/         optional: license files for what the level uses
 ```
+
+`licenses/` holds plain text or document files (`.txt`, `.md`, `.pdf`,
+`.rtf`, `.html`) that the builder keeps with the level: a model pack's
+License.txt, a note from an artist. Nothing in the level refers to them, no
+license is required, and the game never reads them; they travel with the
+level when it's exported or shared.
 
 Each layer is its own file, so the editor can switch between layers freely.
 **A level never holds code.** Godot `.tres` / `.tscn` files can carry scripts
@@ -98,10 +105,10 @@ other count (2–4, or over 25) fits no size and can't be published.
   "lighting": {"preset": "dusk", "sun_energy": 1.0, "ambient_energy": 1.0,
                "exposure": 1.0, "fog_density": 0.0, "sun_angle": [-50, 35], "tint": [1, 1, 1]},
   "start": {"pos": [0, 0.1, 4], "yaw": 0},
-  "assets": [{"id": "rock_big", "file": "assets/rock_big.glb", "license": "CC0", "author": "Kenney",
+  "assets": [{"id": "rock_big", "file": "assets/rock_big.glb",
               "surface": "obstacle", "hitbox": "convex", "category": "decoration", "folder": "Rocks"}],
   "materials": [{"id": "flagstone", "name": "Flagstone", "albedo": "assets/flagstone.png", "color": [1, 1, 1],
-                 "tile": 4.0, "roughness": 0.9, "license": "CC0", "author": "Me", "folder": "Stone"}],
+                 "tile": 4.0, "roughness": 0.9, "folder": "Stone"}],
   "folders": {"prefab": ["Buildings/Ruins"]},
   "pieces": [{"id": "floor_1", "asset": "builtin:box", "pos": [0, -0.5, 0], "size": [16, 0.5, 16],
               "color": [0.4, 0.45, 0.4], "surface": "floor"},
@@ -126,13 +133,13 @@ other count (2–4, or over 25) fits no size and can't be published.
   tint is held to 0.6–1 per channel, and the sun stays 10–90° up. A room
   meant to be dark uses the Darkness hazard instead.
 - **assets**: imported models. `file` must be inside the level folder and end
-  in `.glb` or `.gltf`. Each asset needs a `license` before it can be
-  published. `surface` and `hitbox` are the defaults for every copy of it.
+  in `.glb` or `.gltf`. `surface` and `hitbox` are the defaults for every copy
+  of it. (Older levels may have `license` and `author` here; they're ignored.
+  Licenses live in `licenses/`.)
   `category` (`decoration` or `prefab`) and `folder` (names joined with `/`)
   only organise the editor's list; the game ignores them.
 - **materials**: paint for pieces. `albedo` and `normal` are optional images
-  (`.png`, `.jpg`, `.jpeg`, `.webp`) inside the level folder; a material with
-  an image needs a `license`. `color` tints it, `roughness` and `metallic` are
+  (`.png`, `.jpg`, `.jpeg`, `.webp`) inside the level folder. `color` tints it, `roughness` and `metallic` are
   0–1, `normal_strength` 0–4. Materials are mapped in world space
   (triplanar), so stretching a shape doesn't stretch the image; `tile` is how
   many metres one copy of the image covers (0.1–100, default 2). `name` and
@@ -358,8 +365,7 @@ publishing:
 - there's no start, or no exit (a teleporter with a destination)
 - an id is missing or used twice
 - something points at an id that doesn't exist
-- an asset has no license, or a piece or decoration uses an asset that isn't
-  imported
+- a piece or decoration uses an asset that isn't imported
 - an object type, event, condition or action is unknown
 - a combat room has no waves, or an empty wave
 - an enemy is invalid, or is one the game doesn't have
