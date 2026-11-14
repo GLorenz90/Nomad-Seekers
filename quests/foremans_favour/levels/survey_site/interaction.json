@@ -1,0 +1,102 @@
+{
+	"button_groups": [],
+	"dialogues": [
+		{
+			"id": "too_far",
+			"lines": [
+				{
+					"speaker": "SyncAIDa",
+					"text": "Lapis isn't with you. Go back for her."
+				}
+			]
+		}
+	],
+	"flags": {},
+	"objects": [
+		{
+			"id": "beacon",
+			"once": false,
+			"pos": [
+				0,
+				0,
+				-4
+			],
+			"size": [
+				6,
+				3,
+				4
+			],
+			"type": "trigger_zone"
+		},
+		{
+			"destination": "hub",
+			"id": "home",
+			"label": "Nomad-2",
+			"pos": [
+				0,
+				0,
+				8
+			],
+			"type": "teleporter"
+		}
+	],
+	"rules": [
+		{
+			"do": [
+				{
+					"action": "stop_escort",
+					"target": "lapis"
+				},
+				{
+					"action": "complete_step",
+					"step": "survey"
+				}
+			],
+			"id": "survey",
+			"if": [
+				{
+					"check": "quest_step",
+					"is": "current",
+					"step": "survey"
+				},
+				{
+					"check": "escort_near",
+					"distance": 10,
+					"target": "lapis"
+				}
+			],
+			"once": true,
+			"when": {
+				"event": "entered",
+				"source": "beacon"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "start_dialogue",
+					"target": "too_far"
+				}
+			],
+			"id": "alone",
+			"if": [
+				{
+					"check": "quest_step",
+					"is": "current",
+					"step": "survey"
+				},
+				{
+					"check": "escort_near",
+					"distance": 10,
+					"is": false,
+					"target": "lapis"
+				}
+			],
+			"once": false,
+			"when": {
+				"event": "entered",
+				"source": "beacon"
+			}
+		}
+	]
+}

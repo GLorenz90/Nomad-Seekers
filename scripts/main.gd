@@ -293,8 +293,7 @@ func on_enemy_defeated(enemy: Enemy) -> void:
 	var enemy_id := enemy.data.resource_path.get_file().get_basename()
 	for kit in kits:
 		kit.player.gain_exp(enemy.data.exp_value())
-		if QuestBook.record(kit.player.save, "defeat", enemy_id):
-			kit.hud.show_banner("Quest complete: report to the Guild")
+	quest_record("defeat", enemy_id)
 	var nearest := Player.nearest(self, enemy.global_position, true)
 	var save := nearest.save if nearest else null
 	var emblem := save.character.emblem_index() if save else 0
@@ -309,9 +308,18 @@ func _check_all_rooms_cleared() -> void:
 	for room in Scope.group(self, "wave_rooms"):
 		if (room as WaveRoom).state != WaveRoom.RoomState.CLEARED:
 			return
-	for kit in kits:
-		if QuestBook.record(kit.player.save, "clear", Maps.id_of(self)):
-			kit.hud.show_banner("Quest complete: report to the Guild")
+	quest_record("clear", Maps.id_of(self))
+
+
+## Counts quest progress once for the party (the leader's quest is
+## everyone's) and shows what changed.
+func quest_record(type: String, key: String, amount := 1) -> void:
+	if kits.is_empty():
+		return
+	var save := kits[0].player.save
+	var result := QuestBook.record(save, type, key, amount)
+	if result != "":
+		banner(QuestBook.news(save, result))
 
 
 func quest_done() -> void:

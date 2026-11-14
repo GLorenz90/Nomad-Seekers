@@ -1,0 +1,68 @@
+{
+	"areas": [],
+	"assets": [],
+	"boundaries": [],
+	"decorations": [],
+	"folders": {},
+	"grid": 4.0,
+	"lighting": {
+		"ambient_energy": 1.0,
+		"exposure": 1.0,
+		"fog_density": 0.0,
+		"preset": "day",
+		"sun_energy": 1.0
+	},
+	"materials": [],
+	"pieces": [
+		{
+			"asset": "builtin:box",
+			"color": [
+				0.55,
+				0.42,
+				0.25
+			],
+			"id": "crates_1",
+			"pos": [
+				5.5,
+				0,
+				-7
+			],
+			"size": [
+				1.2,
+				1.2,
+				1.2
+			],
+			"surface": "obstacle"
+		},
+		{
+			"asset": "builtin:box",
+			"color": [
+				0.55,
+				0.42,
+				0.25
+			],
+			"id": "crates_2",
+			"pos": [
+				6.8,
+				0,
+				-7.3
+			],
+			"size": [
+				1.2,
+				1.2,
+				1.2
+			],
+			"surface": "obstacle",
+			"yaw": 20
+		}
+	],
+	"start": {
+		"pos": [
+			0,
+			0,
+			0
+		],
+		"yaw": 0
+	},
+	"walls": []
+}

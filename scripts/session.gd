@@ -96,7 +96,9 @@ static func play(index: int) -> bool:
 	if data == null:
 		return false
 	use_slot(index, data)
-	Maps.new_session()  # every area picks a level again (Part 13a)
+	# Every area picks a level again (Part 13a); a quest in the save starts
+	# its quest session (QuestSession).
+	QuestSession.roll_picks(QuestBook.active(data))
 	Teleportals.new_session()
 	_tree().change_scene_to_file.call_deferred(HUB_SCENE)
 	return true

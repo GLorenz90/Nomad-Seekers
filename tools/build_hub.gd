@@ -20,7 +20,7 @@ var _mats := {}
 func _initialize() -> void:
 	_root = Node3D.new()
 	_root.name = "Hub"
-	_root.set_script(load("res://scripts/main.gd"))
+	_root.set_script(load("res://scripts/levels/hub_level.gd"))
 	_root.set("peaceful", true)  # no fighting in Nomad-2 (Grayson, 2026-11-10)
 
 	var env := WorldEnvironment.new()

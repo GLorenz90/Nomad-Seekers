@@ -372,8 +372,20 @@ func _create() -> void:
 ## The level editor's Playtest button (Part 13a) runs the game with
 ## `-- --level=<level folder or scene>`: straight into that level with the
 ## last played character (or a fresh one), skipping the title.
+## `-- --quest=<quest folder>` (2026-11-13): that quest, accepted, in a fresh
+## quest session on Nomad-2 (it replaces the character's current quest).
 func _playtest_launch() -> bool:
 	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--quest="):
+			var save := Session.current_save(CombatController.make_default_loadouts())
+			Session.save = save
+			var q := QuestBook.add_folder(arg.trim_prefix("--quest="))
+			if q.is_empty():
+				return false
+			save.quest = {}
+			QuestBook.accept(save, q.id)
+			QuestSession.restart(get_tree())
+			return true
 		if arg.begins_with("--level="):
 			var path := arg.trim_prefix("--level=")
 			Session.current_save(CombatController.make_default_loadouts())

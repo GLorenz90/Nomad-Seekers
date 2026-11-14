@@ -210,7 +210,8 @@ func _map_checks() -> void:
 	_check("an unknown area resolves to nothing", Maps.resolve("area:nowhere") == "")
 	QuestBook.reload()
 	var quest := QuestBook.get_quest(&"demo_run")
-	_check("quests load from res://quests (%s)" % quest.get("title", "none"), quest.get("objective") == "event")
+	_check("quests load from res://quests (%s)" % quest.get("title", "none"), quest.get("steps", []).size() == 1 and quest.steps[0].type == "event" and quest.steps[0].id == "demo_boss"
+		and quest.areas[0].destination == "area:test_1")
 
 
 # --- Imported assets --------------------------------------------------------------------------

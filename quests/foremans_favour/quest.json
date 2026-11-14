@@ -1,0 +1,40 @@
+{
+	"format": 1,
+	"id": "foremans_favour",
+	"title": "The Foreman's Favour",
+	"client": "Petram Solidus, foreman",
+	"text": "The foreman needs a Lumidium survey done and his crew patched up. Find him by the teleporter.",
+	"reward": 800,
+	"steps": [
+		{
+			"id": "talk_foreman",
+			"type": "event",
+			"goal": "Talk to Foreman Petram Solidus by the teleporter."
+		},
+		{
+			"id": "meet_lapis",
+			"type": "event",
+			"goal": "Find Lapis Viridi by the bank and ask her to come along."
+		},
+		{
+			"id": "survey",
+			"type": "event",
+			"goal": "Take Lapis to the beacon at the survey site."
+		},
+		{
+			"id": "deliver",
+			"type": "event",
+			"goal": "Bring the foreman 2 HP Gels for his crew."
+		}
+	],
+	"areas": [
+		{
+			"quest_level": "survey_site",
+			"name": "Survey site"
+		},
+		{
+			"area": "test_1",
+			"name": "The demo level"
+		}
+	]
+}

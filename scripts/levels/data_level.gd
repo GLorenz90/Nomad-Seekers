@@ -21,6 +21,9 @@ extends "res://scripts/main.gd"
 
 ## The level folder (set by Maps.instantiate before it enters the tree).
 @export var level_path := ""
+## Laid over a hand-built scene (HubLevel: a quest's Nomad-2 additions): the
+## scene keeps its own lighting, start and navmesh bake, and no folder is fine.
+var overlay := false
 
 var data: LevelData
 var events: LevelEvents
@@ -38,24 +41,31 @@ func _ready() -> void:
 	events.name = "LevelEvents"
 	events.level = self
 	add_child(events)
-	data = LevelData.load_dir(level_path)
-	if data == null:
+	data = LevelData.load_dir(level_path) if level_path != "" else null
+	if data == null and not overlay:
 		push_error("No level at %s" % level_path)
 		_fallback_floor()
-	else:
+	elif data != null:
 		_build()
+	else:
+		_props = _group_node(self, "Props")
+		_objects = _group_node(self, "Objects")
+		_enemies = _group_node(self, "Enemies")
 	super._ready()
-	navmesh_ready.connect(func(): events.emit_event("level_started"), CONNECT_ONE_SHOT)
-	if data == null:
+	navmesh_ready.connect(func():
+		_bring_escorts()
+		events.emit_event("level_started"), CONNECT_ONE_SHOT)
+	if data == null and not overlay:
 		banner.call_deferred("Couldn't load this level")
 
 
 func _build() -> void:
-	for node in LevelLighting.build(data.map.lighting):
-		add_child(node)
-	var start: Dictionary = data.map.start
-	player.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(float(start.get("yaw", 0.0)))),
-		LevelData.vec3(start.get("pos")))
+	if not overlay:
+		for node in LevelLighting.build(data.map.lighting):
+			add_child(node)
+		var start: Dictionary = data.map.start
+		player.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(float(start.get("yaw", 0.0)))),
+			LevelData.vec3(start.get("pos")))
 	_props = _group_node(self, "Props")
 	_objects = _group_node(self, "Objects")
 	_enemies = _group_node(self, "Enemies")
@@ -185,11 +195,36 @@ func _add_piece(spec: Dictionary) -> Node3D:
 	return model
 
 
+## People the party is escorting (QuestSession) come along: the ones placed
+## here start following, the rest appear beside the first Seeker.
+func _bring_escorts() -> void:
+	var leader := Scope.first(self, "player") as Node3D
+	var i := 0
+	for e in QuestSession.escorts():
+		var here := events.objects.get(String(e.id)) as Person
+		if here == null:
+			here = Person.from_spec(e)
+			here.name = "Escort_" + String(e.id)
+			events.objects[String(e.id)] = here
+			_objects.add_child(here)
+			if leader:
+				here.global_position = leader.global_position + Vector3(1.5 + i, 0.0, 1.5)
+			here.talked.connect(events.on_talked)
+			i += 1
+		here.shown_override = true
+		here.escorting = true
+		here.refresh()
+
+
 ## The navmesh: LevelNav's bake (the same one the editor shows), on a
-## navigation map with the matching cell size.
+## navigation map with the matching cell size. An overlay keeps its scene's
+## own bake (which takes in the overlay's floors and obstacles too).
 func _bake_navmesh() -> void:
 	await get_tree().process_frame
-	if data != null:
+	if overlay:
+		await get_tree().physics_frame
+		navigation.bake_navigation_mesh(false)
+	elif data != null:
 		var map_rid := get_world_3d().navigation_map
 		NavigationServer3D.map_set_cell_size(map_rid, LevelData.NAV.cell)
 		NavigationServer3D.map_set_cell_height(map_rid, LevelData.NAV.cell_height)
@@ -268,6 +303,13 @@ func _build_interaction() -> void:
 func _make_object(o: Dictionary) -> Node3D:
 	var node: Node3D
 	match String(o.get("type", "")):
+		"person":
+			var person := Person.from_spec(o)
+			var model_id := String(person.look.get("model", ""))
+			if model_id != "":
+				person.model = LevelAssets.model(data, model_id)
+			person.talked.connect(events.on_talked)
+			node = person
 		"door":
 			var door := SwitchDoor.new()
 			door.size = LevelData.vec3(o.get("size"), Vector3(4.2, 4.0, 0.6))

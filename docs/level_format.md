@@ -27,7 +27,8 @@ levels/
   forest_2/
   forest_boss/         boss areas get their own folder too
 quests/
-  some_quest.json      quests made in the editor (see Quests)
+  foremans_favour/     a quest folder made in the editor (see Quests)
+  demo_run.json        an older single-file quest
 ```
 
 - A teleporter, quest or menu can send a Seeker to **`area:forest_1`**. The
@@ -39,7 +40,12 @@ quests/
 - `user://levels/` holds your own levels (and the workshop's, later). They can
   be played from the Debug tab but never join the area rotation.
 - **Playtest:** run the game with `-- --level=<folder>` to go straight into a
-  level with the last played character, skipping the title screen.
+  level with the last played character, skipping the title screen, or with
+  `-- --quest=<quest folder>` to start that quest's session on Nomad-2 (it
+  replaces that character's current quest).
+- **Quest sessions** (see Quests): while a quest is on, the picks are rolled
+  for it (an area it names a level for gets that level) and Nomad-2's
+  teleporter offers only the quest's areas.
 - **Exports:** levels are plain files, so an export preset must include
   `levels/*` and `quests/*` in its non-resource include filter.
 
@@ -84,6 +90,9 @@ Shared conventions:
 ```json
 {"format": 2, "name": "Glade", "area": "forest_1", "author": "", "description": ""}
 ```
+
+`"kind": "nomad2"` marks a quest's Nomad-2 additions (see Quests): no rooms,
+start or exit of its own. Anything else is an ordinary level (`"level"`).
 
 There's no size to choose: it follows from the number of **rooms**
 (`LevelData.size_for`). Corridors never count (Grayson, 2026-11-12). Any
@@ -249,6 +258,15 @@ the same cell size.
 | `trigger_zone` | `size`, `once` (default true), `whole_party` (waits for every Seeker on the map), `enabled` | `enable`, `disable` |
 | `platform` | `points` (world positions of its top; ≥ 2), `size`, `mode` `loop`/`ping_pong`/`step`, `speed` 0.5–8 m/s, `wait` s, `running`, `color` | `start`, `stop`, `toggle`, `step` |
 | `bridge` | `length` 1–64, `width`, `extended`, `speed`; it slides out along its forward (-Z) | `extend`, `retract`, `toggle` |
+| `person` | `name`, `look` {`color`, `height` 0.5–4, `model` (an imported asset id)}, `talk`, `show_from`, `show_until`, `route` {`points` ≥ 2, `mode` `loop`/`back_and_forth`, `speed` 0.2–6, `wait` s}, `walking` | `show`, `hide`, `walk`, `stop`, `set_talk`, `escort`, `stop_escort` |
+
+- **People** (2026-11-13): A on them starts their dialogue. `talk` is a list
+  of `{"dialogue", "from_step"}`: the last entry whose step is done (or that
+  has no `from_step`) is what they say. `show_from` / `show_until` (quest
+  step ids) keep them around only from that step being done until that step
+  is done; outside a quest only people with neither set are there. A person
+  can't be hurt, and enemies ignore them. An escort follows the nearest
+  Seeker and comes along to the quest's other maps.
 
 - **Door shortcuts**: `open_when_cleared` opens the door when that room's
   combat ends. `shut_during_combat` closes it while that room fights, then
@@ -289,11 +307,17 @@ the same cell size.
 | `node_broken` | Lumidium node id | |
 | `timer_done` | timer id | |
 | `flag_set` | flag name | |
+| `talked` | person id | |
+| `step_completed` | quest step id | |
 
 Conditions (`"check"`): `flag` (`flag`, `is`); `difficulty_at_least`
 (`value`: `normal`, `hard`, `very_hard`, `ultimate`; tiers aren't built yet,
 so this is always `normal`); `party_at_least` (`value`: Seekers on the map);
-`quest_active` (`value`: quest id).
+`quest_active` (`value`: quest id); `quest_step` (`step`, `is`: `done`
+(default), `current` or `not_done`); `quest_flag` (`flag`, `is`);
+`has_item` (`item`, `color` for Lumidium, `amount`, `is`: the Seeker who last
+talked to someone, else the first Seeker here); `escort_near` (`target`
+person, `distance` m, `is`).
 
 Actions (`"action"`): the object actions in the table above (with
 `target`), plus:
@@ -303,7 +327,15 @@ Actions (`"action"`): the object actions in the table above (with
 - `start_timer` (`id`, `seconds`)
 - `give_item` (`item`: `oro`, a consumable id, or `lumidium` with `color`;
   `amount`). It drops at each Seeker's feet.
-- `complete_objective` (`key`: completes an `event` quest with that key)
+- `complete_objective` (`key`: completes the current `event` step with that
+  id; kept for Part 13a quests)
+- `complete_step` (`step` or `target`: a step id). Only the current step
+  completes; steps go in order.
+- `set_quest_flag` (`flag`, `value`): lasts the whole quest session, on every
+  map
+- `take_item` (`item`, `color`, `amount`): from the Seeker who talked (check
+  `has_item` first; nothing is taken unless they have it all)
+- `set_talk` (`target` person, `dialogue`): what they say from now on
 - `banner` (`text`)
 - `wait` (`seconds`; holds back the rest of the rule's actions)
 
@@ -356,20 +388,70 @@ A **placement**:
 
 ## Quests
 
-`quests/*.json` holds one quest, or a list of quests, listed at the Guild
-after the built-in ones:
+Quests are sessions, like PSO's (Grayson 2026-11-13). Accepting one at the
+Guild starts a quest session: every map closes, the area picks roll again,
+Nomad-2 reloads with the quest's people, and the teleporter offers only the
+quest's areas. Its steps are done in order. Reporting (or abandoning) ends
+the session and starts a fresh free-play one. The whole party must be on
+Nomad-2 to start or end one. In co-op the leader's quest is the party's:
+only the leader accepts or abandons, progress anywhere counts for the party,
+and every Seeker gets the reward.
 
-```json
-{"id": "demo_run", "title": "Demo Run", "client": "...", "text": "...",
- "objective": "event", "key": "demo_boss", "goal": "Beat the boss.",
- "count": 1, "scene": "area:test_1", "place": "The demo level", "reward": 500}
+A quest is a folder in `quests/` (made in the level editor):
+
+```
+quests/foremans_favour/
+  quest.json           the quest
+  nomad2/              what it adds to Nomad-2: a level folder, kind "nomad2"
+  levels/survey_site/  levels only this quest uses
 ```
 
-`objective` is one of the following:
-- `clear`: every wave room in `scene`
-- `defeat`: `enemy` × `count`
-- `bank_lumidium`: `count`
-- `event`: a level rule runs `complete_objective` with this `key`
+```json
+{"format": 1, "id": "foremans_favour", "title": "The Foreman's Favour",
+ "client": "Petram Solidus, foreman", "text": "The briefing...", "reward": 800,
+ "steps": [{"id": "talk_foreman", "type": "event", "goal": "Talk to the foreman."},
+           {"id": "cull", "type": "defeat", "enemy": "grub_hound", "count": 6},
+           {"id": "clear_ravine", "type": "clear", "area": "forest_1"},
+           {"id": "bank", "type": "bank_lumidium", "count": 10}],
+ "areas": [{"quest_level": "survey_site", "name": "Survey site"},
+           {"area": "forest_1", "name": "The Forest"},
+           {"area": "forest_2", "level": "res://levels/forest_2/ravine"}]}
+```
+
+- **Steps** (up to 32), in order. `type`:
+  - `event`: completed by wiring (`complete_step` with its `id`), for talking
+    to someone, handing something over, reaching a spot.
+  - `defeat`: `enemy` × `count`.
+  - `clear`: every wave room of one of the quest's areas in one trip
+    (`area`: an area name or quest level; blank for any of them).
+  - `bank_lumidium`: `count`.
+- **Areas** (up to 12) are where Nomad-2's teleporter goes during the quest:
+  `{"area": "forest_1"}` (a fresh pick from that area's folder),
+  `{"area": "forest_1", "level": "res://levels/forest_1/glade"}` (that level
+  of the area, always), or `{"quest_level": "survey_site"}` (the quest's own
+  level). `name` is shown on the teleporter.
+- **nomad2/** is laid over Nomad-2 (`HubLevel`), which itself is fixed: its
+  pieces and decorations are added (floors and obstacles join Nomad-2's
+  navmesh), and its Interaction layer runs (people, dialogue, wiring). Its
+  start, lighting and combat are ignored. `tools/export_nomad2.gd` writes the
+  copy of Nomad-2 the editor draws underneath.
+- **Wiring** in Nomad-2's additions and in the quest's levels can use the
+  quest: `step_completed`, `quest_step`, `quest_flag`, `complete_step`,
+  `set_quest_flag`, and the people actions (see Layer 2). A level's
+  `stop_escort` / `escort_near` may name a person from the quest's Nomad-2;
+  they come along as escorts.
+- The party's quest is kept in the leader's save (`SaveData.quest`:
+  `id`, `step`, `progress`, `flags`, `escorts`). Continuing a character with
+  a quest starts its quest session.
+
+Single files `quests/*.json` (Part 13a) still work: one `objective`
+(`clear`, `defeat`, `bank_lumidium` or `event` with its `key`) and one `scene`
+read as a one-step quest with one area:
+
+```json
+{"id": "demo_run", "title": "Demo Run", "objective": "event", "key": "demo_boss",
+ "goal": "Beat the boss.", "scene": "area:test_1", "place": "The demo level", "reward": 500}
+```
 
 ## The publish check
 

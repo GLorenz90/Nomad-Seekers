@@ -14,6 +14,12 @@ extends Node
 ##           {"action": "start_dialogue", "target": "brandt_call"}],
 ##    "once": true}
 ## Events, conditions and actions are listed in docs/level_format.md.
+##
+## Quests (2026-11-13): the same wiring runs a quest's Nomad-2 overlay and
+## its levels. It hears step_completed and talked, checks quest_step,
+## quest_flag, has_item and escort_near, and can complete_step,
+## set_quest_flag, take_item, set_talk, escort and stop_escort (plus show,
+## hide, walk and stop on people).
 
 signal fired(event: String, source: String)
 
@@ -30,6 +36,8 @@ var _spent := {}
 ## Dialogues waiting their turn (one at a time).
 var _queue: Array = []
 var _box: DialogueBox
+## Who last talked to someone (take_item / has_item use their pack).
+var talker: Player
 
 
 func _ready() -> void:
@@ -82,6 +90,35 @@ func _conditions_met(checks: Array) -> bool:
 			"party_at_least":
 				if Scope.group(level, "player").size() < int(c.get("value", 1)):
 					return false
+			"quest_step":
+				# is: "current", "done" or "not_done" (default "done").
+				var step := String(c.get("step", ""))
+				var save := _party_save()
+				var done := QuestBook.step_done(save, step)
+				var current := String(QuestBook.current_step(save).get("id", "")) == step
+				match String(c.get("is", "done")):
+					"current":
+						if not current:
+							return false
+					"not_done":
+						if done:
+							return false
+					_:
+						if not done:
+							return false
+			"quest_flag":
+				if QuestBook.flag(_party_save(), String(c.get("flag", ""))) != c.get("is", true):
+					return false
+			"has_item":
+				if _has_item(_who(), c) != bool(c.get("is", true)):
+					return false
+			"escort_near":
+				var person: Node = objects.get(String(c.get("target", "")))
+				var seeker := _who()
+				var near := person != null and seeker != null and is_instance_valid(person) and (person as Node3D).visible \
+					and (person as Node3D).global_position.distance_to(seeker.global_position) <= float(c.get("distance", 8.0))
+				if near != bool(c.get("is", true)):
+					return false
 			"quest_active":
 				var any := false
 				for seeker in Scope.group(level, "player"):
@@ -122,9 +159,32 @@ func do_action(a: Dictionary) -> void:
 		"give_item":
 			_give(a)
 		"complete_objective":
-			for seeker in Scope.group(level, "player"):
-				if QuestBook.record((seeker as Player).save, "event", String(a.get("key", ""))):
-					level.call("banner", "Quest complete: report to the Guild")
+			# Part 13a: completes the `event` step with that key (its id).
+			var result := QuestBook.record(_party_save(), "event", String(a.get("key", "")))
+			if result != "":
+				level.call("banner", QuestBook.news(_party_save(), result))
+		"complete_step":
+			var done := QuestBook.complete_step(_party_save(), String(a.get("step", target)))
+			if done != "":
+				level.call("banner", QuestBook.news(_party_save(), done))
+		"set_quest_flag":
+			QuestBook.set_flag(_party_save(), String(a.get("flag", "")), a.get("value", true))
+		"take_item":
+			_take(_who(), a)
+		"set_talk":
+			var person := objects.get(target) as Person
+			if person:
+				person.talk_override = String(a.get("dialogue", ""))
+		"escort":
+			var person := objects.get(target) as Person
+			if person:
+				person.escorting = true
+				QuestSession.start_escort({"id": person.person_id, "name": person.display_name, "look": person.look})
+		"stop_escort":
+			var person := objects.get(target) as Person
+			if person:
+				person.escorting = false
+			QuestSession.stop_escort(target)
 		"banner":
 			level.call("banner", String(a.get("text", "")))
 		_:
@@ -155,20 +215,84 @@ func _give(a: Dictionary) -> void:
 			push_warning("Level wiring: can't give \"%s\"" % item)
 
 
+## take_item: takes from the Seeker who talked (else the first Seeker here)
+## {"item": "oro" | a consumable id | "lumidium" (+ "color"), "amount"}.
+## Nothing is taken unless they have it all; check with has_item first.
+func _take(seeker: Player, a: Dictionary) -> bool:
+	if seeker == null or not _has_item(seeker, a):
+		return false
+	var item := String(a.get("item", ""))
+	var amount := clampi(int(a.get("amount", 1)), 1, 99999)
+	var inv := seeker.save.inventory
+	if item == "oro":
+		inv.oro -= amount
+	elif item == "lumidium":
+		var color := StringName(String(a.get("color", "raw")))
+		seeker.carried_lumidium[color] = int(seeker.carried_lumidium.get(color, 0)) - amount
+	else:
+		inv.remove_consumable(StringName(item), amount)
+	seeker.item_collected.emit("-%d %s" % [amount, item.capitalize() if item != "oro" else "Oro"])
+	return true
+
+
+func _has_item(seeker: Player, c: Dictionary) -> bool:
+	if seeker == null or seeker.save == null:
+		return false
+	var item := String(c.get("item", ""))
+	var amount := clampi(int(c.get("amount", 1)), 1, 99999)
+	var inv := seeker.save.inventory
+	if item == "oro":
+		return inv.oro >= amount
+	if item == "lumidium":
+		return int(seeker.carried_lumidium.get(StringName(String(c.get("color", "raw"))), 0)) >= amount
+	return inv.count(StringName(item)) >= amount
+
+
+## The Seeker the wiring is about: whoever last talked to someone, else the
+## first one here.
+func _who() -> Player:
+	if talker and is_instance_valid(talker) and Scope.level(talker) == level:
+		return talker
+	return Scope.first(level, "player") as Player
+
+
+func _party_save() -> SaveData:
+	var seeker := _who()
+	return seeker.save if seeker else Session.save
+
+
+## A quest step was completed (QuestSession): people show or hide, and the
+## wiring hears step_completed.
+func on_step_completed(step_id: String) -> void:
+	for node in objects.values():
+		if is_instance_valid(node) and node is Person:
+			(node as Person).refresh()
+	emit_event("step_completed", step_id)
+
+
+## A on a person: the wiring hears talked, then they say their piece.
+func on_talked(person: Person, seeker: Player) -> void:
+	talker = seeker
+	emit_event("talked", person.person_id)
+	var id := person.current_dialogue()
+	if id != "":
+		play_dialogue(id, seeker)
+
+
 # --- Dialogue -------------------------------------------------------------------------------
 
-func play_dialogue(id: String) -> void:
+func play_dialogue(id: String, seeker: Player = null) -> void:
 	if not dialogues.has(id):
 		push_warning("Level wiring: no dialogue %s" % id)
 		return
 	if _box and is_instance_valid(_box):
 		_queue.append(id)
 		return
-	var leader := Scope.first(level, "player") as Player
+	var reader := seeker if seeker else _who()
 	_box = DialogueBox.new()
-	(leader.ui_root() if leader else level).add_child(_box)
+	(reader.ui_root() if reader else level).add_child(_box)
 	_box.finished.connect(_on_dialogue_finished)
-	_box.open(dialogues[id], leader)
+	_box.open(dialogues[id], reader)
 
 
 func is_talking() -> bool:

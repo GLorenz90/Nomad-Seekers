@@ -1,0 +1,269 @@
+{
+	"button_groups": [],
+	"dialogues": [
+		{
+			"choices": [
+				{
+					"id": "yes",
+					"text": "I'll do it."
+				},
+				{
+					"id": "no",
+					"text": "Not now."
+				}
+			],
+			"id": "foreman_ask",
+			"lines": [
+				{
+					"speaker": "Petram Solidus",
+					"text": "Seeker! The survey office wants readings from the new dig, and I can't spare a soul."
+				},
+				{
+					"speaker": "Petram Solidus",
+					"text": "Lapis Viridi will go if someone keeps her safe. Will you?"
+				}
+			]
+		},
+		{
+			"id": "foreman_wait",
+			"lines": [
+				{
+					"speaker": "Petram Solidus",
+					"text": "Lapis is by the bank. Keep her close down there."
+				}
+			]
+		},
+		{
+			"choices": [
+				{
+					"id": "give",
+					"text": "Here you go."
+				},
+				{
+					"id": "later",
+					"text": "Not yet."
+				}
+			],
+			"id": "foreman_gels",
+			"lines": [
+				{
+					"speaker": "Petram Solidus",
+					"text": "Good work. One more thing: my crew's banged up. Got 2 HP Gels?"
+				}
+			]
+		},
+		{
+			"id": "foreman_short",
+			"lines": [
+				{
+					"speaker": "Petram Solidus",
+					"text": "That's not two Gels, Seeker. The shop's right there."
+				}
+			]
+		},
+		{
+			"id": "foreman_thanks",
+			"lines": [
+				{
+					"speaker": "Petram Solidus",
+					"text": "The crew owes you one. Tell the Guild we're square."
+				}
+			]
+		},
+		{
+			"id": "lapis_ready",
+			"lines": [
+				{
+					"speaker": "Lapis Viridi",
+					"text": "You're my escort? Lead the way, I'll stay right behind you."
+				}
+			]
+		},
+		{
+			"id": "lapis_thanks",
+			"lines": [
+				{
+					"speaker": "Lapis Viridi",
+					"text": "Those readings are better than I hoped. Thank you!"
+				}
+			]
+		}
+	],
+	"flags": {},
+	"objects": [
+		{
+			"id": "foreman",
+			"look": {
+				"color": [
+					0.85,
+					0.55,
+					0.2
+				],
+				"height": 2.0
+			},
+			"name": "Petram Solidus",
+			"pos": [
+				4,
+				0,
+				-6
+			],
+			"route": {
+				"mode": "back_and_forth",
+				"points": [
+					[
+						4,
+						0,
+						-6
+					],
+					[
+						4,
+						0,
+						-2
+					]
+				],
+				"speed": 1.2,
+				"wait": 3.0
+			},
+			"talk": [
+				{
+					"dialogue": "foreman_ask"
+				},
+				{
+					"dialogue": "foreman_wait",
+					"from_step": "talk_foreman"
+				},
+				{
+					"dialogue": "foreman_gels",
+					"from_step": "survey"
+				},
+				{
+					"dialogue": "foreman_thanks",
+					"from_step": "deliver"
+				}
+			],
+			"type": "person",
+			"walking": true,
+			"yaw": 0
+		},
+		{
+			"id": "lapis",
+			"look": {
+				"color": [
+					0.3,
+					0.75,
+					0.6
+				]
+			},
+			"name": "Lapis Viridi",
+			"pos": [
+				-9,
+				0,
+				3
+			],
+			"show_from": "talk_foreman",
+			"talk": [
+				{
+					"dialogue": "lapis_ready"
+				},
+				{
+					"dialogue": "lapis_thanks",
+					"from_step": "survey"
+				}
+			],
+			"type": "person",
+			"yaw": 90
+		}
+	],
+	"rules": [
+		{
+			"do": [
+				{
+					"action": "complete_step",
+					"step": "talk_foreman"
+				}
+			],
+			"id": "agree",
+			"once": true,
+			"when": {
+				"event": "dialogue_ended",
+				"source": "foreman_ask",
+				"value": "yes"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "escort",
+					"target": "lapis"
+				},
+				{
+					"action": "complete_step",
+					"step": "meet_lapis"
+				}
+			],
+			"id": "escort",
+			"if": [
+				{
+					"check": "quest_step",
+					"is": "current",
+					"step": "meet_lapis"
+				}
+			],
+			"once": true,
+			"when": {
+				"event": "dialogue_ended",
+				"source": "lapis_ready"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "take_item",
+					"amount": 2,
+					"item": "hp_gel"
+				},
+				{
+					"action": "complete_step",
+					"step": "deliver"
+				}
+			],
+			"id": "give",
+			"if": [
+				{
+					"amount": 2,
+					"check": "has_item",
+					"item": "hp_gel"
+				}
+			],
+			"once": false,
+			"when": {
+				"event": "dialogue_ended",
+				"source": "foreman_gels",
+				"value": "give"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "start_dialogue",
+					"target": "foreman_short"
+				}
+			],
+			"id": "short",
+			"if": [
+				{
+					"amount": 2,
+					"check": "has_item",
+					"is": false,
+					"item": "hp_gel"
+				}
+			],
+			"once": false,
+			"when": {
+				"event": "dialogue_ended",
+				"source": "foreman_gels",
+				"value": "give"
+			}
+		}
+	]
+}
