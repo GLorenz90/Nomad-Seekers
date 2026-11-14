@@ -32,6 +32,7 @@ func _run() -> void:
 	_data_checks()
 	_map_checks()
 	_asset_checks()
+	_shape_checks()
 	await _play_demo()
 	print("\n%s: %d failure(s)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
@@ -92,6 +93,109 @@ func _data_checks() -> void:
 
 # --- Maps ---------------------------------------------------------------------------------
 
+## Curved walls, stairs and materials (Grayson, 2026-11-13).
+func _shape_checks() -> void:
+	# Stairs: 2 m up over 6 m. Three steps (0.67 m each) are too tall to walk;
+	# eight (0.25 m) make a path from the bottom to the top.
+	for spec in [[3, false], [8, true]]:
+		var lv := LevelData.create("Stairs")
+		lv.map.pieces = [
+			{"id": "ground", "asset": "builtin:box", "size": [6, 0.5, 20], "pos": [0, -0.5, 0], "surface": "floor"},
+			{"id": "stairs", "asset": "builtin:stairs", "size": [4, 2, 6], "steps": spec[0], "pos": [0, 0, 0], "surface": "floor"},
+			{"id": "deck", "asset": "builtin:box", "size": [6, 0.5, 6], "pos": [0, 1.5, -6], "surface": "floor"}]
+		var nm := LevelNav.bake(lv, Callable())
+		var bottom := -1
+		var top := -1
+		var isl := LevelNav.islands(nm)
+		for i in isl.size():
+			if LevelNav._island_has(isl[i], Vector3(0, 0, 7)):
+				bottom = i
+			if LevelNav._island_has(isl[i], Vector3(0, 2, -6)):
+				top = i
+		_check("stairs with %d steps %s" % [spec[0], "connect the two floors" if spec[1] else "are too steep to walk"],
+			bottom >= 0 and top >= 0 and (bottom == top) == spec[1])
+	var stairs := LevelNav.builtin_meshes("builtin:stairs", Vector3(4, 2, 6), {"steps": 8})
+	_check("stairs are one box per step", stairs.size() == 8 and is_equal_approx((stairs[7][0] as BoxMesh).size.y, 2.0))
+	# Curved walls: 90 degrees over 8 m of length.
+	var wall: Array = LevelNav.builtin_meshes("builtin:curved_wall", Vector3(8, 3, 0.5), {"bend": 90.0})
+	var mesh: ArrayMesh = wall[0][0]
+	var box := mesh.get_aabb()
+	var radius := 8.0 / (PI * 0.5)
+	_check("a 90° curved wall spans its arc (%s)" % box, is_equal_approx(box.size.y, 3.0)
+		and absf(box.size.x - (2.0 * (radius + 0.25) * sin(PI * 0.25))) < 0.05)
+	var faces := mesh.get_faces()
+	var outward := 0
+	var arrays := mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	for i in range(0, verts.size(), 3):
+		var face_n := (verts[i + 2] - verts[i]).cross(verts[i + 1] - verts[i])  # Godot faces are clockwise
+		if face_n.dot(normals[i] + normals[i + 1] + normals[i + 2]) > 0.0:
+			outward += 1
+	_check("its faces all face outward (%d of %d)" % [outward, verts.size() / 3], outward == verts.size() / 3 and faces.size() > 0)
+	_check("no bend makes a straight wall", LevelNav.builtin_meshes("builtin:curved_wall", Vector3(8, 3, 0.5), {"bend": 0.0})[0][0] is BoxMesh)
+	var lv := LevelData.create("Curve")
+	lv.map.pieces = [{"id": "c", "asset": "builtin:curved_wall", "size": [8, 3, 0.5], "bend": 90.0, "pos": [0, 0, 0], "surface": "obstacle"}]
+	var hit := LevelNav.hitbox(lv.map.pieces[0], lv, Callable())
+	_check("a curved wall gets an exact (concave) hitbox", hit.shapes.size() == 1 and hit.shapes[0][0] is ConcavePolygonShape3D)
+	lv.map.pieces[0].bend = 400.0
+	lv.map.pieces.append({"id": "s", "asset": "builtin:stairs", "steps": 0})
+	var problems := "\n".join(lv.validate())
+	_check("bends over 360° and stairs with no steps are refused", problems.contains("bends at most") and problems.contains("need 1-"))
+
+	# Materials: an image in the level folder, tiled in world space.
+	var dir := "user://material_test"
+	DirAccess.make_dir_recursive_absolute(dir + "/assets")
+	var img := Image.create(8, 8, false, Image.FORMAT_RGB8)
+	img.fill(Color(0.2, 0.6, 0.3))
+	img.save_png(dir + "/assets/moss.png")
+	var level := LevelData.create("Mats")
+	level.dir = ProjectSettings.globalize_path(dir)
+	level.map.materials = [{"id": "moss", "albedo": "assets/moss.png", "tile": 2.0, "roughness": 0.7},
+		{"id": "sneaky", "albedo": "../../secret.png"}]
+	var mat := LevelMaterials.build(level, "moss")
+	_check("a material loads its image from the level folder", mat != null and mat.albedo_texture != null
+		and mat.uv1_world_triplanar and is_equal_approx(mat.uv1_scale.x, 0.5) and is_equal_approx(mat.roughness, 0.7))
+	var sneaky := LevelMaterials.build(level, "sneaky")
+	_check("but never from outside it", sneaky != null and sneaky.albedo_texture == null)
+	var shape := LevelAssets.builtin("builtin:box", Vector3(2, 2, 2), Color.WHITE, {}, mat)
+	_check("shapes wear a material", (shape.get_child(0) as MeshInstance3D).material_override == mat)
+	shape.free()
+	level.map.pieces = [{"id": "p", "asset": "builtin:box", "material": "nope"}]
+	problems = "\n".join(level.validate())
+	_check("the check catches missing materials and unsafe images",
+		problems.contains("isn't in the level (nope)") and problems.contains("Material sneaky: its albedo image"))
+	level.map.materials[0].erase("license")
+	level.map.materials[0].erase("author")
+	_check("licenses aren't required", not "\n".join(level.validate()).contains("license"))
+	# Every map: a glTF-style packed image (occlusion, roughness, metallic), glow,
+	# cut-out transparency, and a height map on UV mapping.
+	level.map.materials.append({"id": "full", "albedo": "assets/moss.png", "normal": "assets/moss.png", "normal_strength": 2.0,
+		"roughness": 1.0, "roughness_map": "assets/moss.png", "roughness_channel": "green",
+		"metallic": 1.0, "metallic_map": "assets/moss.png", "metallic_channel": "blue",
+		"ao_map": "assets/moss.png", "ao_channel": "red", "ao_strength": 0.5,
+		"emission": [1, 0.5, 0], "emission_energy": 3.0, "emission_map": "assets/moss.png",
+		"transparency": "cutout", "alpha_cutoff": 0.4, "opacity": 0.9,
+		"mapping": "uv", "uv_repeat": 2.0, "height_map": "assets/moss.png", "height_scale": 3.0})
+	var full := LevelMaterials.build(level, "full")
+	_check("roughness and metallic maps read their channel", full.roughness_texture != null and full.metallic_texture != null
+		and full.roughness_texture_channel == BaseMaterial3D.TEXTURE_CHANNEL_GREEN and full.metallic_texture_channel == BaseMaterial3D.TEXTURE_CHANNEL_BLUE)
+	_check("ambient occlusion", full.ao_enabled and full.ao_texture != null and full.ao_texture_channel == BaseMaterial3D.TEXTURE_CHANNEL_RED
+		and is_equal_approx(full.ao_light_affect, 0.5))
+	_check("glow", full.emission_enabled and full.emission_texture != null and is_equal_approx(full.emission_energy_multiplier, 3.0)
+		and full.emission.is_equal_approx(Color(1, 0.5, 0)))
+	_check("cut-out transparency", full.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR and is_equal_approx(full.alpha_scissor_threshold, 0.4)
+		and is_equal_approx(full.albedo_color.a, 0.9) and is_equal_approx(full.normal_scale, 2.0))
+	_check("UV mapping with a height map", not full.uv1_triplanar and is_equal_approx(full.uv1_scale.x, 2.0)
+		and full.heightmap_enabled and is_equal_approx(full.heightmap_scale, 3.0))
+	level.map.materials[2].mapping = "world"
+	_check("height maps need UV mapping (Godot can't do them triplanar)", not LevelMaterials.build(level, "full").heightmap_enabled)
+	level.map.materials[2].merge({"transparency": "glass", "ao_channel": "purple", "emission_map": "../x.png"}, true)
+	problems = "\n".join(level.validate())
+	_check("and the check catches bad settings", problems.contains("transparency must be") and problems.contains("ao_channel must be")
+		and problems.contains("emission_map image"))
+
+
 func _map_checks() -> void:
 	_check("res://levels/test_1 is an area", Maps.areas().has("test_1"))
 	Maps.new_session()
@@ -130,9 +234,9 @@ func _asset_checks() -> void:
 	_check("a glb can be written (%s)" % error_string(written), written == OK)
 	var level := LevelData.create("Assets")
 	level.dir = dir
-	level.map.assets = [{"id": "crate", "file": "assets/crate.glb", "license": "CC0"},
-		{"id": "sneaky", "file": "../../outside.glb", "license": "CC0"},
-		{"id": "scene", "file": "assets/thing.tscn", "license": "CC0"}]
+	level.map.assets = [{"id": "crate", "file": "assets/crate.glb"},
+		{"id": "sneaky", "file": "../../outside.glb"},
+		{"id": "scene", "file": "assets/thing.tscn"}]
 	LevelAssets.clear_cache()
 	var model := LevelAssets.model(level, "crate")
 	_check("an imported glb loads at runtime", model != null and model.find_children("*", "MeshInstance3D").size() == 1)
