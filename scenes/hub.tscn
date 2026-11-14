@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_441x5"]
+[ext_resource type="Script" path="res://scripts/levels/hub_level.gd" id="1_441x5"]
 [ext_resource type="Shader" path="res://assets/shaders/blockout_grid.gdshader" id="2_2hkft"]
 [ext_resource type="Script" path="res://scripts/world/service_counter.gd" id="3_4oyfp"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_lcd1r"]
@@ -44,62 +44,62 @@ shader_parameter/base_color = Color(0.45, 0.4, 0.3, 1)
 shader_parameter/line_color = Color(0.35, 0.3, 0.22, 1)
 shader_parameter/cell_size = null
 
-[node name="Hub" type="Node3D" unique_id=510690152]
+[node name="Hub" type="Node3D" unique_id=1101455928]
 script = ExtResource("1_441x5")
 peaceful = true
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=755290509]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2093828452]
 environment = SubResource("Environment_8hrlh")
 
-[node name="CeilingLight" type="DirectionalLight3D" parent="." unique_id=361379324]
+[node name="CeilingLight" type="DirectionalLight3D" parent="." unique_id=1136068054]
 transform = Transform3D(0.9396926, -0.3213938, 0.11697777, 0, 0.34202015, 0.9396926, -0.34202012, -0.8830222, 0.32139382, 0, 0, 0)
 light_energy = 0.8
 shadow_enabled = true
 
-[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=233533083]
+[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=303646335]
 navigation_mesh = SubResource("NavigationMesh_5ox4q")
 
-[node name="Level" type="Node3D" parent="Navigation" unique_id=1104544066]
+[node name="Level" type="Node3D" parent="Navigation" unique_id=827296690]
 
-[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=2137050962]
+[node name="Floor" type="CSGBox3D" parent="Navigation/Level" unique_id=1259128086]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 use_collision = true
 size = Vector3(32, 1, 30)
 material = SubResource("ShaderMaterial_mw5nc")
 
-[node name="WallNorth" type="CSGBox3D" parent="Navigation/Level" unique_id=117012048]
+[node name="WallNorth" type="CSGBox3D" parent="Navigation/Level" unique_id=2066896132]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -15.5)
 use_collision = true
 size = Vector3(32, 5, 1)
 material = SubResource("ShaderMaterial_7t3s2")
 
-[node name="WallSouth" type="CSGBox3D" parent="Navigation/Level" unique_id=568199942]
+[node name="WallSouth" type="CSGBox3D" parent="Navigation/Level" unique_id=686820905]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 15.5)
 use_collision = true
 size = Vector3(32, 5, 1)
 material = SubResource("ShaderMaterial_7t3s2")
 
-[node name="WallWest" type="CSGBox3D" parent="Navigation/Level" unique_id=1854767129]
+[node name="WallWest" type="CSGBox3D" parent="Navigation/Level" unique_id=885545934]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 2.5, 0)
 use_collision = true
 size = Vector3(1, 5, 30)
 material = SubResource("ShaderMaterial_7t3s2")
 
-[node name="WallEast" type="CSGBox3D" parent="Navigation/Level" unique_id=67632471]
+[node name="WallEast" type="CSGBox3D" parent="Navigation/Level" unique_id=781758041]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 2.5, 0)
 use_collision = true
 size = Vector3(1, 5, 30)
 material = SubResource("ShaderMaterial_7t3s2")
 
-[node name="Counters" type="Node3D" parent="Navigation/Level" unique_id=1194192004]
+[node name="Counters" type="Node3D" parent="Navigation/Level" unique_id=840870146]
 
-[node name="GuildCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=2143612824]
+[node name="GuildCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=1856472580]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.55, -6)
 use_collision = true
 size = Vector3(3, 1.1, 5)
 material = SubResource("ShaderMaterial_7n2o6")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/GuildCounter" unique_id=626298243]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/GuildCounter" unique_id=217520859]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
 modulate = Color(1, 0.9, 0.6, 1)
@@ -107,13 +107,13 @@ text = "Guild"
 font_size = 48
 outline_size = 10
 
-[node name="BankCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=1277312545]
+[node name="BankCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=2073558089]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.55, 3)
 use_collision = true
 size = Vector3(3, 1.1, 5)
 material = SubResource("ShaderMaterial_7n2o6")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/BankCounter" unique_id=1968013683]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/BankCounter" unique_id=1806783136]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
 modulate = Color(1, 0.9, 0.6, 1)
@@ -121,13 +121,13 @@ text = "Bank"
 font_size = 48
 outline_size = 10
 
-[node name="WeaponsCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=841523601]
+[node name="WeaponsCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=1295232027]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, -8)
 use_collision = true
 size = Vector3(3, 1.1, 5)
 material = SubResource("ShaderMaterial_7n2o6")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/WeaponsCounter" unique_id=1484468636]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/WeaponsCounter" unique_id=881839148]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
 modulate = Color(1, 0.9, 0.6, 1)
@@ -135,13 +135,13 @@ text = "Weapons"
 font_size = 48
 outline_size = 10
 
-[node name="ArmorCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=801271125]
+[node name="ArmorCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=651278202]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, -1)
 use_collision = true
 size = Vector3(3, 1.1, 5)
 material = SubResource("ShaderMaterial_7n2o6")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/ArmorCounter" unique_id=1125200491]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/ArmorCounter" unique_id=397137751]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
 modulate = Color(1, 0.9, 0.6, 1)
@@ -149,13 +149,13 @@ text = "Armor"
 font_size = 48
 outline_size = 10
 
-[node name="CurativesCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=164581388]
+[node name="CurativesCounter" type="CSGBox3D" parent="Navigation/Level/Counters" unique_id=434111499]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.55, 6)
 use_collision = true
 size = Vector3(3, 1.1, 5)
 material = SubResource("ShaderMaterial_7n2o6")
 
-[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/CurativesCounter" unique_id=1495793168]
+[node name="Sign" type="Label3D" parent="Navigation/Level/Counters/CurativesCounter" unique_id=389810264]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 billboard = 1
 modulate = Color(1, 0.9, 0.6, 1)
@@ -163,50 +163,50 @@ text = "Curatives"
 font_size = 48
 outline_size = 10
 
-[node name="Title" type="Label3D" parent="Navigation/Level" unique_id=1102821242]
+[node name="Title" type="Label3D" parent="Navigation/Level" unique_id=1001880593]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, -14.9)
 modulate = Color(0.7, 0.9, 1, 1)
 text = "NOMAD-2"
 font_size = 120
 outline_size = 16
 
-[node name="GuildClerk" type="Node3D" parent="." unique_id=1354879351]
+[node name="GuildClerk" type="Node3D" parent="." unique_id=2007162790]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.1, 0, -6)
 script = ExtResource("3_4oyfp")
 service = 4
 
-[node name="BankClerk" type="Node3D" parent="." unique_id=610706434]
+[node name="BankClerk" type="Node3D" parent="." unique_id=1991196718]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.1, 0, 3)
 script = ExtResource("3_4oyfp")
 service = 3
 
-[node name="WeaponsClerk" type="Node3D" parent="." unique_id=564962105]
+[node name="WeaponsClerk" type="Node3D" parent="." unique_id=67270577]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.1, 0, -8)
 script = ExtResource("3_4oyfp")
 
-[node name="ArmorClerk" type="Node3D" parent="." unique_id=804334097]
+[node name="ArmorClerk" type="Node3D" parent="." unique_id=310486272]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.1, 0, -1)
 script = ExtResource("3_4oyfp")
 service = 1
 
-[node name="CurativesClerk" type="Node3D" parent="." unique_id=865752419]
+[node name="CurativesClerk" type="Node3D" parent="." unique_id=1513829769]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.1, 0, 6)
 script = ExtResource("3_4oyfp")
 service = 2
 
-[node name="Player" parent="." unique_id=215885093 instance=ExtResource("4_lcd1r")]
+[node name="Player" parent="." unique_id=152578875 instance=ExtResource("4_lcd1r")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 10)
 
-[node name="CameraRig" parent="." unique_id=1173792995 instance=ExtResource("5_s6eg2")]
+[node name="CameraRig" parent="." unique_id=1217777641 instance=ExtResource("5_s6eg2")]
 
-[node name="HUD" parent="." unique_id=1799324018 instance=ExtResource("6_glsmu")]
+[node name="HUD" parent="." unique_id=1641396481 instance=ExtResource("6_glsmu")]
 
-[node name="Teleporter" type="Area3D" parent="." unique_id=106300052]
+[node name="Teleporter" type="Area3D" parent="." unique_id=2017381421]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
 script = ExtResource("7_phvbg")
 destinations = PackedStringArray("res://scenes/main.tscn", "res://scenes/arena.tscn", "area:test_1")
 destination_names = PackedStringArray("The gym (test room)", "The test arena (wave rooms)", "Demo level (made from data)")
 
-[node name="LumidiumDepot" type="Node3D" parent="." unique_id=1817442213]
+[node name="LumidiumDepot" type="Node3D" parent="." unique_id=893287717]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 7.5)
 script = ExtResource("8_3q32m")

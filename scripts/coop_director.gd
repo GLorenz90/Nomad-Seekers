@@ -330,6 +330,13 @@ func maybe_end() -> void:
 	queue_free()
 
 
+## A new session (QuestSession): every hosted map closes; the window's level
+## is replaced by Nomad-2, which spawns the party again.
+func close_hosted() -> void:
+	for path in hosts.keys():
+		_drop_host(path)
+
+
 ## Quit to title: every map and pane goes (panes first, so none is left
 ## looking into a world that's gone).
 func shutdown() -> void:

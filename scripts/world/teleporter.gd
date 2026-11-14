@@ -188,12 +188,20 @@ func _open_picker(seeker: Player) -> void:
 		return
 	var names := destination_names.duplicate()
 	var scenes := destinations.duplicate()
-	# Guild quest (Part 10): its destination comes first, like PSO's quest
-	# ramp. Shown until the quest is done.
+	# A quest session (Grayson 2026-11-13, like PSO): Nomad-2's teleporter
+	# goes only to the quest's areas.
 	var quest := QuestBook.active(seeker.save)
-	if not quest.is_empty() and not QuestBook.is_complete(seeker.save):
-		names.insert(0, "Quest: %s (%s)" % [quest.title, String(quest.place).to_lower()])
-		scenes.insert(0, String(quest.scene))
+	if not quest.is_empty() and Maps.id_of(Scope.level(self)) == Session.HUB_SCENE:
+		names = PackedStringArray()
+		scenes = PackedStringArray()
+		for a in QuestBook.open_areas(seeker.save):
+			names.append("Quest: %s" % String(a.name))
+			scenes.append(String(a.destination))
+		if names.is_empty():
+			var level := Scope.level(self)
+			if level:
+				level.call("banner", "Nowhere's open yet. %s" % QuestBook.step_text(seeker.save, QuestBook.current_step(seeker.save)))
+			return
 	picker = DestinationPicker.new()
 	seeker.ui_root().add_child(picker)
 	picker.open(names, func(index: int):

@@ -25,6 +25,7 @@ var _failures := 0
 
 
 func _initialize() -> void:
+	GuildMenu.restart_sessions = false  # quest_test covers the session change
 	_main = load("res://scenes/hub.tscn").instantiate()
 	root.add_child(_main)
 	current_scene = _main
@@ -380,14 +381,15 @@ func _run() -> void:
 	_check("reporting early says what's left (%s)" % menu._message.text, menu._message.text.contains("0 / 6 Grub Hounds"))
 	menu.close()
 	await _frames(3)
-	# The hub teleporter lists the quest first.
+	# A quest session: the hub teleporter goes only to the quest's areas.
 	var pad := _main.get_node("Teleporter") as Teleporter
 	await _place(pad.global_position)
 	_player.hold_input(0.0)
 	await _tap("jump")
 	await _frames(3)
 	var listed := pad.picker.button_names() if pad.picker else PackedStringArray()
-	_check("the teleporter lists the quest first (%s)" % ", ".join(listed), listed.size() > 0 and listed[0] == "Quest: Hound Cull (the test arena)")
+	_check("in a quest the teleporter offers only its areas (%s)" % ", ".join(listed), listed.size() > 0 and listed[0] == "Quest: The test arena"
+		and not listed.has("Test arena") and not ", ".join(listed).contains("Gym"))
 	await _pad(JOY_BUTTON_B)
 	await _frames(3)
 	# Progress: defeats of the right enemy only.

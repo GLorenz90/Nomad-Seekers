@@ -1,0 +1,136 @@
+{
+	"areas": [
+		{
+			"color": [
+				0.43,
+				0.64,
+				0.95
+			],
+			"id": "room_1",
+			"kind": "room",
+			"name": "Dig site",
+			"polys": [
+				[
+					[
+						-7.6,
+						0.0,
+						-9.6
+					],
+					[
+						7.6,
+						0.0,
+						-9.6
+					],
+					[
+						7.6,
+						0.0,
+						9.6
+					]
+				],
+				[
+					[
+						-7.6,
+						0.0,
+						-9.6
+					],
+					[
+						7.6,
+						0.0,
+						9.6
+					],
+					[
+						-7.6,
+						0.0,
+						9.6
+					]
+				]
+			],
+			"seed": [
+				0,
+				0,
+				4
+			]
+		}
+	],
+	"assets": [],
+	"boundaries": [],
+	"decorations": [
+		{
+			"asset": "builtin:light",
+			"color": [
+				0.4,
+				0.9,
+				1.0
+			],
+			"energy": 1.5,
+			"id": "beacon_light",
+			"pos": [
+				0,
+				2.8,
+				-6
+			],
+			"range": 8.0
+		}
+	],
+	"folders": {},
+	"grid": 4.0,
+	"lighting": {
+		"ambient_energy": 1.0,
+		"exposure": 1.0,
+		"fog_density": 0.0,
+		"preset": "day",
+		"sun_energy": 1.0
+	},
+	"materials": [],
+	"pieces": [
+		{
+			"asset": "builtin:box",
+			"color": [
+				0.35,
+				0.45,
+				0.3
+			],
+			"id": "ground",
+			"pos": [
+				0,
+				-0.5,
+				0
+			],
+			"size": [
+				16,
+				0.5,
+				20
+			],
+			"surface": "floor"
+		},
+		{
+			"asset": "builtin:cylinder",
+			"color": [
+				0.3,
+				0.8,
+				0.9
+			],
+			"id": "beacon_post",
+			"pos": [
+				0,
+				0,
+				-6
+			],
+			"size": [
+				0.6,
+				2.5,
+				0.6
+			],
+			"surface": "obstacle"
+		}
+	],
+	"start": {
+		"pos": [
+			0,
+			0.1,
+			6
+		],
+		"yaw": 0
+	},
+	"walls": []
+}

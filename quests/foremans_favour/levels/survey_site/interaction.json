@@ -1,0 +1,141 @@
+{
+	"button_groups": [],
+	"dialogues": [
+		{
+			"id": "too_far",
+			"lines": [
+				{
+					"speaker": "SyncAIDa",
+					"text": "Lapis isn't with you. Go back for her."
+				}
+			]
+		},
+		{
+			"choices": [
+				{
+					"id": "crew",
+					"text": "The foreman's crew."
+				},
+				{
+					"id": "office",
+					"text": "The survey office."
+				}
+			],
+			"id": "who_gets_it",
+			"lines": [
+				{
+					"speaker": "Lapis Viridi",
+					"text": "These readings are worth a fortune. The office wants them, but the foreman's crew could use them right now. Who gets them first?"
+				}
+			]
+		}
+	],
+	"flags": {},
+	"objects": [
+		{
+			"id": "beacon",
+			"once": false,
+			"pos": [
+				0,
+				0,
+				-4
+			],
+			"size": [
+				6,
+				3,
+				4
+			],
+			"type": "trigger_zone"
+		},
+		{
+			"destination": "hub",
+			"id": "home",
+			"label": "Nomad-2",
+			"pos": [
+				0,
+				0,
+				8
+			],
+			"type": "teleporter"
+		}
+	],
+	"rules": [
+		{
+			"do": [
+				{
+					"action": "stop_escort",
+					"target": "lapis"
+				},
+				{
+					"action": "complete_step",
+					"step": "survey"
+				},
+				{
+					"action": "start_dialogue",
+					"target": "who_gets_it"
+				}
+			],
+			"id": "survey",
+			"if": [
+				{
+					"check": "quest_step",
+					"is": "current",
+					"step": "survey"
+				},
+				{
+					"check": "escort_near",
+					"distance": 10,
+					"target": "lapis"
+				}
+			],
+			"once": true,
+			"when": {
+				"event": "entered",
+				"source": "beacon"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "set_quest_flag",
+					"flag": "gave_crew",
+					"value": true
+				}
+			],
+			"id": "side_crew",
+			"once": true,
+			"when": {
+				"event": "dialogue_ended",
+				"source": "who_gets_it",
+				"value": "crew"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "start_dialogue",
+					"target": "too_far"
+				}
+			],
+			"id": "alone",
+			"if": [
+				{
+					"check": "quest_step",
+					"is": "current",
+					"step": "survey"
+				},
+				{
+					"check": "escort_near",
+					"distance": 10,
+					"is": false,
+					"target": "lapis"
+				}
+			],
+			"once": false,
+			"when": {
+				"event": "entered",
+				"source": "beacon"
+			}
+		}
+	]
+}

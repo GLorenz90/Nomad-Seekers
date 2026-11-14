@@ -528,10 +528,11 @@ func carried_lumidium_total() -> int:
 ## how much was deposited; anything that didn't fit stays in the satchel.
 func deposit_lumidium() -> int:
 	var total := save.inventory.bank_lumidium(carried_lumidium)
-	if total > 0 and QuestBook.record(save, "bank_lumidium", "", total):
+	var result := QuestBook.record(save, "bank_lumidium", "", total) if total > 0 else ""
+	if result != "":
 		var level := Scope.level(self)
 		if level:
-			level.call("quest_done")
+			level.call("banner", QuestBook.news(save, result))
 	if total > 0:
 		save_game()
 	return total
