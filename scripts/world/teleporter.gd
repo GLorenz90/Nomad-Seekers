@@ -194,9 +194,14 @@ func _open_picker(seeker: Player) -> void:
 	if not quest.is_empty() and Maps.id_of(Scope.level(self)) == Session.HUB_SCENE:
 		names = PackedStringArray()
 		scenes = PackedStringArray()
-		for a in quest.areas:
+		for a in QuestBook.open_areas(seeker.save):
 			names.append("Quest: %s" % String(a.name))
 			scenes.append(String(a.destination))
+		if names.is_empty():
+			var level := Scope.level(self)
+			if level:
+				level.call("banner", "Nowhere's open yet. %s" % QuestBook.step_text(seeker.save, QuestBook.current_step(seeker.save)))
+			return
 	picker = DestinationPicker.new()
 	seeker.ui_root().add_child(picker)
 	picker.open(names, func(index: int):

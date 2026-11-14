@@ -9,6 +9,25 @@
 					"text": "Lapis isn't with you. Go back for her."
 				}
 			]
+		},
+		{
+			"choices": [
+				{
+					"id": "crew",
+					"text": "The foreman's crew."
+				},
+				{
+					"id": "office",
+					"text": "The survey office."
+				}
+			],
+			"id": "who_gets_it",
+			"lines": [
+				{
+					"speaker": "Lapis Viridi",
+					"text": "These readings are worth a fortune. The office wants them, but the foreman's crew could use them right now. Who gets them first?"
+				}
+			]
 		}
 	],
 	"flags": {},
@@ -50,6 +69,10 @@
 				{
 					"action": "complete_step",
 					"step": "survey"
+				},
+				{
+					"action": "start_dialogue",
+					"target": "who_gets_it"
 				}
 			],
 			"id": "survey",
@@ -69,6 +92,22 @@
 			"when": {
 				"event": "entered",
 				"source": "beacon"
+			}
+		},
+		{
+			"do": [
+				{
+					"action": "set_quest_flag",
+					"flag": "gave_crew",
+					"value": true
+				}
+			],
+			"id": "side_crew",
+			"once": true,
+			"when": {
+				"event": "dialogue_ended",
+				"source": "who_gets_it",
+				"value": "crew"
 			}
 		},
 		{

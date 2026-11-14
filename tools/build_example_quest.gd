@@ -12,7 +12,12 @@ extends SceneTree
 ##   3. survey        Take her to the beacon at the survey site (a level only
 ##                    this quest has): the zone counts only with her nearby.
 ##   4. deliver       Bring the foreman 2 HP Gels (he takes them).
-## Areas: the survey site, and the demo level (a pick from area test_1).
+## Areas open in order (2026-11-13): the survey site once Lapis is with you
+## (after meet_lapis), the demo level after the survey.
+## At the beacon Lapis asks who gets the readings first: the crew (quest flag
+## gave_crew) or the survey office. The foreman thanks you differently, and
+## the quest has two endings; the crew's pays more and sets the story flag
+## foreman_friend.
 
 const DIR := "res://quests/foremans_favour"
 
@@ -29,7 +34,12 @@ func _init() -> void:
 			{"id": "meet_lapis", "type": "event", "goal": "Find Lapis Viridi by the bank and ask her to come along."},
 			{"id": "survey", "type": "event", "goal": "Take Lapis to the beacon at the survey site."},
 			{"id": "deliver", "type": "event", "goal": "Bring the foreman 2 HP Gels for his crew."}],
-		"areas": [{"quest_level": "survey_site", "name": "Survey site"}, {"area": "test_1", "name": "The demo level"}]}
+		"areas": [{"quest_level": "survey_site", "name": "Survey site", "opens_after": "meet_lapis"},
+			{"area": "test_1", "name": "The demo level", "opens_after": "survey"}],
+		"endings": [
+			{"if": [{"flag": "gave_crew", "is": true}], "reward": 1000, "sets": {"foreman_friend": true},
+				"text": "The crew used Lapis's readings to strike a rich seam before anyone else. Petram Solidus won't forget who brought them."},
+			{"text": "The survey office filed Lapis's readings. The foreman grumbled about paperwork, but he paid."}]}
 	var f := FileAccess.open(dir.path_join("quest.json"), FileAccess.WRITE)
 	f.store_string(JSON.stringify(quest, "\t", false))
 	f.close()
@@ -51,7 +61,8 @@ func _nomad2() -> LevelData:
 		{"type": "person", "id": "foreman", "name": "Petram Solidus", "pos": [4, 0, -6], "yaw": 0,
 			"look": {"color": [0.85, 0.55, 0.2], "height": 2.0},
 			"talk": [{"dialogue": "foreman_ask"}, {"dialogue": "foreman_wait", "from_step": "talk_foreman"},
-				{"dialogue": "foreman_gels", "from_step": "survey"}, {"dialogue": "foreman_thanks", "from_step": "deliver"}],
+				{"dialogue": "foreman_gels", "from_step": "survey"}, {"dialogue": "foreman_thanks", "from_step": "deliver"},
+				{"dialogue": "foreman_thanks_crew", "from_step": "deliver", "flag": "gave_crew"}],
 			"route": {"points": [[4, 0, -6], [4, 0, -2]], "mode": "back_and_forth", "speed": 1.2, "wait": 3.0}, "walking": true},
 		{"type": "person", "id": "lapis", "name": "Lapis Viridi", "pos": [-9, 0, 3], "yaw": 90,
 			"look": {"color": [0.3, 0.75, 0.6]}, "show_from": "talk_foreman",
@@ -65,7 +76,8 @@ func _nomad2() -> LevelData:
 		{"id": "foreman_gels", "lines": [{"speaker": "Petram Solidus", "text": "Good work. One more thing: my crew's banged up. Got 2 HP Gels?"}],
 			"choices": [{"id": "give", "text": "Here you go."}, {"id": "later", "text": "Not yet."}]},
 		{"id": "foreman_short", "lines": [{"speaker": "Petram Solidus", "text": "That's not two Gels, Seeker. The shop's right there."}]},
-		{"id": "foreman_thanks", "lines": [{"speaker": "Petram Solidus", "text": "The crew owes you one. Tell the Guild we're square."}]},
+		{"id": "foreman_thanks", "lines": [{"speaker": "Petram Solidus", "text": "Thanks for the Gels. Tell the Guild we're square."}]},
+		{"id": "foreman_thanks_crew", "lines": [{"speaker": "Petram Solidus", "text": "You sent us the readings first? The crew owes you one, Seeker."}]},
 		{"id": "lapis_ready", "lines": [{"speaker": "Lapis Viridi", "text": "You're my escort? Lead the way, I'll stay right behind you."}]},
 		{"id": "lapis_thanks", "lines": [{"speaker": "Lapis Viridi", "text": "Those readings are better than I hoped. Thank you!"}]}]
 	level.interaction.rules = [
@@ -75,10 +87,11 @@ func _nomad2() -> LevelData:
 			"if": [{"check": "quest_step", "step": "meet_lapis", "is": "current"}],
 			"do": [{"action": "escort", "target": "lapis"}, {"action": "complete_step", "step": "meet_lapis"}], "once": true},
 		{"id": "give", "when": {"event": "dialogue_ended", "source": "foreman_gels", "value": "give"},
-			"if": [{"check": "has_item", "item": "hp_gel", "amount": 2}],
+			"if": [{"check": "quest_step", "step": "deliver", "is": "current"}, {"check": "has_item", "item": "hp_gel", "amount": 2}],
 			"do": [{"action": "take_item", "item": "hp_gel", "amount": 2}, {"action": "complete_step", "step": "deliver"}], "once": false},
 		{"id": "short", "when": {"event": "dialogue_ended", "source": "foreman_gels", "value": "give"},
-			"if": [{"check": "has_item", "item": "hp_gel", "amount": 2, "is": false}],
+			"if": [{"check": "quest_step", "step": "deliver", "is": "current"},
+				{"check": "has_item", "item": "hp_gel", "amount": 2, "is": false}],
 			"do": [{"action": "start_dialogue", "target": "foreman_short"}], "once": false}]
 	return level
 
@@ -102,11 +115,16 @@ func _survey_site() -> LevelData:
 		{"type": "trigger_zone", "id": "beacon", "pos": [0, 0, -4], "size": [6, 3, 4], "once": false},
 		{"type": "teleporter", "id": "home", "pos": [0, 0, 8], "destination": "hub", "label": "Nomad-2"}]
 	level.interaction.dialogues = [
-		{"id": "too_far", "lines": [{"speaker": "SyncAIDa", "text": "Lapis isn't with you. Go back for her."}]}]
+		{"id": "too_far", "lines": [{"speaker": "SyncAIDa", "text": "Lapis isn't with you. Go back for her."}]},
+		{"id": "who_gets_it", "lines": [{"speaker": "Lapis Viridi", "text": "These readings are worth a fortune. The office wants them, but the foreman's crew could use them right now. Who gets them first?"}],
+			"choices": [{"id": "crew", "text": "The foreman's crew."}, {"id": "office", "text": "The survey office."}]}]
 	level.interaction.rules = [
 		{"id": "survey", "when": {"event": "entered", "source": "beacon"},
 			"if": [{"check": "quest_step", "step": "survey", "is": "current"}, {"check": "escort_near", "target": "lapis", "distance": 10}],
-			"do": [{"action": "stop_escort", "target": "lapis"}, {"action": "complete_step", "step": "survey"}], "once": true},
+			"do": [{"action": "stop_escort", "target": "lapis"}, {"action": "complete_step", "step": "survey"},
+				{"action": "start_dialogue", "target": "who_gets_it"}], "once": true},
+		{"id": "side_crew", "when": {"event": "dialogue_ended", "source": "who_gets_it", "value": "crew"},
+			"do": [{"action": "set_quest_flag", "flag": "gave_crew", "value": true}], "once": true},
 		{"id": "alone", "when": {"event": "entered", "source": "beacon"},
 			"if": [{"check": "quest_step", "step": "survey", "is": "current"}, {"check": "escort_near", "target": "lapis", "distance": 10, "is": false}],
 			"do": [{"action": "start_dialogue", "target": "too_far"}], "once": false}]

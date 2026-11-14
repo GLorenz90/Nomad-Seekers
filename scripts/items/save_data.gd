@@ -24,6 +24,10 @@ const OLD_LOADOUTS_PATH := "user://loadouts.tres"
 @export var quest: Dictionary = {}
 ## Quest id -> times completed.
 @export var quests_cleared: Dictionary = {}
+## Story flags (2026-11-13): choices that outlast a quest ("sided with the
+## miners"), set by wiring (set_story_flag) or a quest's ending. Later quests
+## and any level's wiring can check them; quests can require them.
+@export var story_flags: Dictionary = {}
 ## The d-pad item palette (Grayson, 2026-11-09): 8 slots. 0-3 are d-pad left
 ## / up / right / down, 4-7 the same with RT held. Each holds a consumable id
 ## or, for Goluman, a trap's id; &"" is empty. See quick() / set_quick().

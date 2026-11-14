@@ -261,8 +261,10 @@ the same cell size.
 | `person` | `name`, `look` {`color`, `height` 0.5–4, `model` (an imported asset id)}, `talk`, `show_from`, `show_until`, `route` {`points` ≥ 2, `mode` `loop`/`back_and_forth`, `speed` 0.2–6, `wait` s}, `walking` | `show`, `hide`, `walk`, `stop`, `set_talk`, `escort`, `stop_escort` |
 
 - **People** (2026-11-13): A on them starts their dialogue. `talk` is a list
-  of `{"dialogue", "from_step"}`: the last entry whose step is done (or that
-  has no `from_step`) is what they say. `show_from` / `show_until` (quest
+  of `{"dialogue", "from_step", "flag", "flag_is", "story"}`: the last entry
+  that holds is what they say. An entry holds when its `from_step` is done
+  (if it has one) and its `flag` (a quest flag, or a story flag with
+  `"story": true`) is `flag_is` (default true). `show_from` / `show_until` (quest
   step ids) keep them around only from that step being done until that step
   is done; outside a quest only people with neither set are there. A person
   can't be hurt, and enemies ignore them. An escort follows the nearest
@@ -317,7 +319,7 @@ so this is always `normal`); `party_at_least` (`value`: Seekers on the map);
 (default), `current` or `not_done`); `quest_flag` (`flag`, `is`);
 `has_item` (`item`, `color` for Lumidium, `amount`, `is`: the Seeker who last
 talked to someone, else the first Seeker here); `escort_near` (`target`
-person, `distance` m, `is`).
+person, `distance` m, `is`); `story_flag` (`flag`, `is`).
 
 Actions (`"action"`): the object actions in the table above (with
 `target`), plus:
@@ -333,6 +335,8 @@ Actions (`"action"`): the object actions in the table above (with
   completes; steps go in order.
 - `set_quest_flag` (`flag`, `value`): lasts the whole quest session, on every
   map
+- `set_story_flag` (`flag`, `value`): kept in every party member's save
+  after the quest
 - `take_item` (`item`, `color`, `amount`): from the Seeker who talked (check
   `has_item` first; nothing is taken unless they have it all)
 - `set_talk` (`target` person, `dialogue`): what they say from now on
@@ -413,9 +417,13 @@ quests/foremans_favour/
            {"id": "cull", "type": "defeat", "enemy": "grub_hound", "count": 6},
            {"id": "clear_ravine", "type": "clear", "area": "forest_1"},
            {"id": "bank", "type": "bank_lumidium", "count": 10}],
- "areas": [{"quest_level": "survey_site", "name": "Survey site"},
-           {"area": "forest_1", "name": "The Forest"},
-           {"area": "forest_2", "level": "res://levels/forest_2/ravine"}]}
+ "areas": [{"quest_level": "survey_site", "name": "Survey site", "opens_after": "talk_foreman"},
+           {"area": "forest_1", "name": "The Forest", "opens_after": "cull"},
+           {"area": "forest_2", "level": "res://levels/forest_2/ravine", "opens_with": "found_key"}],
+ "endings": [{"if": [{"flag": "gave_crew", "is": true}], "reward": 1000,
+              "sets": {"foreman_friend": true}, "text": "The crew struck a rich seam..."},
+             {"text": "The survey office filed the readings..."}],
+ "requires": [{"flag": "met_foreman", "is": true}]}
 ```
 
 - **Steps** (up to 32), in order. `type`:
@@ -430,6 +438,22 @@ quests/foremans_favour/
   `{"area": "forest_1", "level": "res://levels/forest_1/glade"}` (that level
   of the area, always), or `{"quest_level": "survey_site"}` (the quest's own
   level). `name` is shown on the teleporter.
+  - **Opening in order** (2026-11-13): `opens_after` (a step id) and / or
+    `opens_with` (a quest flag) keep an area off the teleporter until the step
+    is done / the flag is on. A banner says when one opens. Use them for set
+    maps done in order, with steps between (talk to someone to open the
+    next map).
+- **Endings**: told at the Guild when the quest is reported. The first
+  ending whose `if` flags all hold is told (`story: true` checks a story
+  flag instead of a quest flag); put one with no `if` last as the default.
+  Its `reward`, if given, replaces the quest's; its `sets` become **story
+  flags** for every Seeker in the party.
+- **Story flags** (`SaveData.story_flags`) stay with the character after the
+  quest: choices that change later quests. Set them with an ending's `sets`
+  or the `set_story_flag` action; check them with `story_flag` (in any
+  level's wiring), a person's talk line, an ending's `if`, or a quest's
+  `requires` (the Guild only lists the quest while they hold). Setting one
+  sets it for the whole party.
 - **nomad2/** is laid over Nomad-2 (`HubLevel`), which itself is fixed: its
   pieces and decorations are added (floors and obstacles join Nomad-2's
   navmesh), and its Interaction layer runs (people, dialogue, wiring). Its

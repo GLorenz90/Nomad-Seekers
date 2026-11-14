@@ -113,8 +113,7 @@ func _run() -> void:
 	_check("the foreman is around; Lapis isn't yet (she shows from step 1)", foreman != null and foreman.visible and lapis != null and not lapis.visible)
 	var crates := _level().find_child("crates_1", true, false)
 	_check("the quest's props are on Nomad-2", crates != null)
-	_check("the teleporter offers only the quest's areas",
-		QuestSession.destinations().map(func(d): return d[0]) == ["Survey site", "The demo level"])
+	_check("no area is open before its step (the survey site opens with Lapis)", QuestSession.destinations().is_empty())
 	var start := foreman.global_position
 	await _frames(90)
 	_check("the foreman walks his rounds (%.1f m)" % foreman.global_position.distance_to(start), foreman.global_position.distance_to(start) > 0.5)
@@ -140,6 +139,7 @@ func _run() -> void:
 	await _frames(3)
 	_check("she starts following and step 2 is done", lapis.escorting and QuestBook.step_index(_save) == 2
 		and QuestSession.escorts().size() == 1)
+	_check("the survey site opens on the teleporter (only it)", QuestSession.destinations().map(func(d): return d[0]) == ["Survey site"])
 
 	# --- The quest's own level ------------------------------------------------------------------
 	Maps.change_to(self, String(q.areas[0].destination))
@@ -156,6 +156,11 @@ func _run() -> void:
 	await _frames(3)
 	_check("with her close it does (step 3)", QuestBook.step_done(_save, "survey"))
 	_check("and the escort ends", not escort.escorting and QuestSession.escorts().is_empty())
+	_check("the next map opens in order", QuestSession.destinations().map(func(d): return d[0]) == ["Survey site", "The demo level"])
+	await _frames(3)
+	_check("Lapis asks who gets the readings", _close_dialogue() == "who_gets_it")
+	_events().emit_event("dialogue_ended", "who_gets_it", "crew")
+	_check("siding with the crew sets a quest flag", QuestBook.flag(_save, "gave_crew") == true)
 
 	# --- Delivery -------------------------------------------------------------------------------
 	Maps.change_to(self, "hub")
@@ -171,11 +176,16 @@ func _run() -> void:
 	await _frames(3)
 	_check("with them he takes 2 (1 left)", _save.inventory.count(&"hp_gel") == 1)
 	_check("and the quest is complete", QuestBook.is_complete(_save) and QuestBook.progress_text(_save) == "done")
+	_events().on_talked(foreman, _player())
+	var thanks := _close_dialogue()
+	_check("he thanks you for siding with the crew (a line picked by the flag: %s)" % thanks, thanks == "foreman_thanks_crew")
 
 	# --- Reporting ---------------------------------------------------------------------------
 	var oro := _save.inventory.oro
 	var message := QuestBook.report(_save)
-	_check("reporting pays (%s)" % message, _save.inventory.oro == oro + 800 and QuestBook.active(_save).is_empty())
+	_check("reporting tells the crew's ending and pays its reward (%s)" % message.replace("\n", " "),
+		message.contains("rich seam") and _save.inventory.oro == oro + 1000 and QuestBook.active(_save).is_empty())
+	_check("the ending sets a story flag that outlasts the quest", _save.story_flags.get("foreman_friend") == true)
 	QuestSession.restart(self)
 	await _arrive("hub")
 	_check("and Nomad-2 is back to free play", get_nodes_in_group("people").is_empty())
@@ -193,7 +203,28 @@ func _run() -> void:
 	QuestBook.report(guest)
 	_check("everyone gets the reward", guest.inventory.oro == guest_oro + 300 and _save.inventory.oro == oro + 300
 		and int(guest.quests_cleared.get("hound_cull", 0)) == 1)
+	QuestBook.set_story_flag(_save, "met_guest", true)
+	_check("a story flag is set for the whole party", guest.story_flags.get("met_guest") == true and _save.story_flags.get("met_guest") == true)
 	Party.guests.clear()
+
+	# --- The other ending, story flags and quests that need them ---------------------------
+	QuestBook.accept(_save, QUEST)
+	_save.quest.step = 4
+	oro = _save.inventory.oro
+	message = QuestBook.report(_save)
+	_check("without the flag it's the office's ending at the quest's reward", message.contains("survey office") and _save.inventory.oro == oro + 800)
+	QuestBook._loaded.append(QuestBook.normalize({"id": "follow_up", "title": "Follow-up", "steps": [{"id": "a"}],
+		"requires": [{"flag": "foreman_friend", "is": true}]}))
+	var stranger := SaveData.create("New", CharacterData.Race.HUMAN, CharacterData.Gender.MALE, CharacterData.Job.STRIKER, 1)
+	var follow := QuestBook.get_quest(&"follow_up")
+	_check("a quest needing a story flag is offered to who has it", QuestBook.available(_save, follow) and not QuestBook.available(stranger, follow))
+	var person := Person.from_spec({"id": "p", "talk": [{"dialogue": "plain"}, {"dialogue": "friendly", "flag": "foreman_friend", "story": true},
+		{"dialogue": "first_time", "flag": "foreman_friend", "story": true, "flag_is": false}]})
+	_check("people's lines can depend on a story flag", person.current_dialogue() == "friendly")
+	Session.save = stranger
+	_check("  (or its absence)", person.current_dialogue() == "first_time")
+	Session.save = _save
+	person.free()
 
 	# --- A quest's named levels win the picks -----------------------------------------------
 	QuestSession.roll_picks({"areas": [{"area": "test_1", "level": "res://levels/test_1/demo", "destination": "area:test_1"}]})

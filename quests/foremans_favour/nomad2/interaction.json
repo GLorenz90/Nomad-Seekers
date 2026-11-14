@@ -66,7 +66,16 @@
 			"lines": [
 				{
 					"speaker": "Petram Solidus",
-					"text": "The crew owes you one. Tell the Guild we're square."
+					"text": "Thanks for the Gels. Tell the Guild we're square."
+				}
+			]
+		},
+		{
+			"id": "foreman_thanks_crew",
+			"lines": [
+				{
+					"speaker": "Petram Solidus",
+					"text": "You sent us the readings first? The crew owes you one, Seeker."
 				}
 			]
 		},
@@ -138,6 +147,11 @@
 				},
 				{
 					"dialogue": "foreman_thanks",
+					"from_step": "deliver"
+				},
+				{
+					"dialogue": "foreman_thanks_crew",
+					"flag": "gave_crew",
 					"from_step": "deliver"
 				}
 			],
@@ -230,6 +244,11 @@
 			"id": "give",
 			"if": [
 				{
+					"check": "quest_step",
+					"is": "current",
+					"step": "deliver"
+				},
+				{
 					"amount": 2,
 					"check": "has_item",
 					"item": "hp_gel"
@@ -251,6 +270,11 @@
 			],
 			"id": "short",
 			"if": [
+				{
+					"check": "quest_step",
+					"is": "current",
+					"step": "deliver"
+				},
 				{
 					"amount": 2,
 					"check": "has_item",

@@ -30,11 +30,31 @@
 	"areas": [
 		{
 			"quest_level": "survey_site",
-			"name": "Survey site"
+			"name": "Survey site",
+			"opens_after": "meet_lapis"
 		},
 		{
 			"area": "test_1",
-			"name": "The demo level"
+			"name": "The demo level",
+			"opens_after": "survey"
+		}
+	],
+	"endings": [
+		{
+			"if": [
+				{
+					"flag": "gave_crew",
+					"is": true
+				}
+			],
+			"reward": 1000,
+			"sets": {
+				"foreman_friend": true
+			},
+			"text": "The crew used Lapis's readings to strike a rich seam before anyone else. Petram Solidus won't forget who brought them."
+		},
+		{
+			"text": "The survey office filed Lapis's readings. The foreman grumbled about paperwork, but he paid."
 		}
 	]
 }

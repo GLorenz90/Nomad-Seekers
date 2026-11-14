@@ -41,6 +41,18 @@ extends RefCounted
 ## The quest in progress lives in the party's save (SaveData.quest):
 ##   {"id", "step": index of the current step, "progress": count within it,
 ##    "flags": {quest flags}, "escorts": [people following the party]}
+##
+## Also (2026-11-13):
+## - Areas can open as the quest goes on: `opens_after` (a step id) and / or
+##   `opens_with` (a quest flag). Nomad-2's teleporter lists only open areas,
+##   and a banner announces each one that opens.
+## - Endings: [{"text", "reward", "if": [{"flag", "is", "story"}],
+##   "sets": {story flag: value}}]. The first whose conditions all hold is the
+##   ending told at the report (its reward, if given, replaces the quest's;
+##   its `sets` become story flags for everyone in the party).
+## - Story flags (SaveData.story_flags) outlast the quest. `requires`:
+##   [{"flag", "is"}] (story flags) keeps a quest off the Guild's list until
+##   they hold.
 
 const QUESTS := [
 	{"id": &"arena_trial", "title": "Arena Trial", "client": "Guild instructor",
@@ -105,7 +117,17 @@ static func _parse(path: String) -> Array:
 static func normalize(q: Dictionary, dir := "") -> Dictionary:
 	var out := {"id": StringName(String(q.id)), "title": String(q.get("title", q.id)), "client": String(q.get("client", "")),
 		"text": String(q.get("text", "")), "place": String(q.get("place", "")),
-		"reward": clampi(int(q.get("reward", 0)), 0, 999999), "dir": dir, "nomad2": "", "steps": [], "areas": []}
+		"reward": clampi(int(q.get("reward", 0)), 0, 999999), "dir": dir, "nomad2": "", "steps": [], "areas": [],
+		"endings": [], "requires": _conditions(q.get("requires", []))}
+	for e in (q.get("endings", []) as Array).slice(0, 16) if q.get("endings") is Array else []:
+		if e is Dictionary:
+			var sets := {}
+			if e.get("sets") is Dictionary:
+				for k in e.sets:
+					if String(k) != "":
+						sets[String(k)] = e.sets[k]
+			out.endings.append({"text": String(e.get("text", "")), "reward": int(e.reward) if e.has("reward") else -1,
+				"if": _conditions(e.get("if", [])), "sets": sets})
 	if dir != "" and LevelData.is_level_dir(dir.path_join("nomad2")):
 		out.nomad2 = dir.path_join("nomad2")
 	if q.has("steps"):
@@ -131,6 +153,16 @@ static func normalize(q: Dictionary, dir := "") -> Dictionary:
 	return out
 
 
+## [{"flag", "is", "story"}] with blank flags dropped.
+static func _conditions(list) -> Array:
+	var out := []
+	if list is Array:
+		for c in list:
+			if c is Dictionary and String(c.get("flag", "")) != "":
+				out.append({"flag": String(c.flag), "is": c.get("is", true), "story": bool(c.get("story", false))})
+	return out
+
+
 static func _step(s: Dictionary, index: int) -> Dictionary:
 	var type := String(s.get("type", "event"))
 	return {"id": String(s.get("id", "step_%d" % (index + 1))), "type": type if STEP_TYPES.has(type) else "event",
@@ -148,14 +180,21 @@ static func _area(a: Dictionary, dir: String) -> Dictionary:
 		if dir == "" or own.contains("..") or own.contains("/"):
 			return {}
 		var path := dir.path_join("levels").path_join(own)
-		return {"name": name if name != "" else Maps.display_name(path), "destination": path, "area": "", "level": path}
+		return _opens(a, {"name": name if name != "" else Maps.display_name(path), "destination": path, "area": "", "level": path})
 	var area := String(a.get("area", ""))
 	if area == "" or area.contains("..") or area.contains("/"):
 		return {}
 	var level := String(a.get("level", ""))
 	if level != "" and not level.begins_with(Maps.AREA_ROOT.path_join(area) + "/"):
 		level = ""  # only a level from that area's own folder
-	return {"name": name if name != "" else area.capitalize(), "destination": "area:" + area, "area": area, "level": level}
+	return _opens(a, {"name": name if name != "" else area.capitalize(), "destination": "area:" + area, "area": area, "level": level})
+
+
+## When an area opens: after a step and / or once a quest flag is on.
+static func _opens(a: Dictionary, out: Dictionary) -> Dictionary:
+	out.opens_after = String(a.get("opens_after", ""))
+	out.opens_with = String(a.get("opens_with", ""))
+	return out
 
 
 ## Reads one quest folder from anywhere (the editor's playtest) and adds it,
@@ -170,6 +209,14 @@ static func add_folder(dir: String) -> Dictionary:
 	_loaded = _loaded.filter(func(old): return old.id != q.id)
 	_loaded.append(q)
 	return q
+
+
+## Whether the Guild offers a quest: its required story flags hold.
+static func available(save: SaveData, q: Dictionary) -> bool:
+	for c in q.get("requires", []):
+		if bool(story_flag(save, String(c.flag))) != bool(c.is):
+			return false
+	return true
 
 
 static func get_quest(id: StringName) -> Dictionary:
@@ -243,9 +290,52 @@ static func set_flag(save: SaveData, name: String, value: Variant) -> void:
 	var s := state(save)
 	if s.is_empty():
 		return
+	var before := open_area_names(save)
 	if not s.has("flags"):
 		s.flags = {}
 	s.flags[name] = value
+	_announce_opened(save, before)
+
+
+# --- Story flags (outlast a quest) --------------------------------------------------------------
+
+static func story_flag(save: SaveData, name: String) -> Variant:
+	var s := party_save(save)
+	return s.story_flags.get(name, false) if s else false
+
+
+## Sets a story flag for everyone in the party (they were all there).
+static func set_story_flag(save: SaveData, name: String, value: Variant) -> void:
+	var s := party_save(save)
+	if s == null or name == "":
+		return
+	for member in party_saves(s):
+		member.story_flags[name] = value
+
+
+# --- Areas opening ----------------------------------------------------------------------------
+
+## Whether one of the quest's areas is open yet.
+static func area_open(save: SaveData, a: Dictionary) -> bool:
+	if String(a.get("opens_after", "")) != "" and not step_done(save, String(a.opens_after)):
+		return false
+	if String(a.get("opens_with", "")) != "" and not bool(flag(save, String(a.opens_with))):
+		return false
+	return true
+
+
+static func open_areas(save: SaveData) -> Array:
+	return (active(save).get("areas", []) as Array).filter(func(a): return area_open(save, a))
+
+
+static func open_area_names(save: SaveData) -> Array:
+	return open_areas(save).map(func(a): return String(a.name))
+
+
+static func _announce_opened(save: SaveData, before: Array) -> void:
+	var opened := open_area_names(save).filter(func(n): return not before.has(n))
+	if not opened.is_empty():
+		QuestSession.announce("The teleporter can go to %s now." % ", ".join(opened))
 
 
 ## "" when accepted, or why not. Only the leader takes quests in co-op.
@@ -299,9 +389,11 @@ static func complete_step(save: SaveData, step_id: String) -> String:
 
 
 static func _advance(s: SaveData, step_id: String) -> String:
+	var before := open_area_names(s)
 	s.quest.step = step_index(s) + 1
 	s.quest.progress = 0
 	QuestSession.step_completed(step_id)
+	_announce_opened(s, before)
 	return "done" if is_complete(s) else "step"
 
 
@@ -336,14 +428,34 @@ static func report(save: SaveData) -> String:
 		return "You have no quest."
 	if not is_complete(s):
 		return "%s isn't done yet (%s)." % [q.title, progress_text(s)]
+	var ending := ending_for(s)
+	var reward := int(q.reward) if int(ending.get("reward", -1)) < 0 else int(ending.reward)
 	var short := 0
 	for member in party_saves(s):
-		var paid := member.inventory.add_oro(int(q.reward))
-		short += int(q.reward) - paid
+		var paid := member.inventory.add_oro(reward)
+		short += reward - paid
 		member.quests_cleared[String(q.id)] = int(member.quests_cleared.get(String(q.id), 0)) + 1
+	for k in ending.get("sets", {}):
+		set_story_flag(s, String(k), ending.sets[k])
 	s.quest = {}
-	return "%s complete. Reward: %d Oro%s." % [q.title, int(q.reward),
+	var told := String(ending.get("text", ""))
+	return "%s complete.%s\n\nReward: %d Oro%s." % [q.title, "" if told == "" else "\n\n" + told, reward,
 		"" if short == 0 else " (%d didn't fit: Oro is full)" % short]
+
+
+## The ending the quest has reached ({} for none): the first whose flags all
+## hold (quest flags, or story flags with "story").
+static func ending_for(save: SaveData) -> Dictionary:
+	for e in active(save).get("endings", []):
+		var ok := true
+		for c in e.get("if", []):
+			var value: Variant = story_flag(save, String(c.flag)) if bool(c.story) else flag(save, String(c.flag))
+			if bool(value) != bool(c.is):
+				ok = false
+				break
+		if ok:
+			return e
+	return {}
 
 
 ## The leader's save and every guest's (the party's saves; just `save` alone).

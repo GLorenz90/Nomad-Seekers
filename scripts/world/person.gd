@@ -8,13 +8,17 @@ extends CharacterBody3D
 ##    "pos": [...], "yaw": 0,
 ##    "look": {"color": [0.3, 0.4, 0.8], "model": "brandt_model", "height": 1.8},
 ##    "talk": [{"dialogue": "brandt_hello"},
-##             {"dialogue": "brandt_thanks", "from_step": "find_part"}],
+##             {"dialogue": "brandt_thanks", "from_step": "find_part"},
+##             {"dialogue": "brandt_miners", "flag": "sided_with_miners"},
+##             {"dialogue": "brandt_cold", "flag": "met_brandt", "story": true, "flag_is": false}],
 ##    "show_from": "", "show_until": "",
 ##    "route": {"points": [[...], ...], "mode": "loop", "speed": 1.6, "wait": 2.0},
 ##    "walking": true}
 ##
-## - talk: the last entry whose `from_step` has been completed (or that has
-##   none) is what they say. The wiring can change it (set_talk).
+## - talk: the last entry that holds is what they say. An entry holds when
+##   its `from_step` is done (if it has one) and its `flag` (a quest flag, or
+##   a story flag with "story") is `flag_is` (default true). The wiring can
+##   change it (set_talk).
 ## - show_from / show_until (step ids): they're only around from that step
 ##   being completed until that step is completed. Outside a quest they're
 ##   around only if neither is set.
@@ -154,8 +158,15 @@ func current_dialogue() -> String:
 	var pick := ""
 	for t in talk:
 		var from := String(t.get("from_step", ""))
-		if from == "" or QuestBook.step_done(Session.save, from):
-			pick = String(t.get("dialogue", ""))
+		if from != "" and not QuestBook.step_done(Session.save, from):
+			continue
+		var name := String(t.get("flag", ""))
+		if name != "":
+			var value: Variant = QuestBook.story_flag(Session.save, name) if bool(t.get("story", false)) \
+				else QuestBook.flag(Session.save, name)
+			if bool(value) != bool(t.get("flag_is", true)):
+				continue
+		pick = String(t.get("dialogue", ""))
 	return pick
 
 

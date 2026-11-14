@@ -107,7 +107,10 @@ func _conditions_met(checks: Array) -> bool:
 						if not done:
 							return false
 			"quest_flag":
-				if QuestBook.flag(_party_save(), String(c.get("flag", ""))) != c.get("is", true):
+				if bool(QuestBook.flag(_party_save(), String(c.get("flag", "")))) != bool(c.get("is", true)):
+					return false
+			"story_flag":
+				if bool(QuestBook.story_flag(_party_save(), String(c.get("flag", "")))) != bool(c.get("is", true)):
 					return false
 			"has_item":
 				if _has_item(_who(), c) != bool(c.get("is", true)):
@@ -169,6 +172,8 @@ func do_action(a: Dictionary) -> void:
 				level.call("banner", QuestBook.news(_party_save(), done))
 		"set_quest_flag":
 			QuestBook.set_flag(_party_save(), String(a.get("flag", "")), a.get("value", true))
+		"set_story_flag":
+			QuestBook.set_story_flag(_party_save(), String(a.get("flag", "")), a.get("value", true))
 		"take_item":
 			_take(_who(), a)
 		"set_talk":

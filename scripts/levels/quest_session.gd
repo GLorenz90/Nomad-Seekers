@@ -23,9 +23,22 @@ static func is_active() -> bool:
 ## Where the hub teleporter can go in this quest session: [[name, destination]].
 static func destinations() -> Array:
 	var out := []
-	for a in quest().get("areas", []):
+	for a in QuestBook.open_areas(Session.save):
 		out.append([String(a.name), String(a.destination)])
 	return out
+
+
+## A banner on every map with a Seeker on it ("The teleporter can go to...").
+static func announce(text: String) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return
+	var told := {}
+	for p in tree.get_nodes_in_group("player"):
+		var level := Scope.level(p)
+		if level and not told.has(level) and level.has_method("banner"):
+			told[level] = true
+			level.call_deferred("banner", text)
 
 
 ## Fresh picks for a session (free play: q = {}). A quest's named levels win.

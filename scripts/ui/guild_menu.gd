@@ -42,7 +42,7 @@ func items_for(command_id: String) -> Array[Dictionary]:
 					return why
 				var message := QuestBook.report(save())
 				if QuestBook.active(save()).is_empty():
-					_new_session("Back to free play.")
+					_new_session_on_close()
 				return message, true)
 		"abandon":
 			return _active_item("Abandon this quest", func(_n: int) -> String:
@@ -64,6 +64,8 @@ func _quest_items() -> Array[Dictionary]:
 	var current := QuestBook.active(s)
 	for q in QuestBook.all():
 		var accepted: bool = not current.is_empty() and current.id == q.id
+		if not accepted and not QuestBook.available(s, q):
+			continue  # its story flags don't hold (yet)
 		var cleared := int(s.quests_cleared.get(String(q.id), 0))
 		var item := {"text": "%s%s   %s Oro" % [q.title, "  (accepted)" if accepted else "", _num(int(q.reward))],
 			"color": Color(0.75, 1.0, 0.8) if accepted else Color(0.85, 0.92, 1.0),
@@ -107,6 +109,15 @@ func _active_item(confirm: String, act: Callable, needs_complete: bool) -> Array
 	if needs_complete and not QuestBook.is_complete(s):
 		item.error = "%s isn't done yet (%s)." % [q.title, QuestBook.progress_text(s)]
 	return [item]
+
+
+## After a report the ending can be long: the new session starts when the
+## counter is closed.
+func _new_session_on_close() -> void:
+	if not restart_sessions:
+		return
+	var tree := player.get_tree()
+	tree_exited.connect(func() -> void: QuestSession.restart(tree), CONNECT_ONE_SHOT)
 
 
 ## Closes the counter and starts the session that fits the quest (or free
